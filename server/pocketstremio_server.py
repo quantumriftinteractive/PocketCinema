@@ -4,6 +4,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -15,6 +16,7 @@ from pathlib import Path
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 DEFAULT_TIMEOUT = 15
 BIG_BUCK_BUNNY_ID = "tt1254207"
+MAX_CONTINUE_ITEMS = 50
 
 
 def fetch_json(url, timeout=DEFAULT_TIMEOUT):
@@ -91,8 +93,87 @@ def stream_label(stream, fallback):
     return name
 
 
+class ProgressStore:
+    def __init__(self, path):
+        self.path = Path(path)
+        self.lock = threading.Lock()
+        self.items = self._load()
+
+    @staticmethod
+    def key(item_type, item_id):
+        return f"{item_type}:{item_id}"
+
+    def _load(self):
+        if not self.path.is_file():
+            return {}
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _save(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
+        temp_path.write_text(
+            json.dumps(self.items, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        os.replace(temp_path, self.path)
+
+    def list_items(self):
+        with self.lock:
+            return sorted(
+                (dict(item) for item in self.items.values()),
+                key=lambda item: item.get("updated_at", 0),
+                reverse=True,
+            )[:MAX_CONTINUE_ITEMS]
+
+    def update(self, payload):
+        item_type = str(payload.get("type") or "").strip()[:32]
+        item_id = str(payload.get("id") or "").strip()[:160]
+        title = str(payload.get("title") or "").strip()[:240]
+        if not item_type or not item_id or not title:
+            raise ValueError("type, id, and title are required")
+
+        try:
+            position = max(0, int(float(payload.get("position_seconds") or 0)))
+            duration = max(0, int(float(payload.get("duration_seconds") or 0)))
+            year = int(payload["year"]) if str(payload.get("year") or "").isdigit() else None
+        except (TypeError, ValueError) as exc:
+            raise ValueError("invalid progress value") from exc
+
+        completed_value = payload.get("completed")
+        completed = completed_value is True or str(completed_value).lower() == "true"
+        if duration and position >= max(duration - 30, duration * 0.9):
+            completed = True
+
+        key = self.key(item_type, item_id)
+        with self.lock:
+            if completed:
+                self.items.pop(key, None)
+                self._save()
+                return None
+
+            item = {
+                "type": item_type,
+                "id": item_id,
+                "title": title,
+                "year": year,
+                "position_seconds": position,
+                "duration_seconds": duration,
+                "updated_at": int(time.time()),
+            }
+            self.items[key] = item
+            if len(self.items) > MAX_CONTINUE_ITEMS:
+                oldest = min(self.items, key=lambda item_key: self.items[item_key].get("updated_at", 0))
+                self.items.pop(oldest, None)
+            self._save()
+            return dict(item)
+
+
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.2"
+    server_version = "PocketStremio/0.3"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -103,9 +184,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.2-stremio-poc",
+                    "version": "0.3-subtitles-progress-poc",
                     "message": "PocketStremio server is reachable",
                     "stream_addons": len(self.server.stream_addons),
+                    "continue_watching": len(self.server.progress_store.list_items()),
                 }
             )
             return
@@ -122,27 +204,56 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.handle_streams(parts[2], parts[3])
             return
 
+        if len(parts) == 4 and parts[:2] == ["api", "subtitles"]:
+            self.handle_subtitles(parts[2], parts[3], parsed)
+            return
+
+        if parsed.path == "/api/continue-watching":
+            items = self.server.progress_store.list_items()
+            self.write_json({"count": len(items), "items": items})
+            return
+
         if len(parts) == 2 and parts[0] == "play":
             self.handle_play_session(parts[1])
+            return
+
+        if len(parts) == 2 and parts[0] == "subtitle":
+            self.handle_subtitle(parts[1])
             return
 
         if parsed.path == "/media/test-video.mp4":
             self.write_file(self.server.media_dir / "test-video.mp4")
             return
 
+
+        if parsed.path == "/media/test-subtitle.srt":
+            self.write_file(self.server.fixture_dir / "test-subtitle.srt")
+            return
+
         self.write_json({"error": "not_found", "path": parsed.path}, status=404)
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/api/play":
-            self.write_json({"error": "not_found", "path": parsed.path}, status=404)
+        if parsed.path == "/api/play":
+            self.handle_create_play_session()
             return
 
+        if parsed.path == "/api/progress":
+            self.handle_progress()
+            return
+        self.write_json({"error": "not_found", "path": parsed.path}, status=404)
+
+    def read_json_body(self):
         length = int(self.headers.get("Content-Length") or 0)
         try:
-            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            return json.loads(self.rfile.read(length).decode("utf-8") or "{}")
         except json.JSONDecodeError:
             self.write_json({"error": "bad_json"}, status=400)
+            return None
+
+    def handle_create_play_session(self):
+        payload = self.read_json_body()
+        if payload is None:
             return
 
         stream_id = payload.get("stream_id")
@@ -166,6 +277,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             "stream_id": stream_id,
             "url": url,
             "name": stream.get("name", ""),
+            "duration_seconds": stream.get("duration_seconds", 0),
         }
 
         self.write_json(
@@ -173,8 +285,20 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "url": f"http://{self.server.public_host}:{self.server.server_port}/play/{session_id}",
                 "session_id": session_id,
                 "stream_id": stream_id,
+                "duration_seconds": stream.get("duration_seconds", 0),
             }
         )
+
+    def handle_progress(self):
+        payload = self.read_json_body()
+        if payload is None:
+            return
+        try:
+            item = self.server.progress_store.update(payload)
+        except (OSError, ValueError) as exc:
+            self.write_json({"error": "invalid_progress", "message": str(exc)}, status=400)
+            return
+        self.write_json({"saved": item is not None, "item": item})
 
     def handle_search(self, parsed):
         query = urllib.parse.parse_qs(parsed.query).get("q", [""])[0].strip()
@@ -220,6 +344,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "id": f"sample-{BIG_BUCK_BUNNY_ID}",
                     "name": "PocketStremio hosted test video",
                     "description": "Known-compatible H.264/AAC MP4 hosted by desktop-gaming",
+                    "duration_seconds": 6,
                     "playable": test_video.is_file(),
                     "source": "pocketstremio-sample",
                     "url": stream_url if test_video.is_file() else "",
@@ -238,6 +363,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
             for stream_index, raw in enumerate(data.get("streams", [])):
                 stream_url = raw.get("url")
+                behavior_hints = raw.get("behaviorHints") or {}
                 stream_id = f"a{addon_index}-s{stream_index}-{hashlib.sha1((stream_url or repr(raw)).encode()).hexdigest()[:8]}"
                 playable = bool(stream_url and stream_url.startswith(("http://", "https://")))
                 streams.append(
@@ -249,6 +375,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "playable": playable,
                         "source": addon.get("name") or manifest_url,
                         "url": stream_url if playable else "",
+                        "video_hash": behavior_hints.get("videoHash") or "",
+                        "video_size": behavior_hints.get("videoSize") or 0,
                     }
                 )
 
@@ -256,8 +384,85 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.server.stream_cache[stream["id"]] = stream
 
         public_items = [
-            {k: v for k, v in stream.items() if k not in {"url", "source"}}
+            {
+                k: v
+                for k, v in stream.items()
+                if k not in {"url", "source", "video_hash", "video_size"}
+            }
             for stream in streams
+        ]
+        self.write_json({"count": len(public_items), "items": public_items})
+
+    def handle_subtitles(self, item_type, item_id, parsed):
+        query = urllib.parse.parse_qs(parsed.query)
+        stream = self.server.stream_cache.get(query.get("stream_id", [""])[0], {})
+        subtitles = []
+
+        if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
+            fixture = self.server.fixture_dir / "test-subtitle.srt"
+            if fixture.is_file():
+                subtitles.append(
+                    {
+                        "id": f"sample-sub-{BIG_BUCK_BUNNY_ID}",
+                        "name": "English (PocketStremio test)",
+                        "lang": "eng",
+                        "source": "pocketstremio-sample",
+                        "url": f"http://{self.server.public_host}:{self.server.server_port}/media/test-subtitle.srt",
+                    }
+                )
+
+        for addon_index, addon in enumerate(self.server.stream_addons):
+            base = addon_base_from_manifest(addon["manifest_url"])
+            routes = [
+                f"{base}/subtitles/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"
+            ]
+            video_hash = str(stream.get("video_hash") or "")
+            video_size = stream.get("video_size") or 0
+            if video_hash:
+                extra = urllib.parse.quote(
+                    f"videoID={item_id}&videoSize={video_size}",
+                    safe="=&",
+                )
+                routes.insert(
+                    0,
+                    f"{base}/subtitles/{urllib.parse.quote(item_type)}/{urllib.parse.quote(video_hash)}/{extra}.json",
+                )
+
+            seen_addon_urls = set()
+            for route in routes:
+                try:
+                    data = fetch_json(route)
+                except Exception as exc:
+                    print(f"subtitle addon failed: {route}: {exc}", flush=True)
+                    continue
+
+                for raw in data.get("subtitles", []):
+                    subtitle_url = raw.get("url")
+                    if not subtitle_url or not subtitle_url.startswith(("http://", "https://")):
+                        continue
+                    if subtitle_url in seen_addon_urls:
+                        continue
+                    seen_addon_urls.add(subtitle_url)
+                    subtitle_id = (
+                        f"a{addon_index}-sub-"
+                        f"{hashlib.sha1(subtitle_url.encode()).hexdigest()[:10]}"
+                    )
+                    lang = str(raw.get("lang") or raw.get("language") or "und")
+                    subtitles.append(
+                        {
+                            "id": subtitle_id,
+                            "name": raw.get("name") or lang,
+                            "lang": lang,
+                            "source": addon.get("name") or addon["manifest_url"],
+                            "url": subtitle_url,
+                        }
+                    )
+
+        for subtitle in subtitles:
+            self.server.subtitle_cache[subtitle["id"]] = subtitle
+        public_items = [
+            {k: v for k, v in subtitle.items() if k not in {"url", "source"}}
+            for subtitle in subtitles
         ]
         self.write_json({"count": len(public_items), "items": public_items})
 
@@ -267,6 +472,13 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"error": "session_not_found"}, status=404)
             return
         self.proxy_remote_url(session["url"])
+
+    def handle_subtitle(self, subtitle_id):
+        subtitle = self.server.subtitle_cache.get(subtitle_id)
+        if not subtitle:
+            self.write_json({"error": "subtitle_not_found"}, status=404)
+            return
+        self.proxy_remote_url(subtitle["url"])
 
     def proxy_remote_url(self, url):
         headers = {"User-Agent": "PocketStremio/0.1"}
@@ -374,24 +586,41 @@ def main():
         default=str(Path(__file__).resolve().parent / "media"),
         help="Directory containing test-video.mp4 for playback experiments",
     )
+    parser.add_argument(
+        "--fixture-dir",
+        default=str(Path(__file__).resolve().parent / "fixtures"),
+        help="Directory containing deterministic text fixtures",
+    )
+    parser.add_argument(
+        "--data-dir",
+        default=str(Path(__file__).resolve().parent / "data"),
+        help="Directory for persistent server state",
+    )
     args = parser.parse_args()
 
     media_dir = Path(args.media_dir).resolve()
     media_dir.mkdir(parents=True, exist_ok=True)
+    fixture_dir = Path(args.fixture_dir).resolve()
+    data_dir = Path(args.data_dir).resolve()
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     httpd = ThreadingHTTPServer((args.host, args.port), PocketStremioHandler)
     httpd.media_dir = media_dir
+    httpd.fixture_dir = fixture_dir
     httpd.public_host = args.public_host or args.host
     httpd.server_port = args.port
     httpd.stremio_service_url = args.stremio_service_url.rstrip("/") if args.stremio_service_url else ""
     httpd.stream_addons = load_stream_addons(args.stream_addons, httpd.stremio_service_url)
     httpd.stream_cache = {}
+    httpd.subtitle_cache = {}
     httpd.play_sessions = {}
+    httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
 
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
     print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
     print(f"Media directory: {media_dir}", flush=True)
+    print(f"Data directory: {data_dir}", flush=True)
     httpd.serve_forever()
 
 

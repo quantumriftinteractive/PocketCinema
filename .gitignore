@@ -9,5 +9,7 @@ tailscale/logs/*
 server/media/*
 !server/media/.gitkeep
 server/config/stream_addons.json
+server/data/*
+!server/data/.gitkeep
 __pycache__/
 *.pyc

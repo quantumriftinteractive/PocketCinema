@@ -8,6 +8,10 @@
 - supports D-pad navigation, A selection, and B/back;
 - parses API responses with OnionOS `jq`;
 - launches FFplay in the working OnionOS framebuffer/audio context.
+- offers Search and Continue Watching from a lightweight home menu;
+- selects external subtitles through the server when FFplay advertises the
+  `subtitles` filter;
+- resumes saved items with FFplay `-ss` and reports approximate progress.
 
 The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set
@@ -21,6 +25,11 @@ Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
 
 The standalone `json-client.sh` remains as the lightweight structured JSON
 connectivity probe.
+
+Subtitle and continue-watching support is implemented but still requires a
+physical OnionOS Apps-menu confirmation. See
+`docs/subtitles-progress-poc.md` for the exact test and current progress accuracy
+limits.
 
 `json-client.sh` is a lightweight OnionOS shell client for the first structured JSON proof.
 

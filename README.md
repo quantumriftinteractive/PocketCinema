@@ -17,6 +17,9 @@ stream plays as H.264 640x360 with AAC audio. See
 `docs/vertical-slice.md` and `docs/ffplay-playback-poc.md` for confirmed results
 and current limitations.
 
+See [docs/roadmap.md](docs/roadmap.md) for milestone status, acceptance criteria,
+sequencing, deferred features, and known risks.
+
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
 The Miyoo is intentionally kept lightweight. Heavy tasks such as stream resolution, torrent handling, transcoding, and Stremio-related processing should be performed by a remote PC.
@@ -334,6 +337,10 @@ Menu     Main Menu / Exit
 
 ## Development Roadmap
 
+The original phases below describe the initial concept. The evidence-based
+[project roadmap](docs/roadmap.md) is authoritative for current status,
+sequencing, acceptance criteria, and deferred work.
+
 ### Phase 0: Research
 
 Determine the Miyoo Mini Plus / OnionOS runtime environment.
@@ -502,11 +509,16 @@ PocketStremio/
 
 ## Current Status
 
-🚧 **Experimental / Proof of Concept**
+**Experimental / working vertical slice**
 
-The project is currently at the research and architecture stage.
+Tailscale networking, structured JSON communication, OnionOS FFplay playback,
+and controller-driven movie selection are confirmed on the Miyoo Mini Plus.
+The next milestone is physical verification of the newly implemented subtitle
+selection and Continue Watching flow. Real server-side stream resolution follows
+through the existing PocketStremio boundary. See [docs/roadmap.md](docs/roadmap.md)
+for details.
 
-Initial priorities:
+The original priority sequence was:
 
 ```text
 1. Tailscale on Miyoo Mini Plus

@@ -21,7 +21,12 @@ GET /api/status
 GET /api/search?q=alien
 GET /api/meta/{type}/{id}
 GET /api/streams/{type}/{id}
+GET /api/subtitles/{type}/{id}?stream_id=...
+GET /api/continue-watching
 POST /api/play
+POST /api/progress
+GET /play/{session}
+GET /subtitle/{subtitle_id}
 GET /media/test-video.mp4
 ```
 
@@ -41,3 +46,18 @@ notepad .\server\config\stream_addons.json
 ```
 
 `stream_addons.json` is ignored by git. You can also set `POCKETSTREMIO_STREAM_ADDONS` to a comma-separated list of manifest URLs.
+
+Configured addons are also queried for Stremio subtitle resources. Subtitle URLs
+remain server-side and are proxied through opaque `/subtitle/{subtitle_id}`
+routes. The bundled `fixtures/test-subtitle.srt` is a deterministic rendering
+fixture for Big Buck Bunny.
+
+Continue-watching entries are written to
+`server/data/continue_watching.json`, which is ignored by git. The server keeps
+at most 50 entries and removes completed items.
+
+Run the automated server checks with:
+
+```powershell
+python -m unittest server.test_pocketstremio_server -v
+```

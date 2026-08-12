@@ -161,6 +161,12 @@ http://100.85.171.67:8755
 
 If Stremio Service later exposes usable local streams, PocketStremio can normalize them through `/api/streams/...`.
 
+Configured addons can also provide the Stremio `subtitles` resource. PocketStremio
+normalizes those results through `/api/subtitles/...` and proxies the selected
+subtitle through an opaque `/subtitle/{id}` route, keeping the upstream URL on
+the gaming PC. Device rendering status is tracked in
+[Subtitles and Continue Watching POC](subtitles-progress-poc.md).
+
 Configure stream addon manifest URLs in:
 
 ```text
