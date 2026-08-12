@@ -1,4 +1,26 @@
-# Miyoo Client POC
+# Miyoo Client
+
+`pocketstremio-ui.sh` is the current controller-driven OnionOS client. It:
+
+- starts Tailscale if its userspace socket is missing;
+- calls PocketStremio through `HTTP_PROXY=http://127.0.0.1:1055/`;
+- uses OnionOS `kbinput` for search text and the bundled SDL 1.2 selector for lists;
+- supports D-pad navigation, A selection, and B/back;
+- parses API responses with OnionOS `jq`;
+- launches FFplay in the working OnionOS framebuffer/audio context.
+
+The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
+`sdl_selector.c`. Manual selection is the default. Set
+`POCKETSTREMIO_AUTO_FIRST=1` to restore the development auto-select path.
+
+Confirmed device flow:
+
+```text
+Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
+```
+
+The standalone `json-client.sh` remains as the lightweight structured JSON
+connectivity probe.
 
 `json-client.sh` is a lightweight OnionOS shell client for the first structured JSON proof.
 

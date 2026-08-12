@@ -1,0 +1,9 @@
+{
+  "addons": [
+    {
+      "name": "Example stream addon",
+      "manifest_url": "https://example.com/manifest.json",
+      "enabled": false
+    }
+  ]
+}

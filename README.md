@@ -2,6 +2,21 @@
 
 A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
 
+## Confirmed Prototype
+
+The current prototype completes this controller-driven OnionOS flow:
+
+```text
+Apps -> PocketStremio -> search -> select media -> Play -> select stream -> FFplay
+```
+
+It uses the existing Tailscale userspace HTTP proxy on the Miyoo, a lightweight
+SDL 1.2 selector, a Python server on the gaming PC, and the PC's localhost-only
+Stremio Service as an optional backend. The known-compatible Big Buck Bunny test
+stream plays as H.264 640x360 with AAC audio. See
+`docs/vertical-slice.md` and `docs/ffplay-playback-poc.md` for confirmed results
+and current limitations.
+
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
 The Miyoo is intentionally kept lightweight. Heavy tasks such as stream resolution, torrent handling, transcoding, and Stremio-related processing should be performed by a remote PC.

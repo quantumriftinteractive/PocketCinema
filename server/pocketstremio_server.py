@@ -1,59 +1,129 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
 import json
 import mimetypes
+import os
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
 
-MEDIA = [
-    {
-        "id": "mock-alien-1979",
-        "title": "Alien",
-        "type": "movie",
-        "year": 1979,
-        "runtime_minutes": 117,
-    },
-    {
-        "id": "mock-aliens-1986",
-        "title": "Aliens",
-        "type": "movie",
-        "year": 1986,
-        "runtime_minutes": 137,
-    },
-    {
-        "id": "mock-arrival-2016",
-        "title": "Arrival",
-        "type": "movie",
-        "year": 2016,
-        "runtime_minutes": 116,
-    },
-]
+CINEMETA_BASE = "https://v3-cinemeta.strem.io"
+DEFAULT_TIMEOUT = 15
+BIG_BUCK_BUNNY_ID = "tt1254207"
+
+
+def fetch_json(url, timeout=DEFAULT_TIMEOUT):
+    req = urllib.request.Request(url, headers={"User-Agent": "PocketStremio/0.1"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def load_stream_addons(config_path, stremio_service_url):
+    addons = []
+    if stremio_service_url:
+        addons.append(
+            {
+                "name": "Stremio Service local addon",
+                "manifest_url": stremio_service_url.rstrip("/") + "/local-addon/manifest.json",
+            }
+        )
+
+    raw = os.environ.get("POCKETSTREMIO_STREAM_ADDONS", "").strip()
+    if raw:
+        addons.extend(
+            {"name": "env addon", "manifest_url": item.strip()}
+            for item in raw.split(",")
+            if item.strip()
+        )
+        return addons
+
+    path = Path(config_path)
+    if not path.is_file():
+        return addons
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    addons.extend(
+        {"name": item.get("name", "configured addon"), "manifest_url": item["manifest_url"]}
+        for item in data.get("addons", [])
+        if item.get("enabled", True)
+    )
+    return addons
+
+
+def addon_base_from_manifest(manifest_url):
+    parsed = urllib.parse.urlparse(manifest_url)
+    if parsed.path.endswith("/manifest.json"):
+        path = parsed.path[: -len("/manifest.json")]
+    else:
+        path = parsed.path.rstrip("/")
+    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
+
+
+def normalize_meta(meta):
+    release = str(meta.get("releaseInfo") or meta.get("year") or "")
+    year = None
+    for token in release.replace("-", " ").split():
+        if len(token) >= 4 and token[:4].isdigit():
+            year = int(token[:4])
+            break
+
+    return {
+        "id": meta.get("id") or meta.get("imdb_id"),
+        "imdb_id": meta.get("imdb_id") or meta.get("id"),
+        "type": meta.get("type") or "movie",
+        "title": meta.get("name") or meta.get("title") or "",
+        "year": year,
+        "poster": meta.get("poster") or "",
+        "description": meta.get("description") or "",
+    }
+
+
+def stream_label(stream, fallback):
+    name = stream.get("name") or stream.get("title") or fallback
+    description = stream.get("description") or ""
+    if description:
+        return f"{name} - {description[:80]}"
+    return name
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremioPOC/0.1"
+    server_version = "PocketStremio/0.2"
 
     def do_GET(self):
-        parsed = urlparse(self.path)
+        parsed = urllib.parse.urlparse(self.path)
+        parts = [part for part in parsed.path.split("/") if part]
+
         if parsed.path == "/api/status":
             self.write_json(
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.1-poc",
-                    "message": "PocketStremio JSON POC is reachable",
+                    "version": "0.2-stremio-poc",
+                    "message": "PocketStremio server is reachable",
+                    "stream_addons": len(self.server.stream_addons),
                 }
             )
             return
 
         if parsed.path == "/api/search":
-            query = parse_qs(parsed.query).get("q", [""])[0].strip().lower()
-            results = [
-                item for item in MEDIA if not query or query in item["title"].lower()
-            ]
-            self.write_json({"query": query, "count": len(results), "results": results})
+            self.handle_search(parsed)
+            return
+
+        if len(parts) == 4 and parts[:2] == ["api", "meta"]:
+            self.handle_meta(parts[2], parts[3])
+            return
+
+        if len(parts) == 4 and parts[:2] == ["api", "streams"]:
+            self.handle_streams(parts[2], parts[3])
+            return
+
+        if len(parts) == 2 and parts[0] == "play":
+            self.handle_play_session(parts[1])
             return
 
         if parsed.path == "/media/test-video.mp4":
@@ -61,6 +131,166 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
 
         self.write_json({"error": "not_found", "path": parsed.path}, status=404)
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path != "/api/play":
+            self.write_json({"error": "not_found", "path": parsed.path}, status=404)
+            return
+
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self.write_json({"error": "bad_json"}, status=400)
+            return
+
+        stream_id = payload.get("stream_id")
+        if not stream_id:
+            self.write_json({"error": "missing_stream_id"}, status=400)
+            return
+
+        stream = self.server.stream_cache.get(stream_id)
+        if not stream:
+            self.write_json({"error": "stream_not_found"}, status=404)
+            return
+
+        url = stream.get("url")
+        if not url:
+            self.write_json({"error": "stream_not_playable"}, status=409)
+            return
+
+        session_id = hashlib.sha1(f"{time.time()}:{stream_id}:{url}".encode()).hexdigest()[:16]
+        self.server.play_sessions[session_id] = {
+            "created_at": time.time(),
+            "stream_id": stream_id,
+            "url": url,
+            "name": stream.get("name", ""),
+        }
+
+        self.write_json(
+            {
+                "url": f"http://{self.server.public_host}:{self.server.server_port}/play/{session_id}",
+                "session_id": session_id,
+                "stream_id": stream_id,
+            }
+        )
+
+    def handle_search(self, parsed):
+        query = urllib.parse.parse_qs(parsed.query).get("q", [""])[0].strip()
+        if not query:
+            self.write_json({"query": "", "count": 0, "items": [], "results": []})
+            return
+
+        extra = urllib.parse.quote(f"search={query}", safe="=")
+        url = f"{CINEMETA_BASE}/catalog/movie/top/{extra}.json"
+        try:
+            data = fetch_json(url)
+            items = [normalize_meta(meta) for meta in data.get("metas", [])[:12]]
+            if "bunny" in query.lower() or "big buck" in query.lower():
+                bbb = normalize_meta(
+                    fetch_json(f"{CINEMETA_BASE}/meta/movie/{BIG_BUCK_BUNNY_ID}.json").get("meta") or {}
+                )
+                if bbb.get("id") and all(item.get("id") != bbb["id"] for item in items):
+                    items.insert(0, bbb)
+        except Exception as exc:
+            self.write_json({"error": "search_failed", "message": str(exc)}, status=502)
+            return
+
+        self.write_json({"query": query, "count": len(items), "items": items, "results": items})
+
+    def handle_meta(self, item_type, item_id):
+        url = f"{CINEMETA_BASE}/meta/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"
+        try:
+            data = fetch_json(url)
+            meta = normalize_meta(data.get("meta") or {})
+        except Exception as exc:
+            self.write_json({"error": "meta_failed", "message": str(exc)}, status=502)
+            return
+        self.write_json(meta)
+
+    def handle_streams(self, item_type, item_id):
+        streams = []
+
+        if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
+            test_video = self.server.media_dir / "test-video.mp4"
+            stream_url = f"http://{self.server.public_host}:{self.server.server_port}/media/test-video.mp4"
+            streams.append(
+                {
+                    "id": f"sample-{BIG_BUCK_BUNNY_ID}",
+                    "name": "PocketStremio hosted test video",
+                    "description": "Known-compatible H.264/AAC MP4 hosted by desktop-gaming",
+                    "playable": test_video.is_file(),
+                    "source": "pocketstremio-sample",
+                    "url": stream_url if test_video.is_file() else "",
+                }
+            )
+
+        for addon_index, addon in enumerate(self.server.stream_addons):
+            manifest_url = addon["manifest_url"]
+            base = addon_base_from_manifest(manifest_url)
+            url = f"{base}/stream/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"
+            try:
+                data = fetch_json(url)
+            except Exception as exc:
+                print(f"stream addon failed: {manifest_url}: {exc}", flush=True)
+                continue
+
+            for stream_index, raw in enumerate(data.get("streams", [])):
+                stream_url = raw.get("url")
+                stream_id = f"a{addon_index}-s{stream_index}-{hashlib.sha1((stream_url or repr(raw)).encode()).hexdigest()[:8]}"
+                playable = bool(stream_url and stream_url.startswith(("http://", "https://")))
+                streams.append(
+                    {
+                        "id": stream_id,
+                        "name": raw.get("name") or raw.get("title") or f"Stream {stream_index + 1}",
+                        "description": raw.get("description") or "",
+                        "label": stream_label(raw, f"Stream {stream_index + 1}"),
+                        "playable": playable,
+                        "source": addon.get("name") or manifest_url,
+                        "url": stream_url if playable else "",
+                    }
+                )
+
+        for stream in streams:
+            self.server.stream_cache[stream["id"]] = stream
+
+        public_items = [
+            {k: v for k, v in stream.items() if k not in {"url", "source"}}
+            for stream in streams
+        ]
+        self.write_json({"count": len(public_items), "items": public_items})
+
+    def handle_play_session(self, session_id):
+        session = self.server.play_sessions.get(session_id)
+        if not session:
+            self.write_json({"error": "session_not_found"}, status=404)
+            return
+        self.proxy_remote_url(session["url"])
+
+    def proxy_remote_url(self, url):
+        headers = {"User-Agent": "PocketStremio/0.1"}
+        if self.headers.get("Range"):
+            headers["Range"] = self.headers["Range"]
+
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT) as resp:
+                self.send_response(resp.status)
+                for key in ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"]:
+                    value = resp.headers.get(key)
+                    if value:
+                        self.send_header(key, value)
+                self.end_headers()
+                while True:
+                    chunk = resp.read(1024 * 256)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+        except urllib.error.HTTPError as exc:
+            self.write_json({"error": "upstream_http_error", "status": exc.code}, status=502)
+        except Exception as exc:
+            self.write_json({"error": "upstream_fetch_failed", "message": str(exc)}, status=502)
 
     def log_message(self, fmt, *args):
         print("%s - %s" % (self.address_string(), fmt % args), flush=True)
@@ -130,9 +360,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Minimal PocketStremio POC server")
+    parser = argparse.ArgumentParser(description="Minimal PocketStremio server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8755)
+    parser.add_argument("--public-host", default=None)
+    parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
+    parser.add_argument(
+        "--stream-addons",
+        default=str(Path(__file__).resolve().parent / "config" / "stream_addons.json"),
+    )
     parser.add_argument(
         "--media-dir",
         default=str(Path(__file__).resolve().parent / "media"),
@@ -145,7 +381,16 @@ def main():
 
     httpd = ThreadingHTTPServer((args.host, args.port), PocketStremioHandler)
     httpd.media_dir = media_dir
-    print(f"PocketStremio POC server listening on http://{args.host}:{args.port}", flush=True)
+    httpd.public_host = args.public_host or args.host
+    httpd.server_port = args.port
+    httpd.stremio_service_url = args.stremio_service_url.rstrip("/") if args.stremio_service_url else ""
+    httpd.stream_addons = load_stream_addons(args.stream_addons, httpd.stremio_service_url)
+    httpd.stream_cache = {}
+    httpd.play_sessions = {}
+
+    print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
+    print(f"Public host: {httpd.public_host}", flush=True)
+    print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
     print(f"Media directory: {media_dir}", flush=True)
     httpd.serve_forever()
 
