@@ -1,2 +1,526 @@
 # MM--PocketStremio
 
+# PocketStremio for Miyoo Mini Plus
+
+A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
+
+The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
+
+The Miyoo is intentionally kept lightweight. Heavy tasks such as stream resolution, torrent handling, transcoding, and Stremio-related processing should be performed by a remote PC.
+
+## Project Idea
+
+The basic architecture is:
+
+```text
+┌──────────────────────┐
+│   Miyoo Mini Plus    │
+│      OnionOS         │
+│                      │
+│  PocketStremio UI    │
+│        │             │
+│        ▼             │
+│   HTTP / REST API    │
+│        │             │
+│        ▼             │
+│      FFplay          │
+└─────────┬────────────┘
+          │
+          │ Tailscale
+          │
+          ▼
+┌──────────────────────┐
+│      Gaming PC       │
+│                      │
+│ PocketStremio Server │
+│        │             │
+│        ├─ Stremio    │
+│        ├─ Addons     │
+│        ├─ Streams    │
+│        ├─ ffmpeg     │
+│        └─ Transcode  │
+└──────────────────────┘
+```
+
+## Goals
+
+The final client should ideally support:
+
+* Browse available media
+* Search for movies and series
+* View metadata
+* Browse seasons and episodes
+* Access a user's library
+* Continue watching
+* Select available streams
+* Resume playback
+* Subtitle support
+* Send playback progress back to the server
+* Play remote video through OnionOS/FFplay
+* Connect securely to the server through Tailscale
+
+The Miyoo client should remain as lightweight as possible.
+
+## Design Philosophy
+
+The Miyoo Mini Plus should act primarily as a **thin client**.
+
+It should not be responsible for:
+
+* Torrent downloading
+* Torrent peer management
+* Heavy Stremio processing
+* Video transcoding
+* High-resolution video decoding
+* Complex addon resolution
+* Large local databases
+
+Instead, the gaming PC should perform the expensive operations and expose a small API designed specifically for the Miyoo.
+
+Example:
+
+```text
+Miyoo
+  │
+  │ GET /api/search?q=alien
+  ▼
+PocketStremio Server
+  │
+  ▼
+Stremio / Addons
+  │
+  ▼
+JSON response
+```
+
+Playback:
+
+```text
+Miyoo
+  │
+  │ GET /api/play/<media-id>
+  ▼
+PocketStremio Server
+  │
+  ├─ Resolve source
+  ├─ Determine compatibility
+  ├─ Transcode if necessary
+  │
+  ▼
+HTTP video stream
+  │
+  ▼
+FFplay on Miyoo
+```
+
+## Why a Remote Server?
+
+The Miyoo Mini Plus has limited CPU, memory, networking, and codec capabilities.
+
+The gaming PC can handle:
+
+* Stream resolution
+* Torrent-based sources
+* Debrid sources
+* Unsupported codecs
+* HEVC / AV1 sources
+* High bitrate media
+* Audio conversion
+* Subtitle processing
+* Resolution scaling
+* Video transcoding
+
+A source such as:
+
+```text
+2160p
+HEVC Main10
+HDR
+EAC3
+```
+
+could therefore be converted by the PC into something much more suitable for the Miyoo:
+
+```text
+640x360 / 640x480
+H.264
+AAC
+```
+
+The Miyoo only needs to receive and display the resulting stream.
+
+## Networking
+
+Remote communication is intended to use **Tailscale**.
+
+Example:
+
+```text
+Miyoo Mini Plus
+      │
+      │ Wi-Fi
+      ▼
+   Internet
+      │
+      │ Tailscale
+      ▼
+ Gaming PC
+```
+
+This would allow the PocketStremio client to connect to the gaming PC without exposing the server directly to the public internet.
+
+A major early objective of this project is determining the best method of running Tailscale on OnionOS / Miyoo Mini Plus.
+
+Possible approaches include:
+
+1. Native ARM build
+2. Existing compatible Tailscale binary
+3. TUN-based networking
+4. Tailscale userspace networking
+5. A lightweight client/proxy solution if full Tailscale cannot run
+
+## Proposed Components
+
+### PocketStremio Client
+
+Runs on:
+
+```text
+Miyoo Mini Plus
+OnionOS
+```
+
+Responsibilities:
+
+* UI
+* Controller input
+* HTTP communication
+* JSON parsing
+* Image/poster loading
+* Search
+* Catalog browsing
+* Episode selection
+* Playback requests
+* Launch FFplay
+* Report playback state
+
+The client should contain as little Stremio-specific logic as possible.
+
+### PocketStremio Server
+
+Runs on:
+
+```text
+Gaming PC
+```
+
+Responsibilities:
+
+* Stremio integration
+* Addon communication
+* Catalog retrieval
+* Metadata retrieval
+* Stream resolution
+* Authentication
+* Torrent/debrid handling
+* Playback URL generation
+* Transcoding
+* Subtitle processing
+* Playback state
+* API communication with the Miyoo
+
+## Possible API
+
+The API is intentionally simple.
+
+Examples:
+
+```http
+GET /api/status
+```
+
+```http
+GET /api/home
+```
+
+```http
+GET /api/search?q=alien
+```
+
+```http
+GET /api/meta/{id}
+```
+
+```http
+GET /api/series/{id}
+```
+
+```http
+GET /api/streams/{id}
+```
+
+```http
+GET /api/play/{id}
+```
+
+```http
+POST /api/progress
+```
+
+Example response:
+
+```json
+{
+  "id": "tt0078748",
+  "title": "Alien",
+  "year": 1979,
+  "type": "movie",
+  "poster": "https://example.com/poster.jpg"
+}
+```
+
+Playback response:
+
+```json
+{
+  "url": "http://gaming-pc:8754/stream/session-id",
+  "resume": 1842,
+  "subtitles": []
+}
+```
+
+## UI Concept
+
+PocketStremio should be designed around the Miyoo controls rather than attempting to reproduce the desktop Stremio interface.
+
+Example:
+
+```text
+┌──────────────────────┐
+│    POCKETSTREMIO     │
+├──────────────────────┤
+│ > Continue Watching  │
+│   Movies             │
+│   Series             │
+│   Library            │
+│   Search             │
+│   Settings           │
+└──────────────────────┘
+```
+
+Possible controls:
+
+```text
+D-Pad    Navigate
+A        Select / Play
+B        Back
+X        Search
+Y        Options
+Menu     Main Menu / Exit
+```
+
+## Development Roadmap
+
+### Phase 0: Research
+
+Determine the Miyoo Mini Plus / OnionOS runtime environment.
+
+Investigate:
+
+* CPU architecture
+* Linux kernel
+* libc
+* available libraries
+* `/dev/net/tun`
+* permissions
+* available RAM
+* networking stack
+* OnionOS application structure
+* FFplay capabilities
+
+### Phase 1: Tailscale Proof of Concept
+
+Goal:
+
+```text
+Miyoo → Tailscale → Gaming PC
+```
+
+Tasks:
+
+* Test compatible Tailscale binaries
+* Test TUN support
+* Test userspace networking
+* Store Tailscale state on the SD card
+* Create startup/shutdown scripts
+* Verify connectivity outside the local network
+
+### Phase 2: HTTP Proof of Concept
+
+Create a minimal server endpoint:
+
+```http
+GET /api/status
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "message": "hello tiny potato"
+}
+```
+
+The Miyoo should retrieve and display the response.
+
+### Phase 3: Remote Video Test
+
+Host a known compatible video from the gaming PC.
+
+Test:
+
+```text
+Gaming PC
+    │
+    ▼
+HTTP stream
+    │
+ Tailscale
+    │
+    ▼
+Miyoo FFplay
+```
+
+Confirm:
+
+* buffering
+* stability
+* audio
+* controls
+* Wi-Fi performance
+
+### Phase 4: PocketStremio Server
+
+Implement the initial server API.
+
+Start with:
+
+* `/api/status`
+* `/api/search`
+* `/api/meta`
+* `/api/play`
+
+Stremio integration can then be added behind the API.
+
+### Phase 5: Miyoo UI
+
+Implement:
+
+* Main menu
+* Search
+* Result lists
+* Media details
+* Series / season / episode browsing
+* Playback
+
+### Phase 6: Playback Compatibility
+
+Add server-side detection and conversion for unsupported media.
+
+Possible transcoding target:
+
+```text
+H.264
+AAC
+640x360 or 640x480
+Miyoo-friendly bitrate
+```
+
+### Phase 7: Quality of Life
+
+Potential features:
+
+* Continue Watching
+* Watch progress
+* Recently watched
+* Favorites / Library
+* Poster caching
+* Subtitle selection
+* Audio track selection
+* Stream quality selection
+* Server discovery
+* Tailscale hostname configuration
+* Connection status indicator
+
+## Initial Repository Structure
+
+```text
+PocketStremio/
+├── client/
+│   ├── src/
+│   ├── assets/
+│   └── README.md
+│
+├── server/
+│   ├── src/
+│   └── README.md
+│
+├── tailscale/
+│   ├── scripts/
+│   ├── config/
+│   └── README.md
+│
+├── experiments/
+│   ├── tailscale/
+│   ├── http-client/
+│   └── ffplay/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── miyoo-hardware.md
+│   ├── tailscale.md
+│   └── stremio.md
+│
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+## Current Status
+
+🚧 **Experimental / Proof of Concept**
+
+The project is currently at the research and architecture stage.
+
+Initial priorities:
+
+```text
+1. Tailscale on Miyoo Mini Plus
+        ↓
+2. Miyoo → PC HTTP communication
+        ↓
+3. Remote FFplay playback
+        ↓
+4. PocketStremio Server
+        ↓
+5. Stremio integration
+        ↓
+6. Full Miyoo UI
+```
+
+The project should avoid implementing later stages until the underlying networking and playback experiments have been proven reliable.
+
+## Inspiration
+
+This project is inspired by lightweight network-based applications created for the Miyoo Mini Plus, particularly projects demonstrating that OnionOS applications can retrieve remote media and hand playback to FFplay.
+
+PocketStremio is not intended to be a port of the official Stremio application.
+
+Instead, it aims to provide a purpose-built controller-first interface suited to the capabilities and limitations of the Miyoo Mini Plus.
+
+## Disclaimer
+
+PocketStremio is an independent experimental project and is not affiliated with Stremio, OnionOS, Miyoo, or Tailscale.
+
+Users are responsible for the media sources and services they configure and for complying with applicable laws and service terms.
