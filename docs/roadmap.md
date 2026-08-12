@@ -95,44 +95,34 @@ Evidence: [FFplay playback POC](ffplay-playback-poc.md)
 Evidence: [First vertical slice](vertical-slice.md) and
 [Stremio integration](stremio-integration.md)
 
-## Next Milestone
+### 6. Continue Watching and Subtitle Feasibility
 
-### 6. Subtitles and Continue Watching
+**Status: Confirmed**
 
-**Status: Next**
+Continue Watching is implemented and physically confirmed:
 
-Goal: add lightweight external subtitle selection and persistent resume entries
-without introducing a larger Miyoo runtime.
-
-Implemented for device verification:
-
-- server-side Stremio subtitle discovery with opaque Miyoo-facing IDs;
-- subtitle proxy URLs that keep private upstream URLs on the gaming PC;
-- a subtitle selection screen after stream selection;
-- local temporary SRT download and FFplay subtitle-filter launch;
-- persistent server-side continue-watching state;
-- Search and Continue Watching home actions;
+- persistent, bounded server-side progress state;
+- Search, Continue Watching, and Exit home actions;
 - Resume and Play from Start actions;
-- approximate progress updates based on FFplay wall-clock playback time.
+- FFplay resume seeking with `-ss`;
+- approximate progress updates based on FFplay wall-clock playback time;
+- completed-item removal when duration is known;
+- clean return to the home menu with no stale processes or temporary files.
 
-Acceptance criteria:
+The target FFplay build advertises `-ss` but does not include the `subtitles`
+video filter. It can select subtitle streams already embedded in an input, but
+cannot render a separate SRT alongside the current direct MP4 path. Server-side
+Stremio subtitle discovery, opaque IDs, and proxying are implemented and tested,
+but external subtitle rendering is deferred until a remux/burn-in path or
+another compatible player is deliberately introduced and measured.
 
-- The test SRT appears over the hosted Big Buck Bunny video on the Miyoo.
-- No subtitles remains selectable and preserves normal playback.
-- Exiting playback early creates a Continue Watching entry.
-- Selecting Resume starts FFplay near the saved position using `-ss`.
-- Completing a video removes its Continue Watching entry when duration is known.
-- B/back works from the new home, resume, and subtitle screens.
-- Playback exits cleanly without stale subtitle files or `stay_awake` state.
+Evidence: [Subtitles and Continue Watching POC](subtitles-progress-poc.md)
 
-The feature remains unconfirmed until the target FFplay build reports the
-`subtitles` filter and the full interaction is physically tested from Apps.
-
-## Planned Milestones
+## Next Milestone
 
 ### 7. Real Stream Resolution
 
-**Status: Planned**
+**Status: Next**
 
 Goal: replace the hosted test stream as the only proven source with at least one
 real, legally accessible HTTP(S) stream resolved by a server-side addon or
@@ -169,7 +159,7 @@ Not part of this milestone:
 - debrid integration;
 - transcoding;
 - series or episodes;
-- subtitles, accounts, library, or playback progress;
+- accounts or library integration;
 - posters or a larger UI framework.
 
 ### 8. Playback Compatibility and Reliability
@@ -219,6 +209,8 @@ behavior are stable:
 
 - server-side transcoding or remuxing;
 - audio-track selection;
+- external subtitle rendering through server-side remuxing/burn-in or another
+  measured compatible player;
 - Stremio account, library, and authentication work;
 - posters, image caching, and richer media details;
 - favorites, history, and settings UI;

@@ -42,7 +42,8 @@ message() {
 
 api_get() {
   path="$1"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 30 "$SERVER_BASE$path")
+  timeout="${2:-30}"
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time "$timeout" "$SERVER_BASE$path")
 }
 
 api_post_play() {
@@ -152,12 +153,25 @@ read_keyboard() {
 }
 
 ensure_ready() {
+  started=0
   if [ ! -S /tmp/pocketstremio-tailscale/tailscaled.sock ]; then
     log "tailscaled socket missing; starting"
     (unset LD_PRELOAD; "$BASE_DIR/tailscale/scripts/start.sh") >> "$LOG_FILE" 2>&1 || return 1
+    started=1
   fi
-  api_get "/api/status" >/tmp/pocketstremio-status.json || return 1
-  return 0
+  [ "$started" = "1" ] && sleep 6
+
+  attempts=0
+  while [ "$attempts" -lt 6 ]; do
+    if api_get "/api/status" 5 >/tmp/pocketstremio-status.json; then
+      log "server ready after attempts=$((attempts + 1))"
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    log "server readiness attempt=$attempts failed"
+    sleep 2
+  done
+  return 1
 }
 
 home_flow() {

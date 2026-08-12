@@ -221,4 +221,6 @@ Normal searches such as `alien` are returned directly from Cinemeta without this
 
 - `/play/{session}` proxies HTTP(S) streams through the PocketStremio server and forwards single Range requests where the upstream supports them.
 - No stream URLs are persisted. Sessions are in memory and disappear when the server restarts.
-- No account sync, library sync, series support, subtitles, or transcoding is implemented.
+- No account sync, library sync, series support, external subtitle rendering,
+  or transcoding is implemented. Subtitle discovery/proxy contracts exist, but
+  the target FFplay build cannot render a separate SRT.

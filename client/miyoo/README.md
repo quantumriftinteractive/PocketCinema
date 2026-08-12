@@ -26,10 +26,10 @@ Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
 The standalone `json-client.sh` remains as the lightweight structured JSON
 connectivity probe.
 
-Subtitle and continue-watching support is implemented but still requires a
-physical OnionOS Apps-menu confirmation. See
-`docs/subtitles-progress-poc.md` for the exact test and current progress accuracy
-limits.
+Continue Watching and resume seeking are physically confirmed from the OnionOS
+Apps menu. External subtitle selection is capability-gated and remains hidden on
+the target FFplay build because its `subtitles` filter is unavailable. See
+`docs/subtitles-progress-poc.md` for evidence and progress accuracy limits.
 
 `json-client.sh` is a lightweight OnionOS shell client for the first structured JSON proof.
 

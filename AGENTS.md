@@ -36,7 +36,14 @@ The physically confirmed flow is:
 
 ```text
 Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
+Apps -> PocketStremio -> Continue Watching -> Resume -> stream -> FFplay
 ```
+
+Continue Watching persists on the gaming PC and resume uses FFplay `-ss` with
+an approximate wall-clock-derived position. The target FFplay build does not
+include the `subtitles` video filter; do not expose an external subtitle option
+unless a remux/burn-in path or another compatible player has been implemented
+and measured.
 
 Current network and service boundaries:
 

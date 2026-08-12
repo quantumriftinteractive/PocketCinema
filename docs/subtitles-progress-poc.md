@@ -5,11 +5,14 @@ preserving the confirmed OnionOS networking and FFplay path.
 
 ## Status
 
-**Implemented; device verification pending.**
+**Continue Watching confirmed. External SRT rendering is blocked by the target
+FFplay build.**
 
-The Miyoo was offline at both its LAN and tailnet addresses when this feature
-was implemented. Server contracts and shell syntax are tested, but subtitle
-rendering and resume seeking must still be confirmed from the OnionOS Apps menu.
+After the Miyoo came online, its FFplay build confirmed `-ss` support but did
+not advertise the `subtitles` video filter. The client therefore suppresses the
+external subtitle menu on this build. Server subtitle discovery and proxying
+remain tested for a future remux, burn-in, or compatible-player path. Resume
+seeking is physically confirmed from the OnionOS Apps menu.
 
 ## Subtitle Flow
 
@@ -38,6 +41,17 @@ The client:
 
 A small original SRT fixture is included for the hosted Big Buck Bunny test
 stream so rendering can be tested without a third-party subtitle service.
+
+Confirmed target FFplay behavior:
+
+```text
+-ss pos: available
+subtitles video filter: unavailable
+-sst: available only for subtitle streams already embedded in the input
+```
+
+External SRT rendering therefore requires a later server-side remux/burn-in path
+or a different compatible player. It is not presented as working support.
 
 References:
 
@@ -80,6 +94,32 @@ time and cannot distinguish every end-of-file condition for streams whose
 duration is unknown. A later compatibility milestone should replace it with a
 machine-readable player position if the OnionOS FFplay build exposes one.
 
+## Confirmed Device Result
+
+Confirmed from the OnionOS Apps menu on August 12, 2026:
+
+```text
+home -> Continue Watching
+item -> Big Buck Bunny (2008) - 0m 2s
+action -> Resume at 0m 2s
+stream -> PocketStremio hosted test video
+FFplay -> resume_seconds=2, H.264 640x360 + AAC stereo
+FFplay exit -> rc=0
+progress -> completed=true, entry removed
+home -> Exit
+```
+
+The user confirmed playback resumed correctly. The device log also confirmed:
+
+- the server was ready through the Tailscale proxy;
+- after an app-local tailscaled stop, the client restarted it with the existing
+  persistent state, waited for readiness, and completed its first API request;
+- the subtitle filter was unavailable and no subtitle option was shown;
+- video and `/dev/dsp` audio opened successfully;
+- the Continue Watching list was empty after completion;
+- no `/tmp/stay_awake`, temporary SRT, FFplay, selector, or client process was
+  left behind.
+
 ## Automated Verification
 
 `server/test_pocketstremio_server.py` covers:
@@ -97,15 +137,10 @@ Run:
 python -m unittest server.test_pocketstremio_server -v
 ```
 
-## Required Device Test
+## Remaining Subtitle Work
 
-1. Confirm `ffplay -filters` includes `subtitles`.
-2. Launch PocketStremio from Apps.
-3. Search for Big Buck Bunny and select the hosted stream.
-4. Select English (PocketStremio test) and confirm visible subtitle text.
-5. Replay with No subtitles and confirm normal video/audio.
-6. Exit early and confirm a Continue Watching entry appears.
-7. Select Resume and confirm playback seeks forward.
-8. Verify B/back and clean return to OnionOS on all new screens.
-9. Collect `logs/pocketstremio-ui.log` and confirm temporary files/processes are
-   gone.
+External subtitle rendering requires a separately scoped compatibility
+milestone. The next investigation should compare server-side remuxing an SRT
+into a subtitle-capable container, burning subtitles into H.264, and a different
+lightweight player. Any option must be measured against the Miyoo's limited free
+memory and must preserve the current direct playback path as a fallback.

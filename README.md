@@ -513,10 +513,11 @@ PocketStremio/
 
 Tailscale networking, structured JSON communication, OnionOS FFplay playback,
 and controller-driven movie selection are confirmed on the Miyoo Mini Plus.
-The next milestone is physical verification of the newly implemented subtitle
-selection and Continue Watching flow. Real server-side stream resolution follows
-through the existing PocketStremio boundary. See [docs/roadmap.md](docs/roadmap.md)
-for details.
+Continue Watching and resume seeking are now physically confirmed. External SRT
+rendering is blocked because the target FFplay build lacks the `subtitles`
+filter. The next milestone is real server-side stream resolution through the
+existing PocketStremio boundary. See [docs/roadmap.md](docs/roadmap.md) for
+details.
 
 The original priority sequence was:
 
