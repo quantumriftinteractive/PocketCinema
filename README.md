@@ -1,5 +1,3 @@
-# MM--PocketStremio
-
 # PocketStremio for Miyoo Mini Plus
 
 A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
