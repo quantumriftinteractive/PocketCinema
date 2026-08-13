@@ -515,8 +515,9 @@ filter. Real server-side stream resolution is now confirmed through a
 localhost-only addon and a public-domain direct stream. Series, season, and
 episode browsing are confirmed with a deterministic local fixture. Direct and
 optional-proxy transport modes are confirmed, and Tailscale-specific code is
-isolated under `onion-tailscale/`. The active milestone is real series stream
-validation. See
+isolated under `onion-tailscale/`. A real public-domain series episode now plays
+through the same opaque server pipeline. The active milestone is real episode
+resume and reliability. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 

@@ -276,7 +276,16 @@ Tailscale folder must be independently deployable without PocketStremio files.
 
 ### 12. Real Series Stream Validation
 
-**Status: Next**
+**Status: Confirmed**
+
+The real Cinemeta series *The Beverly Hillbillies* exposes nine normalized
+seasons. Its public-domain S1E1 Internet Archive derivative resolves through the
+localhost open-media addon and remains hidden behind an opaque play session.
+The H.264/AAC 320x240 stream played successfully from the Apps context with
+audio, progress saving, Menu exit, and clean OnionOS return. A generic parent
+series lookup now supplies standalone episode details.
+
+Evidence: [Real Series Stream Validation](real-series-stream.md)
 
 - Search Cinemeta for a real series and normalize its real season/episode data.
 - Resolve one legal direct-HTTP episode through a server-side addon.
@@ -292,6 +301,24 @@ on the Miyoo through the configured network transport.
 
 Not part of this milestone: accounts, library sync, torrents, debrid,
 transcoding, external subtitle rendering, posters, or a larger UI framework.
+
+## Next Milestone
+
+### 13. Real Episode Resume and Reliability
+
+**Status: Next**
+
+- Verify the real episode appears in Continue Watching with a clear series and
+  episode label.
+- Resume the same episode through the real source and measure seek accuracy.
+- Confirm Play from Start resets the requested position without corrupting saved
+  progress.
+- Exercise B navigation before playback and Menu exit during resumed playback.
+- Measure repeat startup time and confirm cleanup after both paths.
+
+Acceptance criterion: the real episode can be resumed from Continue Watching,
+starts near the saved position, reports plausible new progress, and returns
+cleanly to OnionOS without stale state or processes.
 
 ## Deferred Features
 

@@ -93,6 +93,13 @@ by a normal Apps-context selector and B exit. The authenticated legacy state was
 unchanged; the standalone `/mnt/SDCARD/App/Tailscale/` app has not been deployed
 or migrated.
 
+Real series playback is physically confirmed with *The Beverly Hillbillies*
+S1E1 `tt0055662:1:1`. Cinemeta supplies nine seasons; the localhost open-media
+addon maps that exact episode to a public-domain Internet Archive H.264/AAC
+320x240 derivative. Apps-context playback, audio initialization, Menu exit,
+44-second progress saving, and cleanup are confirmed. Real episode metadata must
+continue to be derived generically from parent series metadata.
+
 ## Repository Layout
 
 - `app/`: OnionOS app metadata and root launcher. `app/launch.sh` is the

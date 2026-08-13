@@ -22,7 +22,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.8-operational-resilience-poc"
+SERVER_VERSION = "0.9-real-series-poc"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -237,6 +237,45 @@ def normalize_meta(meta):
     ]
     normalized["episodes"] = episodes
     return normalized
+
+
+def split_episode_video_id(item_id):
+    parts = str(item_id or "").rsplit(":", 2)
+    if len(parts) != 3 or not parts[0]:
+        return None
+    season = nonnegative_int(parts[1])
+    episode = nonnegative_int(parts[2])
+    if season < 1 or episode < 1:
+        return None
+    return parts[0], season, episode
+
+
+def normalize_series_episode(meta, item_id):
+    parsed = split_episode_video_id(item_id)
+    if not parsed:
+        return None
+    series_id, season, episode_number = parsed
+    series = normalize_meta(meta)
+    episode = next(
+        (item for item in series.get("episodes", []) if item["id"] == item_id),
+        None,
+    )
+    if not episode:
+        return None
+    return {
+        "id": item_id,
+        "imdb_id": "",
+        "type": "series",
+        "title": episode["title"],
+        "year": episode["year"],
+        "poster": series.get("poster") or "",
+        "description": episode.get("description") or series.get("description") or "",
+        "series_id": series_id,
+        "series_title": series.get("title") or "",
+        "season": season,
+        "episode": episode_number,
+        "released": episode.get("released") or "",
+    }
 
 
 def normalize_test_episode(item_id):
@@ -485,7 +524,7 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.8"
+    server_version = "PocketStremio/0.9"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -773,6 +812,34 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
         if item_type == "series" and item_id in TEST_SERIES_EPISODES:
             self.write_json(normalize_test_episode(item_id))
+            return
+
+        episode_parts = (
+            split_episode_video_id(item_id) if item_type == "series" else None
+        )
+        if episode_parts:
+            series_id = episode_parts[0]
+            url = (
+                f"{CINEMETA_BASE}/meta/series/"
+                f"{urllib.parse.quote(series_id)}.json"
+            )
+            try:
+                data = fetch_json(url)
+                episode_meta = normalize_series_episode(
+                    data.get("meta") or {}, item_id
+                )
+            except Exception as exc:
+                self.write_json(
+                    {"error": "meta_failed", "message": str(exc)}, status=502
+                )
+                return
+            if not episode_meta:
+                self.write_json(
+                    {"error": "not_found", "message": "Episode details unavailable"},
+                    status=404,
+                )
+                return
+            self.write_json(episode_meta)
             return
 
         url = f"{CINEMETA_BASE}/meta/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"

@@ -91,6 +91,12 @@ the ignored local series fixture:
 Search for `test series` to use the two-season fixture without an upstream
 metadata or media dependency.
 
+For a real legal series path, search for `the beverly hillbillies`. The
+localhost open-media addon exposes only S1E1 `The Clampetts Strike Oil` from its
+public-domain Internet Archive item. The measured 320x240 H.264/AAC derivative
+is hidden behind the normal opaque stream and play-session APIs. Other episodes
+currently return no open-media streams.
+
 Configured addons are also queried for Stremio subtitle resources. Subtitle URLs
 remain server-side and are proxied through opaque `/subtitle/{subtitle_id}`
 routes. The bundled `fixtures/test-subtitle.srt` is a deterministic rendering

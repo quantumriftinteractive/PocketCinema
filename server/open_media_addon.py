@@ -10,15 +10,22 @@ NIGHT_OF_THE_LIVING_DEAD_URL = (
     "https://archive.org/download/Night.Of.The.Living.Dead_1080p/"
     "NightOfTheLivingDead_DVD5_512kb.mp4"
 )
+BEVERLY_HILLBILLIES_ID = "tt0055662"
+BEVERLY_HILLBILLIES_S01E01_ID = "tt0055662:1:1"
+BEVERLY_HILLBILLIES_S01E01_URL = (
+    "https://archive.org/download/"
+    "Beverly_Hillbillies_Ep01_The_Clampetts_Strike_Oil/"
+    "BH01_The_Clampetts_Strike_Oil_512kb.mp4"
+)
 
 MANIFEST = {
     "id": "org.pocketstremio.open-media",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "name": "PocketStremio Open Media",
     "description": "Small legal-media source used to validate Stremio stream resolution.",
     "resources": ["stream"],
-    "types": ["movie"],
-    "idPrefixes": [NIGHT_OF_THE_LIVING_DEAD_ID],
+    "types": ["movie", "series"],
+    "idPrefixes": [NIGHT_OF_THE_LIVING_DEAD_ID, BEVERLY_HILLBILLIES_ID],
 }
 
 
@@ -32,16 +39,37 @@ class OpenMediaAddonHandler(BaseHTTPRequestHandler):
             return
 
         parts = [urllib.parse.unquote(part) for part in path.split("/") if part]
-        if len(parts) == 3 and parts[:2] == ["stream", "movie"]:
+        if len(parts) == 3 and parts[0] == "stream":
+            item_type = parts[1]
             item_id = parts[2].removesuffix(".json")
             streams = []
-            if item_id == NIGHT_OF_THE_LIVING_DEAD_ID:
+            if item_type == "movie" and item_id == NIGHT_OF_THE_LIVING_DEAD_ID:
                 streams.append(
                     {
                         "name": "Open Media - Internet Archive",
                         "description": "Public domain | H.264/AAC | 320x240 | 512 Kb/s",
                         "url": NIGHT_OF_THE_LIVING_DEAD_URL,
                         "durationSeconds": 5752,
+                        "behaviorHints": {
+                            "pocketstremio": {
+                                "status": "confirmed",
+                                "message": "Confirmed H.264/AAC 320x240 profile",
+                            }
+                        },
+                    }
+                )
+            elif (
+                item_type == "series"
+                and item_id == BEVERLY_HILLBILLIES_S01E01_ID
+            ):
+                streams.append(
+                    {
+                        "name": "Open Media - Internet Archive",
+                        "description": (
+                            "Public domain | H.264/AAC | 320x240 | 581 Kb/s"
+                        ),
+                        "url": BEVERLY_HILLBILLIES_S01E01_URL,
+                        "durationSeconds": 1492,
                         "behaviorHints": {
                             "pocketstremio": {
                                 "status": "confirmed",

@@ -173,6 +173,43 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertFalse(status["state"]["play_sessions_persistent"])
         self.assertTrue(status["state"]["probe_cache_persistent"])
 
+    def test_real_episode_meta_is_resolved_from_parent_series(self):
+        parent_meta = {
+            "id": "tt0055662",
+            "type": "series",
+            "name": "The Beverly Hillbillies",
+            "releaseInfo": "1962-1971",
+            "description": "Series description",
+            "poster": "https://images.example/poster.jpg",
+            "videos": [
+                {
+                    "id": "tt0055662:1:1",
+                    "season": 1,
+                    "episode": 1,
+                    "name": "The Clampetts Strike Oil",
+                    "released": "1962-09-26T00:00:00.000Z",
+                    "overview": "The Clampetts discover oil.",
+                }
+            ],
+        }
+        with mock.patch.object(
+            pocket, "fetch_json", return_value={"meta": parent_meta}
+        ) as fetch:
+            status_code, episode = self.get_json(
+                "/api/meta/series/tt0055662:1:1"
+            )
+        self.assertEqual(status_code, 200)
+        self.assertEqual(episode["title"], "The Clampetts Strike Oil")
+        self.assertEqual(episode["series_id"], "tt0055662")
+        self.assertEqual(episode["series_title"], "The Beverly Hillbillies")
+        self.assertEqual(episode["season"], 1)
+        self.assertEqual(episode["episode"], 1)
+        self.assertEqual(episode["year"], 1962)
+        self.assertEqual(episode["description"], "The Clampetts discover oil.")
+        self.assertTrue(
+            fetch.call_args.args[0].endswith("/meta/series/tt0055662.json")
+        )
+
     def test_offline_series_fixture_browses_and_plays_without_upstream(self):
         (self.server.media_dir / "series-av-sync.mp4").write_bytes(
             bytes(range(256)) * 16
@@ -324,6 +361,7 @@ class PocketStremioServerTest(unittest.TestCase):
             with urllib.request.urlopen(manifest_url, timeout=5) as response:
                 manifest = json.load(response)
             self.assertIn("stream", manifest["resources"])
+            self.assertEqual(manifest["types"], ["movie", "series"])
 
             _, streams = self.get_json("/api/streams/movie/tt0063350")
             self.assertEqual(streams["count"], 1)
@@ -335,6 +373,24 @@ class PocketStremioServerTest(unittest.TestCase):
             self.assertEqual(
                 self.server.stream_cache[stream["id"]]["url"],
                 open_media_addon.NIGHT_OF_THE_LIVING_DEAD_URL,
+            )
+
+            _, episode_streams = self.get_json(
+                "/api/streams/series/"
+                f"{open_media_addon.BEVERLY_HILLBILLIES_S01E01_ID}"
+            )
+            self.assertEqual(episode_streams["count"], 1)
+            episode_stream = episode_streams["items"][0]
+            self.assertEqual(
+                episode_stream["name"], "Open Media - Internet Archive"
+            )
+            self.assertEqual(episode_stream["duration_seconds"], 1492)
+            self.assertEqual(episode_stream["compatibility"]["status"], "confirmed")
+            self.assertNotIn("url", episode_stream)
+            self.assertNotIn("source", episode_stream)
+            self.assertEqual(
+                self.server.stream_cache[episode_stream["id"]]["url"],
+                open_media_addon.BEVERLY_HILLBILLIES_S01E01_URL,
             )
         finally:
             addon.shutdown()
