@@ -60,25 +60,30 @@ with a rollback copy retained, start the standalone daemon, verify the same
 tailnet identity and proxy traffic, and only then consider retiring the legacy
 files. It must not run two daemons against one state or the same listener.
 
-## Current Validation
+## Confirmed Validation
 
-Confirmed locally:
+Confirmed on August 13, 2026:
 
 - no PocketStremio production or diagnostic code refers to Tailscale;
-- direct and proxy branches use explicit environment handling;
+- a headless on-device direct request reached a temporary loopback HTTP fixture,
+  parsed status and search JSON, and exited successfully with `transport=direct`;
+- a headless on-device proxy request reached PocketStremio server 0.8 through
+  `http://127.0.0.1:1055/`, parsed the two-season fixture, and exited cleanly;
+- the installed client loaded the explicit app-local server and proxy config;
+- Apps -> PocketStremio displayed the normal Search, Continue Watching, and Exit
+  selector; controller navigation worked and B returned to OnionOS;
+- the device log recorded server readiness, selector cancellation, and normal UI
+  exit, while SSH inspection found `MainUI` active with no stale PocketStremio,
+  selector, FFplay, infoPanel, or temporary playback state;
+- the legacy Tailscale state hash, size, and modification time were unchanged
+  before and after testing;
+- `/mnt/SDCARD/App/Tailscale/` remained absent, proving the standalone app and
+  state migration were not deployed as part of PocketStremio decoupling;
 - all changed BusyBox shell scripts pass `sh -n`;
 - all changed PowerShell scripts pass the PowerShell parser;
 - all 15 PocketStremio server tests pass;
 - generated Tailscale binaries, downloads, node state, and logs remain ignored.
 
-Still required before this milestone becomes **Confirmed**:
-
-- run a headless direct-HTTP PocketStremio request on the Miyoo;
-- write the current proxy as explicit PocketStremio config and run a remote
-  headless request;
-- launch PocketStremio from Apps and confirm normal controller UI and clean exit;
-- verify the legacy daemon and authenticated state were not changed.
-
 The standalone Tailscale app itself needs a later physical deployment and state
-migration milestone. That work is intentionally not an acceptance requirement
-for decoupling PocketStremio.
+migration project. That work is intentionally not part of PocketStremio and was
+not an acceptance requirement for decoupling its network transport.

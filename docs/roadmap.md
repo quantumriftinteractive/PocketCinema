@@ -241,11 +241,20 @@ Evidence: [Operational Resilience](operational-resilience.md)
 Acceptance criterion: expected network and server failures return the user to a
 working OnionOS screen without stale processes or persistent-state damage.
 
-## Next Milestone
-
 ### 11. Transport Independence and Tailscale Extraction
 
-**Status: Next**
+**Status: Confirmed**
+
+PocketStremio now requires an explicit server URL, uses direct HTTP when its
+generic proxy setting is empty, and contains no Tailscale lifecycle or state
+knowledge. Direct and configured-proxy requests passed on the Miyoo. The normal
+Apps selector and B exit were physically confirmed after deployment, with clean
+process and temporary-file state. The live legacy Tailscale state remained
+byte-for-byte unchanged. Tailscale-specific source is isolated in an
+independently deployable `onion-tailscale/` subproject, but that app and its
+separate state migration were deliberately not deployed.
+
+Evidence: [Transport Independence and Tailscale Extraction](transport-independence.md)
 
 - Make PocketStremio direct HTTP the default and its HTTP proxy optional.
 - Require an explicit server URL instead of shipping a provider-specific target.
@@ -263,14 +272,11 @@ empty, can retain the confirmed remote path when a generic proxy is configured,
 and contains no code that starts or inspects Tailscale. The standalone
 Tailscale folder must be independently deployable without PocketStremio files.
 
-Implementation notes and pending device checks:
-[Transport Independence and Tailscale Extraction](transport-independence.md)
-
-## Planned Milestones
+## Next Milestone
 
 ### 12. Real Series Stream Validation
 
-**Status: Planned**
+**Status: Next**
 
 - Search Cinemeta for a real series and normalize its real season/episode data.
 - Resolve one legal direct-HTTP episode through a server-side addon.

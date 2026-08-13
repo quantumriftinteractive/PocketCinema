@@ -86,6 +86,13 @@ stale UI, selector, FFplay, infoPanel, or temporary playback state. The server
 runs under `server/manage-server.ps1`; play sessions are ephemeral across a
 restart while the bounded probe cache and Continue Watching state persist.
 
+Transport independence is physically confirmed. `SERVER_BASE` is explicit,
+`PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.
+Both direct loopback and configured-proxy requests passed on the Miyoo, followed
+by a normal Apps-context selector and B exit. The authenticated legacy state was
+unchanged; the standalone `/mnt/SDCARD/App/Tailscale/` app has not been deployed
+or migrated.
+
 ## Repository Layout
 
 - `app/`: OnionOS app metadata and root launcher. `app/launch.sh` is the

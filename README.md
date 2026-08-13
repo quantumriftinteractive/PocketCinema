@@ -513,9 +513,10 @@ Continue Watching and resume seeking are now physically confirmed. External SRT
 rendering is blocked because the target FFplay build lacks the `subtitles`
 filter. Real server-side stream resolution is now confirmed through a
 localhost-only addon and a public-domain direct stream. Series, season, and
-episode browsing are confirmed with a deterministic local fixture. The active
-milestone is transport independence and extraction of the standalone
-`onion-tailscale/` app. See
+episode browsing are confirmed with a deterministic local fixture. Direct and
+optional-proxy transport modes are confirmed, and Tailscale-specific code is
+isolated under `onion-tailscale/`. The active milestone is real series stream
+validation. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 
