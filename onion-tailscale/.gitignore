@@ -1,0 +1,7 @@
+downloads/
+bin/*
+!bin/.gitkeep
+state/*
+!state/.gitkeep
+logs/*
+!logs/.gitkeep

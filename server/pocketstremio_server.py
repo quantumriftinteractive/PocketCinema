@@ -99,7 +99,7 @@ TEST_SERIES_META = {
             "episode": 2,
             "name": "The Proxy Path",
             "released": "2026-01-08",
-            "overview": "Tests episode identity through the Tailscale proxy.",
+            "overview": "Tests episode identity through a configured network path.",
         },
         {
             "id": f"{TEST_SERIES_ID}:1:3",

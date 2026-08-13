@@ -14,15 +14,18 @@ priority.
 
 ## Non-Negotiable Boundaries
 
-- Keep all persistent device files under
-  `/mnt/SDCARD/App/PocketStremio/`.
+- Keep PocketStremio persistent device files under
+  `/mnt/SDCARD/App/PocketStremio/`. The independent `onion-tailscale/`
+  subproject targets `/mnt/SDCARD/App/Tailscale/` under its local instructions.
 - Do not modify OnionOS core files. If no app-local solution exists, stop and
   explain the required change before touching a core file, then document it.
-- Preserve the existing Tailscale setup and persistent state. Never replace,
-  reset, delete, or reauthenticate `tailscale/state/tailscaled.state` as part of
-  ordinary development.
-- The Miyoo must communicate only with PocketStremio server through the existing
-  userspace HTTP proxy at `http://127.0.0.1:1055/`.
+- Preserve the existing live Tailscale setup and persistent state. Until an
+  explicit migration is physically confirmed, never replace, move, reset,
+  delete, or reauthenticate
+  `/mnt/SDCARD/App/PocketStremio/tailscale/state/tailscaled.state`.
+- PocketStremio must be transport-agnostic. Direct HTTP is the default; a
+  generic HTTP proxy is optional configuration. PocketStremio must never start,
+  stop, or inspect Tailscale.
 - Keep Stremio Service bound to localhost on the gaming PC. Never expose port
   `11470` to the Miyoo or tailnet.
 - Do not commit private addon URLs, tokens, Tailscale state, downloaded binaries,
@@ -62,8 +65,7 @@ Current network and service boundaries:
 
 ```text
 Miyoo shell/SDL client
-  -> HTTP_PROXY 127.0.0.1:1055
-  -> Tailscale userspace networking
+  -> direct HTTP or configured generic HTTP proxy
   -> PocketStremio server 100.85.171.67:8755
   -> Cinemeta and server-side stream sources
   -> localhost-only Stremio Service 127.0.0.1:11470
@@ -93,8 +95,8 @@ restart while the bounded probe cache and Continue Watching state persist.
   selector binary.
 - `server/`: dependency-free Python HTTP server and optional stream-addon
   configuration example.
-- `tailscale/`: app-local userspace Tailscale lifecycle scripts. Runtime binaries,
-  state, and logs are intentionally ignored.
+- `onion-tailscale/`: independent OnionOS userspace-networking app subproject.
+  Its runtime binaries, state, downloads, and logs are intentionally ignored.
 - `docs/`: confirmed POC evidence, architecture decisions, and canonical roadmap.
 - `experiments/`: isolated experiments that must not replace the production app
   path until confirmed.
@@ -133,8 +135,9 @@ overwrite it. Environment variables take precedence over app-local config.
 - Prefer OnionOS-provided `curl`, `jq`, `kbinput`, `infoPanel`, and FFplay.
 - Unset `LD_PRELOAD` around non-audio network helpers. Apply the OnionOS padsp
   preload only when launching FFplay.
-- Send all Miyoo HTTP requests through both uppercase and lowercase proxy
-  variables for compatibility.
+- When a proxy is configured, send Miyoo HTTP requests through both uppercase
+  and lowercase proxy variables. When it is empty, unset inherited proxy
+  variables and connect directly.
 - Quote paths and user-derived values. Use `jq` for JSON rather than parsing it
   with `grep` or `sed`.
 - Keep logs under the app-local `logs/` directory and avoid logging private
@@ -212,9 +215,10 @@ The cross-toolchains used during development live under ignored `.tmp/` paths
 and are not repository dependencies. Do not commit them.
 
 Use `scripts/deploy-miyoo.ps1` for repeatable tracked-file upgrades. It must
-continue preserving the live client config, logs, Tailscale runtime/state, and
-OnionOS files. Use `scripts/build-miyoo-selector.ps1 -VerifyCommitted` for the
-documented reproducible selector check.
+continue preserving the live client config, logs, all networking-provider
+runtime/state, and OnionOS files. Use
+`scripts/build-miyoo-selector.ps1 -VerifyCommitted` for the documented
+reproducible selector check.
 
 ## Documentation and Milestones
 
@@ -230,9 +234,9 @@ documented reproducible selector check.
 
 ## Git Discipline
 
-- Preserve unrelated user changes and the working Tailscale/playback baseline.
+- Preserve unrelated user changes and the working network/playback baseline.
 - Do not commit generated logs, Python caches, local addon configuration, media,
-  downloaded toolchains, or runtime Tailscale files.
+  downloaded toolchains, or runtime networking-provider files.
 - Review staged changes for private URLs and tokens before pushing.
 - Use focused commits that describe the completed milestone or fix.
 - Push only after local checks pass and the worktree contains the intended files.

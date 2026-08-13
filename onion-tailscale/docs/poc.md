@@ -1,5 +1,11 @@
 # Tailscale Userspace POC
 
+> Historical evidence: these measurements were collected while Tailscale lived
+> under PocketStremio and used `miyoo-pocketstremio` paths and names. The current
+> standalone target and operating commands are documented in
+> [../README.md](../README.md). The authenticated legacy state has intentionally
+> not been migrated yet.
+
 This milestone tests only secure HTTP communication from the Miyoo Mini Plus to another device on the user's tailnet. Stremio integration, catalogs, torrent handling, transcoding, and UI work are intentionally out of scope.
 
 ## Compatibility Research

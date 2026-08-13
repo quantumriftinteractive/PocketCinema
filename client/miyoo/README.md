@@ -2,8 +2,7 @@
 
 `pocketstremio-ui.sh` is the current controller-driven OnionOS client. It:
 
-- starts Tailscale if its userspace socket is missing;
-- calls PocketStremio through `HTTP_PROXY=http://127.0.0.1:1055/`;
+- calls PocketStremio directly or through an optional generic HTTP proxy;
 - uses OnionOS `kbinput` for search text and the bundled SDL 1.2 selector for lists;
 - supports D-pad navigation, A selection, and B/back in selector screens;
 - parses API responses with OnionOS `jq`;
@@ -32,11 +31,14 @@ The production UI optionally reads app-local non-secret settings from:
 ```
 
 Use `pocketstremio.conf.example` as the template. Environment variables take
-precedence over the file. The client validates settings before starting and
-distinguishes Tailscale startup, local proxy, and gaming-PC server failures.
+precedence over the file. `SERVER_BASE` is required and may use a LAN or overlay
+network address. Leave `PROXY` empty for direct HTTP, or set it to an HTTP proxy
+such as `http://127.0.0.1:1055/`. The client validates settings and reports
+PocketStremio server connectivity failures without knowing which network
+provider is in use.
 
 From the repository root, deploy tracked app files without replacing the real
-config or Tailscale state:
+config or any networking-provider state:
 
 ```powershell
 .\scripts\deploy-miyoo.ps1 -DeviceHost root@DEVICE_ADDRESS
@@ -69,13 +71,13 @@ the target FFplay build because its `subtitles` filter is unavailable. See
 
 `json-client.sh` is a lightweight OnionOS shell client for the first structured JSON proof.
 
-It uses the existing Tailscale userspace HTTP proxy:
+It uses direct HTTP by default. To use a local userspace HTTP proxy, set:
 
 ```sh
 HTTP_PROXY=http://127.0.0.1:1055/
 ```
 
-Run on the Miyoo after `tailscaled` is authenticated:
+Run on the Miyoo after the selected network path is available:
 
 ```sh
 cd /mnt/SDCARD/App/PocketStremio/client

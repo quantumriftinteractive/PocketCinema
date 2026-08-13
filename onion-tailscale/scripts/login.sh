@@ -5,9 +5,9 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 
 TAILSCALE="$BASE_DIR/bin/tailscale"
-RUN_DIR="${TS_RUN_DIR:-/tmp/pocketstremio-tailscale}"
+RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
 SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
-HOSTNAME="${TS_HOSTNAME:-miyoo-pocketstremio}"
+HOSTNAME="${TS_HOSTNAME:-miyoo-onion}"
 
 if [ ! -x "$TAILSCALE" ]; then
   echo "Missing executable: $TAILSCALE"

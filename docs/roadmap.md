@@ -28,11 +28,14 @@ OnionOS Apps
 Architectural boundaries:
 
 - The Miyoo remains a lightweight shell and SDL client.
-- The Miyoo reaches the server only through the Tailscale userspace HTTP proxy
-  at `127.0.0.1:1055`.
+- PocketStremio uses direct HTTP by default and can use a configured HTTP proxy.
+- Network providers such as Tailscale are operated independently from
+  PocketStremio.
 - PocketStremio server is the only service exposed to the Miyoo.
 - Stremio Service remains bound to `127.0.0.1:11470` on the gaming PC.
-- Persistent Miyoo files remain under `/mnt/SDCARD/App/PocketStremio/`.
+- PocketStremio persistent files remain under
+  `/mnt/SDCARD/App/PocketStremio/`; independent provider apps own their own app
+  directories.
 - OnionOS core files and Tailscale persistent state are not modified.
 
 ## Confirmed Milestones
@@ -57,7 +60,7 @@ Evidence: [Miyoo hardware notes](miyoo-hardware.md)
 - State and logs remain inside the PocketStremio directory.
 - Miyoo-to-gaming-PC HTTP traffic works across the tailnet.
 
-Evidence: [Tailscale userspace POC](tailscale.md)
+Evidence: [Tailscale userspace POC](../onion-tailscale/docs/poc.md)
 
 ### 3. Structured JSON Communication
 
@@ -240,9 +243,34 @@ working OnionOS screen without stale processes or persistent-state damage.
 
 ## Next Milestone
 
-### 11. Real Series Stream Validation
+### 11. Transport Independence and Tailscale Extraction
 
 **Status: Next**
+
+- Make PocketStremio direct HTTP the default and its HTTP proxy optional.
+- Require an explicit server URL instead of shipping a provider-specific target.
+- Remove all Tailscale daemon lifecycle, socket, state, and status knowledge from
+  PocketStremio production and diagnostic clients.
+- Isolate the userspace-networking proof under the self-contained
+  `onion-tailscale/` subproject with `/mnt/SDCARD/App/Tailscale/` as its target.
+- Preserve the currently authenticated legacy state without moving, deleting,
+  resetting, or reauthenticating it.
+- Keep the current remote Miyoo setup working by explicitly configuring its
+  existing proxy until a separate Tailscale-app migration is physically tested.
+
+Acceptance criterion: PocketStremio can reach a server directly when `PROXY` is
+empty, can retain the confirmed remote path when a generic proxy is configured,
+and contains no code that starts or inspects Tailscale. The standalone
+Tailscale folder must be independently deployable without PocketStremio files.
+
+Implementation notes and pending device checks:
+[Transport Independence and Tailscale Extraction](transport-independence.md)
+
+## Planned Milestones
+
+### 12. Real Series Stream Validation
+
+**Status: Planned**
 
 - Search Cinemeta for a real series and normalize its real season/episode data.
 - Resolve one legal direct-HTTP episode through a server-side addon.
@@ -254,7 +282,7 @@ working OnionOS screen without stale processes or persistent-state damage.
 
 Acceptance criterion: a user can search for a real series, choose a real episode
 and compatible direct stream, and complete visible and audible playback startup
-on the Miyoo through the existing Tailscale userspace proxy.
+on the Miyoo through the configured network transport.
 
 Not part of this milestone: accounts, library sync, torrents, debrid,
 transcoding, external subtitle rendering, posters, or a larger UI framework.

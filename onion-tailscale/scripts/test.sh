@@ -3,9 +3,9 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
-RUN_DIR="${TS_RUN_DIR:-/tmp/pocketstremio-tailscale}"
+RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
 SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
-URL="${1:-${POCKETSTREMIO_TEST_URL:-}}"
+URL="${1:-${TS_TEST_URL:-}}"
 PROXY="${TS_HTTP_PROXY_URL:-http://127.0.0.1:1055/}"
 
 if [ -z "$URL" ]; then
@@ -25,6 +25,6 @@ elif command -v wget >/dev/null 2>&1; then
   HTTP_PROXY="$PROXY" http_proxy="$PROXY" wget -S -O - "$URL"
 else
   echo "Neither curl nor wget was found."
-  echo "Install or copy a small HTTP client, or run a PocketStremio test client that supports HTTP_PROXY."
+  echo "Install or copy an HTTP client that supports HTTP_PROXY."
   exit 1
 fi

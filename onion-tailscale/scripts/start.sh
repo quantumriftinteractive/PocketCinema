@@ -7,7 +7,7 @@ BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 TAILSCALED="$BASE_DIR/bin/tailscaled"
 STATE_DIR="$BASE_DIR/state"
 LOG_DIR="$BASE_DIR/logs"
-RUN_DIR="${TS_RUN_DIR:-/tmp/pocketstremio-tailscale}"
+RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
 STATE_FILE="$STATE_DIR/tailscaled.state"
 SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
 PID_FILE="$STATE_DIR/tailscaled.pid"
@@ -18,15 +18,31 @@ HTTP_PROXY_LISTEN="${TS_HTTP_PROXY_LISTEN:-127.0.0.1:1055}"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$RUN_DIR"
 
+is_managed_pid() {
+  pid="$1"
+  [ -n "$pid" ] && [ -r "/proc/$pid/cmdline" ] &&
+    tr '\000' ' ' <"/proc/$pid/cmdline" | grep -F "$TAILSCALED" >/dev/null 2>&1
+}
+
 if [ ! -x "$TAILSCALED" ]; then
   echo "Missing executable: $TAILSCALED"
   echo "Install the ARM static Tailscale binaries into $BASE_DIR/bin first."
   exit 1
 fi
 
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-  echo "tailscaled is already running with PID $(cat "$PID_FILE")"
-  exit 0
+if [ -f "$PID_FILE" ]; then
+  EXISTING_PID=$(cat "$PID_FILE" 2>/dev/null || true)
+  case "$EXISTING_PID" in
+    ''|*[!0-9]*) ;;
+    *)
+      if is_managed_pid "$EXISTING_PID" && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "tailscaled is already running with PID $EXISTING_PID"
+        exit 0
+      fi
+      ;;
+  esac
+  echo "Removing stale or unrelated PID file"
+  rm -f "$PID_FILE"
 fi
 
 rm -f "$SOCKET_FILE"

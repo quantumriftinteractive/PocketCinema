@@ -32,10 +32,9 @@ The following behavior was confirmed on August 13, 2026:
   the normal server through `127.0.0.1:1055` again. Tailscale state was not
   changed.
 
-The physical test exercised a PocketStremio server failure while the local
-Tailscale proxy remained healthy. Tailscale startup failure messages are
-implemented but were not induced because damaging or reauthenticating the
-working network state would be an unacceptable test method.
+The physical test exercised a PocketStremio server failure while the configured
+local proxy remained healthy. PocketStremio no longer manages that proxy's
+provider; provider startup and authentication are separate operational scope.
 
 ## Server Lifecycle
 
@@ -70,7 +69,8 @@ Create it from `client/miyoo/pocketstremio.conf.example`. Supported settings are
 
 ```text
 SERVER_BASE=http://server-address:8755
-PROXY=http://127.0.0.1:1055/
+# Empty for direct HTTP; otherwise an HTTP proxy URL.
+PROXY=
 DEFAULT_QUERY=big buck bunny
 AUTO_FIRST=0
 ```
@@ -91,8 +91,8 @@ Deploy the tracked OnionOS app files from Windows with:
 The script creates only app-local directories, copies the launch scripts,
 client, helper binaries, and config example, restores executable modes, and
 parses the deployed shell entry points. It deliberately leaves the real client
-config, logs, Tailscale binaries, persistent Tailscale state, and all OnionOS
-core files alone.
+config, logs, networking-provider binaries and state, and all OnionOS core files
+alone.
 
 ## Reproducible Selector Build
 

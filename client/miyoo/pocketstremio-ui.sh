@@ -44,17 +44,16 @@ load_config() {
 }
 
 load_config
-SERVER_BASE="${SERVER_BASE:-http://100.85.171.67:8755}"
-PROXY="${PROXY:-http://127.0.0.1:1055/}"
 AUTO_FIRST="${AUTO_FIRST:-0}"
 DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
 case "$SERVER_BASE" in
   http://*|https://*) ;;
+  '') CONFIG_ERROR="SERVER_BASE is required" ;;
   *) CONFIG_ERROR="SERVER_BASE must be an HTTP URL" ;;
 esac
 case "$PROXY" in
-  http://*) ;;
-  *) CONFIG_ERROR="PROXY must be an HTTP URL" ;;
+  ''|http://*) ;;
+  *) CONFIG_ERROR="PROXY must be empty or an HTTP URL" ;;
 esac
 case "$AUTO_FIRST" in
   0|1) ;;
@@ -112,11 +111,23 @@ stop_loading() {
   rm -f /tmp/dismiss_info_panel
 }
 
+curl_request() (
+  unset LD_PRELOAD
+  if [ -n "$PROXY" ]; then
+    unset ALL_PROXY all_proxy
+    HTTP_PROXY="$PROXY" http_proxy="$PROXY" \
+    HTTPS_PROXY="$PROXY" https_proxy="$PROXY" "$CURL" "$@"
+  else
+    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
+    "$CURL" "$@"
+  fi
+)
+
 api_get() {
   path="$1"
   timeout="${2:-30}"
   rm -f "$HTTP_ERROR_FILE"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time "$timeout" "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE")
+  curl_request -fsS --max-time "$timeout" "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
   if [ "$http_rc" -ne 0 ]; then
     http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
@@ -135,7 +146,7 @@ api_post_play() {
     --arg stream_id "$stream_id" \
     '{type:$type,id:$id,stream_id:$stream_id}')
   rm -f "$HTTP_ERROR_FILE"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE")
+  curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
   if [ "$http_rc" -ne 0 ]; then
     http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
@@ -162,7 +173,7 @@ api_post_progress() {
     --argjson completed "$completed" \
     '{type:$type,id:$id,title:$title,year:$year,position_seconds:$position,duration_seconds:$duration,completed:$completed}')
   rm -f "$HTTP_ERROR_FILE"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/progress" 2>"$HTTP_ERROR_FILE")
+  curl_request -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/progress" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
   if [ "$http_rc" -ne 0 ]; then
     http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
@@ -174,6 +185,27 @@ api_post_progress() {
 ffplay_has_subtitles() {
   (unset LD_PRELOAD; "$FFPLAY" -hide_banner -filters 2>/dev/null) | grep -q '[[:space:]]subtitles[[:space:]]'
 }
+
+run_ffplay() (
+  video_filter="$1"
+  url="$2"
+  resume_seconds="$3"
+  if [ -n "$PROXY" ]; then
+    unset ALL_PROXY all_proxy
+    HOME=/mnt/SDCARD \
+    HTTP_PROXY="$PROXY" \
+    http_proxy="$PROXY" \
+    HTTPS_PROXY="$PROXY" \
+    https_proxy="$PROXY" \
+    LD_PRELOAD="$PADSP" \
+    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+  else
+    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
+    HOME=/mnt/SDCARD \
+    LD_PRELOAD="$PADSP" \
+    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+  fi
+)
 
 play_url() {
   url="$1"
@@ -194,19 +226,9 @@ play_url() {
   touch /tmp/stay_awake
   cd "$SYS_DIR" || return 1
   playback_started=$(date +%s)
-  if [ -n "$subtitle_file" ]; then
-    HOME=/mnt/SDCARD \
-    HTTP_PROXY="$PROXY" \
-    http_proxy="$PROXY" \
-    LD_PRELOAD="$PADSP" \
-    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "subtitles=$subtitle_file,hflip,vflip" -i "$url" >"$ffplay_log" 2>&1 &
-  else
-    HOME=/mnt/SDCARD \
-    HTTP_PROXY="$PROXY" \
-    http_proxy="$PROXY" \
-    LD_PRELOAD="$PADSP" \
-    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "hflip,vflip" -i "$url" >"$ffplay_log" 2>&1 &
-  fi
+  video_filter="hflip,vflip"
+  [ -n "$subtitle_file" ] && video_filter="subtitles=$subtitle_file,hflip,vflip"
+  run_ffplay "$video_filter" "$url" "$resume_seconds" >"$ffplay_log" 2>&1 &
   ffplay_pid=$!
   while kill -0 "$ffplay_pid" 2>/dev/null; do
     if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
@@ -315,21 +337,6 @@ ensure_ready() {
   case "$ready_attempts:$ready_timeout" in
     *[!0-9:]*|0:*|*:0) ready_attempts=6; ready_timeout=5 ;;
   esac
-  started=0
-  if [ ! -S /tmp/pocketstremio-tailscale/tailscaled.sock ]; then
-    log "tailscaled socket missing; starting"
-    if ! (unset LD_PRELOAD; "$BASE_DIR/tailscale/scripts/start.sh") >> "$LOG_FILE" 2>&1; then
-      READY_ERROR="Tailscale failed to start"
-      return 1
-    fi
-    started=1
-  fi
-  [ "$started" = "1" ] && sleep 6
-  if [ ! -S /tmp/pocketstremio-tailscale/tailscaled.sock ]; then
-    READY_ERROR="Tailscale proxy unavailable"
-    return 1
-  fi
-
   attempts=0
   while [ "$attempts" -lt "$ready_attempts" ]; do
     if api_get "/api/status" "$ready_timeout" >/tmp/pocketstremio-status.json; then
@@ -345,7 +352,7 @@ ensure_ready() {
     log "server readiness attempt=$attempts failed"
     sleep 2
   done
-  READY_ERROR="Gaming PC server unavailable"
+  READY_ERROR="PocketStremio server unavailable"
   return 1
 }
 
@@ -763,7 +770,12 @@ select_subtitle() {
 }
 
 cd "$SYS_DIR" || exit 1
-log "PocketStremio UI start server=$SERVER_BASE proxy=$PROXY"
+if [ -n "$PROXY" ]; then
+  transport="proxy:$PROXY"
+else
+  transport="direct"
+fi
+log "PocketStremio UI start server=$SERVER_BASE transport=$transport"
 if [ -n "$CONFIG_ERROR" ]; then
   log "configuration error=$CONFIG_ERROR"
   message "PocketStremio" "$CONFIG_ERROR"

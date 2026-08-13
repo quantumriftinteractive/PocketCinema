@@ -28,6 +28,6 @@ chmod +x network-playback.sh
 Then capture:
 
 ```sh
-/mnt/SDCARD/App/PocketStremio/tailscale/scripts/resource.sh
+/mnt/SDCARD/App/Tailscale/scripts/resource.sh
 tail -n 80 /mnt/SDCARD/App/PocketStremio/experiments/logs/ffplay-network.log
 ```

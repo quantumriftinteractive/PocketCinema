@@ -3,10 +3,10 @@ set -eu
 
 VERSION="${TAILSCALE_VERSION:-1.102.2}"
 ARCH="${TAILSCALE_ARCH:-arm}"
-BASE_DIR="${TAILSCALE_INSTALL_DIR:-/mnt/SDCARD/App/PocketStremio/tailscale}"
+BASE_DIR="${TAILSCALE_INSTALL_DIR:-/mnt/SDCARD/App/Tailscale}"
 URL="${TAILSCALE_URL:-https://pkgs.tailscale.com/stable/tailscale_${VERSION}_${ARCH}.tgz}"
 TGZ="${1:-}"
-WORK_DIR="${TMPDIR:-/tmp}/pocketstremio-tailscale-install"
+WORK_DIR="${TMPDIR:-/tmp}/onion-tailscale-install"
 
 mkdir -p "$BASE_DIR/bin" "$BASE_DIR/state" "$BASE_DIR/logs" "$BASE_DIR/scripts" "$WORK_DIR"
 

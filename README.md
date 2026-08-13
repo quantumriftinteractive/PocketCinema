@@ -10,9 +10,10 @@ The current prototype completes this controller-driven OnionOS flow:
 Apps -> PocketStremio -> search -> select media or episode -> Play -> select stream -> FFplay
 ```
 
-It uses the existing Tailscale userspace HTTP proxy on the Miyoo, a lightweight
-SDL 1.2 selector, a Python server on the gaming PC, and the PC's localhost-only
-Stremio Service as an optional backend. The known-compatible Big Buck Bunny test
+It uses direct HTTP or an optional configured HTTP proxy, a lightweight SDL 1.2
+selector, a Python server on the gaming PC, and the PC's localhost-only Stremio
+Service as an optional backend. Tailscale is an independent network provider,
+not a PocketStremio runtime dependency. The known-compatible Big Buck Bunny test
 stream plays as H.264 640x360 with AAC audio. See
 `docs/vertical-slice.md`, `docs/ffplay-playback-poc.md`, and
 `docs/operational-resilience.md` for confirmed results and current limitations.
@@ -22,7 +23,7 @@ sequencing, deferred features, and known risks.
 
 Normal server operations use `server/manage-server.ps1`. Tracked Miyoo app files
 can be upgraded with `scripts/deploy-miyoo.ps1`; the deployment preserves the
-app's real config, logs, Tailscale state, and OnionOS core files.
+app's real config, logs, networking-provider state, and OnionOS core files.
 
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
@@ -477,37 +478,27 @@ Potential features:
 * Tailscale hostname configuration
 * Connection status indicator
 
-## Initial Repository Structure
+## Repository Structure
 
 ```text
 PocketStremio/
-├── client/
-│   ├── src/
-│   ├── assets/
-│   └── README.md
+├── app/
+├── client/miyoo/
 │
 ├── server/
-│   ├── src/
-│   └── README.md
 │
-├── tailscale/
+├── onion-tailscale/
+│   ├── bin/
+│   ├── docs/
 │   ├── scripts/
-│   ├── config/
 │   └── README.md
 │
 ├── experiments/
-│   ├── tailscale/
-│   ├── http-client/
 │   └── ffplay/
 │
 ├── docs/
-│   ├── architecture.md
-│   ├── miyoo-hardware.md
-│   ├── tailscale.md
-│   └── stremio.md
-│
-├── .gitignore
-├── LICENSE
+├── scripts/
+├── AGENTS.md
 └── README.md
 ```
 
@@ -515,15 +506,16 @@ PocketStremio/
 
 **Experimental / working vertical slice**
 
-Tailscale networking, structured JSON communication, OnionOS FFplay playback,
+Optional Tailscale networking, structured JSON communication, OnionOS FFplay playback,
 and controller-driven movie and series episode selection are confirmed on the
 Miyoo Mini Plus.
 Continue Watching and resume seeking are now physically confirmed. External SRT
 rendering is blocked because the target FFplay build lacks the `subtitles`
 filter. Real server-side stream resolution is now confirmed through a
 localhost-only addon and a public-domain direct stream. Series, season, and
-episode browsing are confirmed with a deterministic local fixture. The next
-milestone is operational resilience. See
+episode browsing are confirmed with a deterministic local fixture. The active
+milestone is transport independence and extraction of the standalone
+`onion-tailscale/` app. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 

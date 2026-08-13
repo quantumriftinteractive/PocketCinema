@@ -1,13 +1,18 @@
 #!/bin/sh
 set -eu
 
-SERVER_BASE="${POCKETSTREMIO_SERVER:-http://100.85.171.67:8755}"
-PROXY="${HTTP_PROXY:-http://127.0.0.1:1055/}"
+SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
+PROXY="${HTTP_PROXY:-}"
 CURL="${CURL:-/mnt/SDCARD/.tmp_update/bin/curl}"
 LOG_DIR="${POCKETSTREMIO_LOG_DIR:-/mnt/SDCARD/App/PocketStremio/client/logs}"
 LOG_FILE="$LOG_DIR/json-client.log"
 
 mkdir -p "$LOG_DIR"
+
+if [ -z "$SERVER_BASE" ]; then
+  echo "Set POCKETSTREMIO_SERVER to the PocketStremio server URL"
+  exit 2
+fi
 
 if [ ! -x "$CURL" ]; then
   echo "curl not found at $CURL"
@@ -30,12 +35,20 @@ json_number() {
 
 fetch() {
   path="$1"
-  HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 20 "$SERVER_BASE$path"
+  if [ -n "$PROXY" ]; then
+    unset ALL_PROXY all_proxy
+    HTTP_PROXY="$PROXY" http_proxy="$PROXY" \
+    HTTPS_PROXY="$PROXY" https_proxy="$PROXY" \
+      "$CURL" -fsS --max-time 20 "$SERVER_BASE$path"
+  else
+    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
+    "$CURL" -fsS --max-time 20 "$SERVER_BASE$path"
+  fi
 }
 
 log "PocketStremio Miyoo JSON client"
 log "server=$SERVER_BASE"
-log "proxy=$PROXY"
+log "proxy=${PROXY:-none}"
 
 STATUS_JSON="$(fetch /api/status)"
 STATUS="$(printf '%s\n' "$STATUS_JSON" | json_string status)"

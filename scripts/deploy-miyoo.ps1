@@ -51,4 +51,4 @@ $modeTargets = @(
 ) -join " "
 $verify = "chmod +x $modeTargets && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
-Write-Output "PocketStremio deployed without modifying config/pocketstremio.conf or Tailscale state"
+Write-Output "PocketStremio deployed without modifying its live config or networking-provider state"

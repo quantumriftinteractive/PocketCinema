@@ -38,4 +38,4 @@ Copy-Item -LiteralPath (Join-Path $packageDir "tailscale") -Destination (Join-Pa
 Copy-Item -LiteralPath (Join-Path $packageDir "tailscaled") -Destination (Join-Path $Destination "bin\tailscaled") -Force
 
 Write-Host "Installed Tailscale $Version ($Arch) into $(Join-Path $Destination "bin")"
-Write-Host "Copy the tailscale directory to /mnt/SDCARD/App/PocketStremio/tailscale on the Miyoo."
+Write-Host "Copy this app directory to /mnt/SDCARD/App/Tailscale on the Miyoo."

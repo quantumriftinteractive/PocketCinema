@@ -1,11 +1,4 @@
 .tmp/
-tailscale/downloads/
-tailscale/bin/tailscale
-tailscale/bin/tailscaled
-tailscale/state/*
-!tailscale/state/.gitkeep
-tailscale/logs/*
-!tailscale/logs/.gitkeep
 server/media/*
 !server/media/.gitkeep
 server/config/stream_addons.json
