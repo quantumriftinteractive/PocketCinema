@@ -23,7 +23,8 @@ Confirmed unchanged infrastructure:
 
 - Tailscale userspace proxy remains `127.0.0.1:1055`.
 - Miyoo talks only to PocketStremio server at `http://100.85.171.67:8755`.
-- Stremio Service remains localhost-only at `http://127.0.0.1:11470`.
+- PocketStremio accesses Stremio Service only at `http://127.0.0.1:11470`, and
+  Windows Firewall blocks remote access to the service ports.
 - OnionOS playback launcher was preserved as `/mnt/SDCARD/App/PocketStremio/playback-poc.sh`.
 
 ## Server
@@ -41,7 +42,8 @@ GET  /play/{session}
 
 Search and metadata use Cinemeta. Streams are resolved from server-side addon sources:
 
-- Stremio Service local addon: `http://127.0.0.1:11470/local-addon/manifest.json`
+- dedicated Stremio Service Local Files backend at
+  `http://127.0.0.1:11470/local-addon/manifest.json`
 - optional private addon config: `server/config/stream_addons.json`
 - hosted test-video stream for `tt1254207`
 

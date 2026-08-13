@@ -59,7 +59,21 @@ Search includes movies and series. Series detail responses normalize Stremio
 video records into compact season and episode lists, and episode video IDs are
 used directly with `/api/streams/series/{video_id}`.
 
-The server also probes local Stremio Service through `http://127.0.0.1:11470/local-addon/manifest.json` by default. Keep Stremio Service bound to localhost; do not expose port `11470` to the Miyoo.
+The server uses a dedicated backend for Stremio Service Local Files at
+`http://127.0.0.1:11470`. Only direct local files inside an allowed media root
+are accepted; desktop paths remain behind opaque play sessions. If the dedicated
+`%USERPROFILE%\Videos\PocketStremio` directory exists, the PowerShell launchers
+allow it automatically. Override the root explicitly when needed:
+
+```powershell
+.\server\start-server.ps1 `
+  -StremioLocalMediaRoot "D:\PocketStremio Media"
+```
+
+The installed Stremio runtime listens beyond loopback, so a Windows Firewall
+inbound block for TCP `11470-11474,12470` is required. Verify that local
+`127.0.0.1:11470` remains reachable and that LAN and tailnet requests to those
+ports fail. See [Local Stremio Service Backend](../docs/local-stremio-service-backend.md).
 
 To configure stream-capable addons without committing private URLs or tokens:
 

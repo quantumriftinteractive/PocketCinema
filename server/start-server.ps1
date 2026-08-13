@@ -3,6 +3,7 @@ param(
   [int]$Port = 8755,
   [string]$PublicHost = $HostAddress,
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
+  [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
   [string]$FFprobePath = ""
 )
@@ -15,6 +16,12 @@ if (-not $FFprobePath) {
     $FFprobePath = $stremioFFprobe
   }
 }
+if (-not $StremioLocalMediaRoot) {
+  $candidate = Join-Path $env:USERPROFILE "Videos\PocketStremio"
+  if (Test-Path -LiteralPath $candidate -PathType Container) {
+    $StremioLocalMediaRoot = $candidate
+  }
+}
 
 $arguments = @(
   (Join-Path $PSScriptRoot "pocketstremio_server.py")
@@ -24,6 +31,9 @@ $arguments = @(
   "--stremio-service-url", $StremioServiceUrl
   "--open-media-addon-port", $OpenMediaAddonPort
 )
+if ($StremioLocalMediaRoot) {
+  $arguments += @("--stremio-local-media-root", $StremioLocalMediaRoot)
+}
 if ($FFprobePath) {
   $arguments += @("--ffprobe", $FFprobePath)
 }

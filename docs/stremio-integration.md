@@ -1,6 +1,7 @@
 # Stremio Integration
 
-This milestone keeps Stremio-specific behavior on `desktop-gaming`. The Miyoo continues to call the PocketStremio REST API through the local Tailscale userspace HTTP proxy.
+Stremio-specific behavior stays on `desktop-gaming`. The Miyoo calls only the
+PocketStremio REST API through direct HTTP or its configured generic proxy.
 
 ## Confirmed Interfaces
 
@@ -123,17 +124,20 @@ Stremio Service is confirmed running on `desktop-gaming` at:
 http://127.0.0.1:11470
 ```
 
-Keep it bound to localhost. The Miyoo must not connect to port `11470` directly.
+PocketStremio uses this loopback origin only. The installed runtime listens more
+broadly and has no supported bind-address setting, so the gaming PC uses an
+inbound Windows Firewall block for TCP ports `11470-11474` and `12470`. The
+Miyoo must not connect to these ports directly.
 
 Confirmed local probes:
 
 ```text
 GET http://127.0.0.1:11470/
-  307 redirect to Stremio Web with streamingServer=http://127.0.0.1:11470
+  200 Stremio web application
 
 GET http://127.0.0.1:11470/settings
   serverVersion: 4.20.8
-  localAddonEnabled: false
+  localAddonEnabled: true
   baseUrl: http://100.85.171.67:11470
 
 GET http://127.0.0.1:11470/local-addon/manifest.json
@@ -143,23 +147,26 @@ GET http://127.0.0.1:11470/local-addon/manifest.json
   idPrefixes: tt
 ```
 
-The local addon stream route is reachable but returned no streams for initial probes:
+The initial probes returned no streams. After enabling Local Files, placing a
+recognized legal fixture in the dedicated indexed directory, and restarting
+Stremio normally, the addon returned one direct local-file stream:
 
 ```text
-GET /local-addon/stream/movie/tt0078748.json
-  {"streams":[]}
-
-GET /local-addon/stream/movie/tt1254207.json
-  {"streams":[]}
+GET /local-addon/stream/movie/tt0063350.json
+  one file result for Night of the Living Dead (1968)
 ```
 
-PocketStremio server includes this localhost-only local addon as a stream source by default. This does not expose Stremio Service to the Miyoo; the Miyoo still calls only:
+PocketStremio handles Local Files through a dedicated loopback adapter. It
+accepts only existing `file://` results under explicitly allowed roots, rejects
+torrent and non-file results, and holds the desktop path server-side. This does
+not expose Stremio Service to the Miyoo; the Miyoo still calls only:
 
 ```text
 http://100.85.171.67:8755
 ```
 
-If Stremio Service later exposes usable local streams, PocketStremio can normalize them through `/api/streams/...`.
+The full implementation, containment checks, and Apps-context playback evidence
+are documented in [Local Stremio Service Backend](local-stremio-service-backend.md).
 
 Configured addons can also provide the Stremio `subtitles` resource. PocketStremio
 normalizes those results through `/api/subtitles/...` and proxies the selected

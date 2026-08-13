@@ -11,6 +11,7 @@ from unittest import mock
 from server import open_media_addon
 from server import playback_compatibility
 from server import pocketstremio_server as pocket
+from server import stremio_service
 
 
 class RedirectingMediaHandler(BaseHTTPRequestHandler):
@@ -71,6 +72,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.public_host = "127.0.0.1"
         self.server.server_port = self.server.server_address[1]
         self.server.stream_addons = []
+        self.server.stremio_service = stremio_service.StremioServiceBackend("", [])
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
         self.server.play_sessions = pocket.SessionStore()
@@ -172,6 +174,141 @@ class PocketStremioServerTest(unittest.TestCase):
         )
         self.assertFalse(status["state"]["play_sessions_persistent"])
         self.assertTrue(status["state"]["probe_cache_persistent"])
+        self.assertFalse(status["stremio_service"]["configured"])
+
+    def test_status_reports_bounded_stremio_service_diagnostics(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir]
+        )
+
+        def fake_fetch(path):
+            if path == "/settings":
+                return {
+                    "values": {
+                        "serverVersion": "4.20.8",
+                        "localAddonEnabled": True,
+                    },
+                    "baseUrl": "http://private-address:11470",
+                }
+            return {
+                "id": "org.stremio.local",
+                "version": "1.10.0",
+                "resources": ["meta", "stream"],
+                "types": ["movie", "series"],
+            }
+
+        backend._fetch_json = mock.Mock(side_effect=fake_fetch)
+        self.server.stremio_service = backend
+        _, status = self.get_json("/api/status")
+        diagnostics = status["stremio_service"]
+        self.assertTrue(diagnostics["reachable"])
+        self.assertEqual(diagnostics["version"], "4.20.8")
+        self.assertTrue(diagnostics["local_addon_enabled"])
+        self.assertTrue(diagnostics["local_addon"]["stream_capable"])
+        self.assertNotIn("baseUrl", json.dumps(diagnostics))
+
+    def test_status_reports_stremio_service_unavailable_without_details(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir]
+        )
+        backend._fetch_json = mock.Mock(side_effect=OSError("private failure"))
+        self.server.stremio_service = backend
+        _, status = self.get_json("/api/status")
+        diagnostics = status["stremio_service"]
+        self.assertFalse(diagnostics["reachable"])
+        self.assertEqual(diagnostics["message"], "Stremio Service is unavailable")
+        self.assertNotIn("private failure", json.dumps(diagnostics))
+
+    def test_stremio_service_local_file_is_opaque_and_range_playable(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir]
+        )
+        local_path = self.server.media_dir / "test-video.mp4"
+
+        def fake_fetch(path):
+            if path == "/local-addon/manifest.json":
+                return {
+                    "id": "org.stremio.local",
+                    "resources": ["stream"],
+                    "types": ["movie", "series"],
+                }
+            if path == "/local-addon/stream/movie/tt1254207.json":
+                return {
+                    "streams": [
+                        {
+                            "name": "Stremio local fixture",
+                            "url": "file://" + str(local_path),
+                        }
+                    ]
+                }
+            raise AssertionError(path)
+
+        backend._fetch_json = mock.Mock(side_effect=fake_fetch)
+        self.server.stremio_service = backend
+        _, streams = self.get_json("/api/streams/movie/tt1254207")
+        service_stream = next(
+            item for item in streams["items"] if item["name"] == "Stremio local fixture"
+        )
+        serialized = json.dumps(service_stream)
+        self.assertNotIn("url", service_stream)
+        self.assertNotIn(str(local_path), serialized)
+        cached = self.server.stream_cache[service_stream["id"]]
+        self.assertEqual(cached["local_path"], str(local_path.resolve()))
+
+        _, play = self.post_json("/api/play", {"stream_id": service_stream["id"]})
+        request = urllib.request.Request(
+            play["url"], headers={"Range": "bytes=20-39"}
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.read(), local_path.read_bytes()[20:40])
+
+    def test_stremio_service_rejects_files_outside_allowed_roots(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir]
+        )
+        outside_path = self.server.fixture_dir / "test-subtitle.srt"
+
+        def fake_fetch(path):
+            if path == "/local-addon/manifest.json":
+                return {
+                    "resources": ["stream"],
+                    "types": ["movie"],
+                }
+            return {"streams": [{"url": outside_path.as_uri()}]}
+
+        backend._fetch_json = mock.Mock(side_effect=fake_fetch)
+        self.server.stremio_service = backend
+        _, streams = self.get_json("/api/streams/movie/tt0000001")
+        self.assertEqual(streams["count"], 0)
+        self.assertEqual(
+            streams["failures"][0]["message"],
+            "Stremio Service returned no allowed direct local files",
+        )
+
+    def test_stremio_service_rechecks_local_file_when_session_is_served(self):
+        local_path = self.server.media_dir / "test-video.mp4"
+        stream_id = "stale-local-file"
+        self.server.stremio_service = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir]
+        )
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Local fixture",
+            "local_path": str(local_path),
+        }
+        _, play = self.post_json("/api/play", {"stream_id": stream_id})
+        local_path.unlink()
+        with self.assertRaises(urllib.error.HTTPError) as rejected:
+            urllib.request.urlopen(play["url"], timeout=5)
+        self.assertEqual(rejected.exception.code, 404)
+        self.assertEqual(json.load(rejected.exception)["error"], "local_media_unavailable")
+
+    def test_stremio_service_url_must_be_loopback(self):
+        with self.assertRaisesRegex(ValueError, "loopback HTTP origin"):
+            stremio_service.StremioServiceBackend(
+                "http://100.85.171.67:11470", [self.server.media_dir]
+            )
 
     def test_real_episode_meta_is_resolved_from_parent_series(self):
         parent_meta = {

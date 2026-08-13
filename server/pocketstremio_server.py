@@ -16,13 +16,15 @@ from pathlib import Path
 try:
     from server import open_media_addon
     from server import playback_compatibility
+    from server import stremio_service
 except ImportError:
     import open_media_addon
     import playback_compatibility
+    import stremio_service
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.9-real-series-poc"
+SERVER_VERSION = "0.10-stremio-service-backend"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -138,16 +140,8 @@ def fetch_json(url, timeout=DEFAULT_TIMEOUT):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def load_stream_addons(config_path, stremio_service_url):
+def load_stream_addons(config_path):
     addons = []
-    if stremio_service_url:
-        addons.append(
-            {
-                "name": "Stremio Service local addon",
-                "manifest_url": stremio_service_url.rstrip("/") + "/local-addon/manifest.json",
-            }
-        )
-
     raw = os.environ.get("POCKETSTREMIO_STREAM_ADDONS", "").strip()
     if raw:
         addons.extend(
@@ -565,6 +559,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "play_sessions_persistent": False,
                         "probe_cache_persistent": True,
                     },
+                    "stremio_service": self.server.stremio_service.status(),
                 }
             )
             return
@@ -652,7 +647,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
 
         url = stream.get("url")
-        if not url:
+        local_path = stream.get("local_path")
+        if not url and not local_path:
             self.write_json({"error": "stream_not_playable"}, status=409)
             return
 
@@ -682,6 +678,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             {
                 "stream_id": stream_id,
                 "url": url,
+                "local_path": local_path,
                 "name": stream.get("name", ""),
                 "duration_seconds": duration_seconds,
                 "compatibility": compatibility,
@@ -700,14 +697,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def preflight_stream(self, stream_id, stream):
         del stream_id
-        cached = self.server.probe_cache.get(stream["url"])
+        probe_target = stream.get("local_path") or stream.get("url")
+        cached = self.server.probe_cache.get(probe_target)
         if cached:
             return cached
 
         if self.server.ffprobe_path:
             data = playback_compatibility.probe_media(
                 self.server.ffprobe_path,
-                stream["url"],
+                probe_target,
                 timeout=self.server.probe_timeout,
             )
             compatibility = playback_compatibility.classify_probe(data)
@@ -718,7 +716,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "status": "candidate",
                     "message": "Media preflight is unavailable",
                 }
-        self.server.probe_cache.set(stream["url"], compatibility)
+        self.server.probe_cache.set(probe_target, compatibility)
         return compatibility
 
     def handle_progress(self):
@@ -855,6 +853,48 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         streams = []
         failures = []
 
+        try:
+            service_result = self.server.stremio_service.resolve_streams(
+                item_type, item_id
+            )
+            for service_index, raw in enumerate(service_result["items"]):
+                local_path = raw["local_path"]
+                stream_id = (
+                    f"stremio-local-{service_index}-"
+                    f"{hashlib.sha1(local_path.encode()).hexdigest()[:8]}"
+                )
+                streams.append(
+                    {
+                        "id": stream_id,
+                        "name": raw["name"],
+                        "description": raw["description"],
+                        "label": raw["name"],
+                        "playable": True,
+                        "compatibility": {
+                            "status": "candidate",
+                            "message": "Local file requires media preflight",
+                        },
+                        "source": "Stremio Service Local Files",
+                        "local_path": local_path,
+                        "duration_seconds": 0,
+                    }
+                )
+            if service_result["message"]:
+                failures.append(
+                    {
+                        "source": "Stremio Service Local Files",
+                        "message": service_result["message"],
+                    }
+                )
+        except stremio_service.StremioServiceError as exc:
+            print(f"Stremio Service stream lookup failed: {exc}", flush=True)
+            failures.append(
+                {
+                    "source": "Stremio Service Local Files",
+                    "message": str(exc),
+                }
+            )
+
         if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
             for fixture in COMPATIBILITY_FIXTURES:
                 path = self.server.media_dir / fixture["filename"]
@@ -967,7 +1007,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             {
                 k: v
                 for k, v in stream.items()
-                if k not in {"url", "source", "video_hash", "video_size"}
+                if k
+                not in {
+                    "url",
+                    "local_path",
+                    "source",
+                    "video_hash",
+                    "video_size",
+                }
             }
             for stream in streams
         ]
@@ -1057,7 +1104,22 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             else:
                 self.write_json({"error": "session_not_found"}, status=404)
             return
-        self.proxy_remote_url(session["url"])
+        if session.get("local_path"):
+            local_path = self.server.stremio_service.resolve_local_path(
+                session["local_path"]
+            )
+            if local_path is None:
+                self.write_json(
+                    {
+                        "error": "local_media_unavailable",
+                        "message": "Local media is no longer available",
+                    },
+                    status=404,
+                )
+                return
+            self.write_file(local_path)
+        else:
+            self.proxy_remote_url(session["url"])
 
     def handle_subtitle(self, subtitle_id):
         subtitle = self.server.subtitle_cache.get(subtitle_id)
@@ -1185,6 +1247,12 @@ def main():
     parser.add_argument("--port", type=int, default=8755)
     parser.add_argument("--public-host", default=None)
     parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
+    parser.add_argument(
+        "--stremio-local-media-root",
+        action="append",
+        default=[],
+        help="Allowed root for local files returned by Stremio Service (repeatable)",
+    )
     parser.add_argument("--open-media-addon-port", type=int, default=8756)
     parser.add_argument("--disable-open-media-addon", action="store_true")
     parser.add_argument(
@@ -1229,8 +1297,12 @@ def main():
     httpd.fixture_dir = fixture_dir
     httpd.public_host = args.public_host or args.host
     httpd.server_port = args.port
-    httpd.stremio_service_url = args.stremio_service_url.rstrip("/") if args.stremio_service_url else ""
-    httpd.stream_addons = load_stream_addons(args.stream_addons, httpd.stremio_service_url)
+    service_roots = args.stremio_local_media_root or [str(media_dir)]
+    httpd.stremio_service = stremio_service.StremioServiceBackend(
+        args.stremio_service_url,
+        service_roots,
+    )
+    httpd.stream_addons = load_stream_addons(args.stream_addons)
     open_media_server = None
     open_media_thread = None
     if not args.disable_open_media_addon:
@@ -1259,6 +1331,16 @@ def main():
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
     print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
+    print(
+        "Stremio Service backend: "
+        + (httpd.stremio_service.base_url or "disabled"),
+        flush=True,
+    )
+    print(
+        "Stremio local media roots: "
+        + ", ".join(str(root) for root in httpd.stremio_service.allowed_roots),
+        flush=True,
+    )
     print(f"Media preflight: {httpd.ffprobe_path or 'disabled'}", flush=True)
     print(
         f"Play sessions: ttl={httpd.play_sessions.ttl_seconds}s "

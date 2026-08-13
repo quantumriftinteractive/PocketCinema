@@ -5,6 +5,7 @@ param(
   [int]$Port = 8755,
   [string]$PublicHost = "",
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
+  [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
   [string]$FFprobePath = ""
 )
@@ -76,6 +77,12 @@ function Start-ManagedServer {
       $script:FFprobePath = $candidate
     }
   }
+  if (-not $StremioLocalMediaRoot) {
+    $candidate = Join-Path $env:USERPROFILE "Videos\PocketStremio"
+    if (Test-Path -LiteralPath $candidate -PathType Container) {
+      $script:StremioLocalMediaRoot = $candidate
+    }
+  }
 
   $arguments = @(
     $serverScript,
@@ -85,6 +92,9 @@ function Start-ManagedServer {
     "--stremio-service-url", $StremioServiceUrl,
     "--open-media-addon-port", $OpenMediaAddonPort
   )
+  if ($StremioLocalMediaRoot) {
+    $arguments += @("--stremio-local-media-root", $StremioLocalMediaRoot)
+  }
   if ($FFprobePath) {
     $arguments += @("--ffprobe", $FFprobePath)
   }

@@ -27,8 +27,9 @@ priority.
 - PocketStremio must be transport-agnostic. Direct HTTP is the default; a
   generic HTTP proxy is optional configuration. PocketStremio must never start,
   stop, or inspect Tailscale.
-- Keep Stremio Service bound to localhost on the gaming PC. Never expose port
-  `11470` to the Miyoo or tailnet.
+- PocketStremio must access Stremio Service only through loopback on the gaming
+  PC. Preserve the inbound Windows Firewall block for TCP `11470-11474` and
+  `12470`; never make those ports reachable from the Miyoo, LAN, or tailnet.
 - Do not commit private addon URLs, tokens, Tailscale state, downloaded binaries,
   logs, generated caches, or the local test video. Respect `.gitignore`.
 - Do not add torrent, debrid, transcoding, subtitle, account, progress, poster,
@@ -45,8 +46,9 @@ Apps -> PocketStremio -> series -> season -> episode -> Play -> stream -> FFplay
 ```
 
 Both the hosted Big Buck Bunny regression fixture and the public-domain *Night
-of the Living Dead* stream resolved by the localhost open-media addon have been
-physically played from the OnionOS Apps context. The latter confirmed H.264
+of the Living Dead* stream have been physically played from the OnionOS Apps
+context. The latter is confirmed through both the localhost open-media addon and
+the allowlisted Stremio Service Local Files backend. It confirmed H.264
 Constrained Baseline 320x240 video, AAC stereo audio initialization, Menu-button
 exit, progress saving, and cleanup.
 
@@ -76,8 +78,18 @@ Miyoo shell/SDL client
   -> direct HTTP or configured generic HTTP proxy
   -> PocketStremio server 100.85.171.67:8755
   -> Cinemeta and server-side stream sources
-  -> localhost-only Stremio Service 127.0.0.1:11470
+  -> loopback-accessed, firewall-contained Stremio Service 127.0.0.1:11470
 ```
+
+Stremio Service 4.20.8 listens beyond loopback even though PocketStremio uses
+only `127.0.0.1`. The gaming PC therefore has an enabled inbound Windows
+Firewall block for TCP `11470-11474` and `12470`. Preserve that rule and verify
+remote denial after service or firewall changes.
+
+The confirmed Local Files backend accepts only `file://` results under an
+explicit server-side allowlist. Do not expose local paths, broaden the allowlist
+to general user media directories, or accept torrent identifiers from this
+backend.
 
 The hosted Big Buck Bunny video is a deterministic regression fixture, not a
 general stream resolver.

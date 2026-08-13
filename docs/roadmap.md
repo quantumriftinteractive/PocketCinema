@@ -32,7 +32,8 @@ Architectural boundaries:
 - Network providers such as Tailscale are operated independently from
   PocketStremio.
 - PocketStremio server is the only service exposed to the Miyoo.
-- Stremio Service remains bound to `127.0.0.1:11470` on the gaming PC.
+- PocketStremio accesses Stremio Service only through `127.0.0.1:11470`; a
+  Windows Firewall block rule prevents remote access to the service ports.
 - PocketStremio persistent files remain under
   `/mnt/SDCARD/App/PocketStremio/`; independent provider apps own their own app
   directories.
@@ -144,7 +145,8 @@ Scope:
 - Identify one reproducible direct-URL stream source for a movie.
 - Resolve it behind `/api/streams/{type}/{id}` without exposing its upstream URL
   to the Miyoo.
-- Preserve the localhost-only Stremio Service boundary.
+- Preserve loopback-only PocketStremio access and firewall containment for
+  Stremio Service.
 - Handle common upstream redirects, Range requests, content types, and failures.
 - Show useful stream names and concise failure messages in the Miyoo client.
 - Keep the hosted Big Buck Bunny stream as a deterministic regression fixture.
@@ -356,11 +358,18 @@ The Connect account screen is implemented but remains unconfirmed against a
 fresh unauthenticated state. Deliberately offline boot is bounded by design but
 has not been physically timed.
 
-## Next Milestone
-
 ### 15. Local Stremio Service Backend
 
-**Status: Next**
+**Status: Confirmed**
+
+PocketStremio now uses a dedicated, loopback-only backend adapter for Stremio
+Service Local Files. One allowlisted public-domain file resolved through the
+service, passed the existing compatibility preflight, remained hidden behind an
+opaque play session, and played visibly and audibly from the OnionOS Apps
+context. Windows Firewall blocks raw service access from both the Miyoo LAN and
+tailnet paths while desktop loopback remains healthy.
+
+Evidence: [Local Stremio Service Backend](local-stremio-service-backend.md)
 
 - Inspect and document the localhost Stremio Service API and runtime capabilities
   actually available at `127.0.0.1:11470`.
@@ -381,6 +390,33 @@ making port `11470` remotely reachable.
 Not part of this milestone: Stremio account authentication or library sync,
 torrents, debrid, transcoding, external subtitle rendering, or a larger UI.
 
+## Next Milestone
+
+### 16. Stremio Account Addon Discovery
+
+**Status: Next**
+
+- Research the current supported account and addon-collection interfaces used by
+  Stremio without reading or copying opaque desktop application state.
+- Keep authentication material and private addon URLs on the gaming PC in
+  ignored configuration; never send them to the Miyoo or commit them.
+- Normalize a read-only account addon list behind PocketStremio and report
+  per-source capability and availability without exposing manifest URLs.
+- Permit only direct HTTP(S) stream results through the existing compatibility
+  and opaque play-session path.
+- Explicitly reject torrent identifiers, debrid-only results, external launch
+  URLs, and unsupported stream shapes.
+- Preserve Local Files, open-media, and deterministic fixtures as independent
+  regression sources.
+
+Acceptance criterion: PocketStremio discovers the authenticated account's addon
+collection server-side, resolves one legal direct-HTTP result through an account
+addon when available, and completes Apps-context playback without exposing an
+auth token, private addon URL, or raw stream URL to the Miyoo.
+
+Not part of this milestone: library or watch-history sync, torrent playback,
+debrid integration, transcoding, or storing account credentials on the Miyoo.
+
 ## Deferred Features
 
 These features should begin only after real stream playback and compatibility
@@ -390,7 +426,7 @@ behavior are stable:
 - audio-track selection;
 - external subtitle rendering through server-side remuxing/burn-in or another
   measured compatible player;
-- Stremio account, library, and authentication work;
+- Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites, history, and settings UI;
 - torrent, debrid, or other source-specific integrations.
@@ -402,8 +438,8 @@ acceptance criteria rather than expanding an earlier milestone.
 
 - Active playback leaves only about 1.9-3.1 MB reported free RAM, so new Miyoo
   runtimes or image-heavy UI work carry significant memory risk.
-- Stremio Service's local addon is reachable but returned no streams in the
-  confirmed probes.
+- Stremio Local Files depends on Windows Search and filename-to-IMDb matching;
+  unmatched or newly added files may not appear until a normal service restart.
 - Direct streams may use codecs, headers, redirects, or seek behavior that the
   current FFplay proxy path does not support.
 - Stream and play-session state remains in memory. Play sessions expire after
