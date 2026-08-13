@@ -2,30 +2,37 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
-BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
+. "$SCRIPT_DIR/common.sh"
 
-TAILSCALE="$BASE_DIR/bin/tailscale"
-TAILSCALED="$BASE_DIR/bin/tailscaled"
-STATE_DIR="$BASE_DIR/state"
-RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
-PID_FILE="$STATE_DIR/tailscaled.pid"
-SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
+MODE="${1:-full}"
+PID=$(managed_pid || true)
+IP=""
+if [ -n "$PID" ] && [ -x "$TAILSCALE" ] && [ -S "$SOCKET_FILE" ]; then
+  IP=$("$TAILSCALE" --socket="$SOCKET_FILE" ip -4 2>/dev/null | sed -n '1p' || true)
+fi
 
-PID=$(cat "$PID_FILE" 2>/dev/null || true)
-case "$PID" in
-  ''|*[!0-9]*) PID="" ;;
-esac
-if [ -n "$PID" ] && [ -r "/proc/$PID/cmdline" ] &&
-    tr '\000' ' ' <"/proc/$PID/cmdline" | grep -F "$TAILSCALED" >/dev/null 2>&1 &&
-    kill -0 "$PID" 2>/dev/null; then
-  echo "tailscaled: running, PID $PID"
+if [ "$MODE" = "--brief" ]; then
+  if [ -n "$PID" ]; then
+    printf 'enabled\t%s\n' "$IP"
+  else
+    printf 'disabled\t\n'
+  fi
+  exit 0
+fi
+
+if [ -n "$PID" ]; then
+  echo "tailscaled: enabled, PID $PID"
+  if [ -n "$IP" ]; then
+    echo "Tailscale IPv4: $IP"
+  else
+    echo "Tailscale IPv4: unavailable"
+  fi
 else
-  echo "tailscaled: not running"
+  echo "tailscaled: disabled"
 fi
 
 if [ -x "$TAILSCALE" ] && [ -S "$SOCKET_FILE" ]; then
   "$TAILSCALE" --socket="$SOCKET_FILE" status || true
-  "$TAILSCALE" --socket="$SOCKET_FILE" ip || true
 else
   echo "tailscale CLI or daemon socket is not available yet."
 fi

@@ -2,38 +2,43 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
-BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
-TAILSCALED="$BASE_DIR/bin/tailscaled"
-RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
-PID_FILE="$BASE_DIR/state/tailscaled.pid"
-SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
+. "$SCRIPT_DIR/common.sh"
+
+LOGIN_PID_FILE="$RUN_DIR/login.pid"
+LOGIN_LOG="$RUN_DIR/login.log"
+
+stop_login() {
+  login_process=$(cat "$LOGIN_PID_FILE" 2>/dev/null || true)
+  case "$login_process" in
+    ''|*[!0-9]*) ;;
+    *) kill "$login_process" 2>/dev/null || true ;;
+  esac
+  rm -f "$LOGIN_PID_FILE" "$LOGIN_LOG"
+}
 
 if [ ! -f "$PID_FILE" ]; then
   echo "No PID file found. tailscaled may already be stopped."
+  stop_login
   rm -f "$SOCKET_FILE"
   exit 0
 fi
 
-PID=$(cat "$PID_FILE")
-case "$PID" in
-  ''|*[!0-9]*)
-    echo "Invalid PID file; no process was signaled"
-    rm -f "$PID_FILE" "$SOCKET_FILE"
-    exit 1
-    ;;
-esac
-if [ -r "/proc/$PID/cmdline" ] &&
-    tr '\000' ' ' <"/proc/$PID/cmdline" | grep -F "$TAILSCALED" >/dev/null 2>&1 &&
-    kill -0 "$PID" 2>/dev/null; then
+PID=$(managed_pid || true)
+if [ -n "$PID" ]; then
   kill "$PID"
-  sleep 1
+  attempt=0
+  while [ "$attempt" -lt 5 ] && kill -0 "$PID" 2>/dev/null; do
+    attempt=$((attempt + 1))
+    sleep 1
+  done
   if kill -0 "$PID" 2>/dev/null; then
     echo "tailscaled did not exit after SIGTERM; sending SIGKILL"
     kill -9 "$PID" 2>/dev/null || true
   fi
   echo "tailscaled stopped"
 else
-  echo "PID $PID is not a running daemon owned by this app"
+  echo "PID file does not identify a running daemon owned by this app"
 fi
 
 rm -f "$PID_FILE" "$SOCKET_FILE"
+stop_login

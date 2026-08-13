@@ -518,8 +518,10 @@ optional-proxy transport modes are confirmed, and Tailscale-specific code is
 isolated under `onion-tailscale/`. A real public-domain series episode now plays
 through the same opaque server pipeline. Its Continue Watching label, Resume,
 Play from Start, progress replacement, B navigation, and Menu exit are also
-physically confirmed. The active milestone is localhost Stremio Service backend
-integration. See
+physically confirmed. The standalone Tailscale app now shows connection state
+and IP, supports controller-driven enable/disable, and starts through an
+app-owned OnionOS boot hook. The active PocketStremio milestone is localhost
+Stremio Service backend integration. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 

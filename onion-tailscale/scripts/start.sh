@@ -2,15 +2,8 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
-BASE_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
+. "$SCRIPT_DIR/common.sh"
 
-TAILSCALED="$BASE_DIR/bin/tailscaled"
-STATE_DIR="$BASE_DIR/state"
-LOG_DIR="$BASE_DIR/logs"
-RUN_DIR="${TS_RUN_DIR:-/tmp/onion-tailscale}"
-STATE_FILE="$STATE_DIR/tailscaled.state"
-SOCKET_FILE="${TS_SOCKET:-$RUN_DIR/tailscaled.sock}"
-PID_FILE="$STATE_DIR/tailscaled.pid"
 LOG_FILE="$LOG_DIR/tailscaled.log"
 
 SOCKS5_LISTEN="${TS_SOCKS5_LISTEN:-127.0.0.1:1055}"
@@ -18,31 +11,28 @@ HTTP_PROXY_LISTEN="${TS_HTTP_PROXY_LISTEN:-127.0.0.1:1055}"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$RUN_DIR"
 
-is_managed_pid() {
-  pid="$1"
-  [ -n "$pid" ] && [ -r "/proc/$pid/cmdline" ] &&
-    tr '\000' ' ' <"/proc/$pid/cmdline" | grep -F "$TAILSCALED" >/dev/null 2>&1
-}
-
 if [ ! -x "$TAILSCALED" ]; then
   echo "Missing executable: $TAILSCALED"
   echo "Install the ARM static Tailscale binaries into $BASE_DIR/bin first."
   exit 1
 fi
 
+EXISTING_PID=$(managed_pid || true)
+if [ -n "$EXISTING_PID" ]; then
+  echo "tailscaled is already running with PID $EXISTING_PID"
+  exit 0
+fi
+
 if [ -f "$PID_FILE" ]; then
-  EXISTING_PID=$(cat "$PID_FILE" 2>/dev/null || true)
-  case "$EXISTING_PID" in
-    ''|*[!0-9]*) ;;
-    *)
-      if is_managed_pid "$EXISTING_PID" && kill -0 "$EXISTING_PID" 2>/dev/null; then
-        echo "tailscaled is already running with PID $EXISTING_PID"
-        exit 0
-      fi
-      ;;
-  esac
   echo "Removing stale or unrelated PID file"
   rm -f "$PID_FILE"
+fi
+
+OTHER_PID=$(other_tailscaled_pid || true)
+if [ -n "$OTHER_PID" ]; then
+  echo "Another tailscaled process is running with PID $OTHER_PID."
+  echo "Stop or migrate that daemon before enabling this app."
+  exit 2
 fi
 
 rm -f "$SOCKET_FILE"
@@ -56,16 +46,27 @@ HOME="$RUN_DIR" TS_NO_LOGS_NO_SUPPORT="${TS_NO_LOGS_NO_SUPPORT:-true}" nohup "$T
   >>"$LOG_FILE" 2>&1 &
 
 PID=$!
-echo "$PID" > "$PID_FILE"
-sleep 2
+echo "$PID" >"$PID_FILE"
 
-if kill -0 "$PID" 2>/dev/null; then
+attempt=0
+while [ "$attempt" -lt 8 ] && kill -0 "$PID" 2>/dev/null && [ ! -S "$SOCKET_FILE" ]; do
+  attempt=$((attempt + 1))
+  sleep 1
+done
+
+if kill -0 "$PID" 2>/dev/null && [ -S "$SOCKET_FILE" ]; then
   echo "tailscaled started with PID $PID"
   echo "socket: $SOCKET_FILE"
   echo "SOCKS5 proxy: $SOCKS5_LISTEN"
   echo "HTTP proxy: $HTTP_PROXY_LISTEN"
   echo "log: $LOG_FILE"
 else
+  if kill -0 "$PID" 2>/dev/null; then
+    kill "$PID" 2>/dev/null || true
+    sleep 1
+    kill -9 "$PID" 2>/dev/null || true
+  fi
+  rm -f "$PID_FILE" "$SOCKET_FILE"
   echo "tailscaled failed to stay running. Last log lines:"
   tail -n 40 "$LOG_FILE" 2>/dev/null || true
   exit 1

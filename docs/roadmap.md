@@ -326,9 +326,39 @@ Acceptance criterion: the real episode can be resumed from Continue Watching,
 starts near the saved position, reports plausible new progress, and returns
 cleanly to OnionOS without stale state or processes.
 
+### 14. Standalone Tailscale Management App
+
+**Status: Confirmed**
+
+The independent OnionOS app now displays Enabled or Disabled state and the
+current Tailscale IPv4 address, supports controller-driven enable/disable and
+Refresh, and toggles an app-owned OnionOS startup hook. The authenticated node
+state was copied into `/mnt/SDCARD/App/Tailscale/` while retaining the original
+rollback state. Two disable/enable cycles restored `100.97.46.26` and proxy
+traffic. A physical reboot returned normally to MainUI and started the
+standalone daemon without opening the app.
+
+Evidence: [OnionOS Tailscale Management App](../onion-tailscale/docs/management-app.md)
+
+- Show daemon state and the assigned Tailscale IPv4 address.
+- Provide Enable, Disable, Refresh, and B/Exit controller actions.
+- Offer an explicit first-account verification URL without storing auth keys or
+  logging the URL in the normal app log.
+- Toggle only the app-owned OnionOS 4.3 startup hook and detect conflicts.
+- Keep boot bounded when Wi-Fi or internet is unavailable.
+- Refuse daemon collisions and use copy-only state adoption with rollback.
+
+Acceptance criterion: the app can control its standalone userspace daemon,
+display the correct IP, preserve authenticated identity across restart, and
+start automatically during a normal OnionOS boot without modifying core files.
+
+The Connect account screen is implemented but remains unconfirmed against a
+fresh unauthenticated state. Deliberately offline boot is bounded by design but
+has not been physically timed.
+
 ## Next Milestone
 
-### 14. Local Stremio Service Backend
+### 15. Local Stremio Service Backend
 
 **Status: Next**
 

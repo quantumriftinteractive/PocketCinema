@@ -29,8 +29,13 @@ valid if this directory is extracted into its own repository.
 - Keep node state and logs under the app directory.
 - Make start and stop idempotent and validate PID ownership before signaling a
   process.
-- The Apps launcher may start or report the service, but initial login and state
-  migration must remain explicit operations.
+- The Apps launcher may explicitly start, stop, report, or initiate account
+  connection. It must never authenticate, log out, reset, or replace state
+  without a controller action.
+- Autostart may own only `.tmp_update/startup/onion-tailscale.sh`. Refuse to
+  overwrite or remove a conflicting file and never edit OnionOS `runtime.sh`.
+- Keep startup bounded to local daemon readiness. Never wait indefinitely for
+  Wi-Fi, internet access, coordination, or a peer.
 
 ## Verification
 

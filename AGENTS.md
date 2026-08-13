@@ -19,10 +19,11 @@ priority.
   subproject targets `/mnt/SDCARD/App/Tailscale/` under its local instructions.
 - Do not modify OnionOS core files. If no app-local solution exists, stop and
   explain the required change before touching a core file, then document it.
-- Preserve the existing live Tailscale setup and persistent state. Until an
-  explicit migration is physically confirmed, never replace, move, reset,
-  delete, or reauthenticate
-  `/mnt/SDCARD/App/PocketStremio/tailscale/state/tailscaled.state`.
+- The standalone Tailscale app now owns the live daemon and copied state under
+  `/mnt/SDCARD/App/Tailscale/`. Preserve that identity and the original rollback
+  state at `/mnt/SDCARD/App/PocketStremio/tailscale/state/tailscaled.state`.
+  Never run both daemons, reset either state, reauthenticate the working node,
+  or delete the rollback copy during ordinary development.
 - PocketStremio must be transport-agnostic. Direct HTTP is the default; a
   generic HTTP proxy is optional configuration. PocketStremio must never start,
   stop, or inspect Tailscale.
@@ -97,8 +98,10 @@ Transport independence is physically confirmed. `SERVER_BASE` is explicit,
 `PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.
 Both direct loopback and configured-proxy requests passed on the Miyoo, followed
 by a normal Apps-context selector and B exit. The authenticated legacy state was
-unchanged; the standalone `/mnt/SDCARD/App/Tailscale/` app has not been deployed
-or migrated.
+later copied into the deployed standalone `/mnt/SDCARD/App/Tailscale/` app with
+the original retained as rollback. Controller-driven status/IP display,
+autostart toggle, two disable/enable cycles, proxy recovery, B exit, and reboot
+autostart are physically confirmed. PocketStremio remains only a proxy consumer.
 
 Real series playback is physically confirmed with *The Beverly Hillbillies*
 S1E1 `tt0055662:1:1`. Cinemeta supplies nine seasons; the localhost open-media

@@ -1,6 +1,7 @@
 downloads/
 bin/*
 !bin/.gitkeep
+!bin/onion-tailscale-selector
 state/*
 !state/.gitkeep
 logs/*

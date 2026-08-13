@@ -1,8 +1,7 @@
 # Onion Tailscale
 
 A self-contained userspace-networking Tailscale app for OnionOS on the Miyoo
-Mini Plus. This directory is intentionally independent from PocketStremio so it
-can be extracted into a separate repository later.
+Mini Plus. This directory can be extracted into a separate repository.
 
 Target device path:
 
@@ -10,22 +9,9 @@ Target device path:
 /mnt/SDCARD/App/Tailscale/
 ```
 
-Layout:
-
-```text
-onion-tailscale/
-  config.json
-  launch.sh
-  bin/                 # ignored Tailscale ARM binaries
-  state/               # ignored node identity and PID
-  logs/                # ignored runtime logs
-  scripts/
-  docs/
-```
-
-The app owns its daemon, socket, proxy, state, and logs. Applications using its
-proxy are ordinary consumers and must not start, stop, or inspect this daemon.
-The defaults are:
+The app owns its daemon, controller UI, boot hook, socket, proxy, state, and
+logs. Consumer applications only configure the local proxy and do not manage
+the daemon.
 
 ```text
 socket:       /tmp/onion-tailscale/tailscaled.sock
@@ -34,37 +20,37 @@ SOCKS5 proxy: 127.0.0.1:1055
 hostname:     miyoo-onion
 ```
 
-All runtime values can be overridden with the existing `TS_*` environment
-variables in the scripts.
+## Controller UI
 
-## Install Binaries
+Open **Apps -> Tailscale**. The screen shows:
 
-On a PC:
+- Enabled or Disabled daemon state;
+- the assigned Tailscale IPv4 address when connected;
+- Enable or Disable;
+- Automatic enable on boot status and toggle;
+- Connect account when the daemon has no authenticated identity;
+- Refresh and Exit.
 
-```powershell
-.\scripts\install-from-pc.ps1
-```
+D-pad Up/Down navigates, A selects, and B exits. Runtime details are written to
+`logs/app.log` without recording account verification URLs.
 
-Or on the Miyoo:
+## First Account Connection
 
-```sh
-./scripts/install-arm-static.sh
-```
+On a new installation:
 
-The downloaded archives and ARM binaries are intentionally ignored by git.
+1. Select **Enable**.
+2. Select **Connect account**.
+3. Open the displayed one-time `https://login.tailscale.com/...` URL on a phone
+   or PC and approve the device.
+4. Select **Refresh** on the Miyoo.
+5. The main screen shows the assigned Tailscale IP after approval.
 
-Deploy the independent app files and installed binaries from a PC with:
+No auth key or account token is stored by the UI. The pending verification URL
+exists only under `/tmp/onion-tailscale/` and is removed after connection or
+Disable. Tailscale persists the device identity in `state/tailscaled.state`. Do
+not share or commit that file.
 
-```powershell
-.\scripts\deploy.ps1 -DeviceHost root@DEVICE_ADDRESS
-```
-
-Deployment never copies or changes `state/` or `logs/`.
-
-## Operate
-
-Launching **Apps -> Tailscale** starts or verifies the userspace daemon and
-shows a concise result. Initial authentication remains an explicit operation:
+The equivalent shell operations are:
 
 ```sh
 cd /mnt/SDCARD/App/Tailscale/scripts
@@ -73,27 +59,81 @@ cd /mnt/SDCARD/App/Tailscale/scripts
 ./status.sh
 ```
 
-Stop it explicitly with `./stop.sh`. Detailed proof-of-concept results and
-resource measurements are in [docs/poc.md](docs/poc.md).
+## Automatic Enable
 
-## Existing PocketStremio State
+OnionOS 4.3 supports custom startup scripts in
+`/mnt/SDCARD/.tmp_update/startup/`. The app installs only this owned hook:
 
-Do not copy or move a live node state while its old daemon is running. The
-currently authenticated state under PocketStremio remains in place until a
-separate migration is physically tested. A later migration must stop the old
-daemon, copy rather than delete the state, start this app against the copy,
-verify tailnet identity and proxy traffic, and retain a rollback path.
+```text
+/mnt/SDCARD/.tmp_update/startup/onion-tailscale.sh
+```
 
-No migration is performed merely by adding or deploying this subproject.
+The hook starts the app-local daemon and then returns. It waits at most eight
+seconds for the local Unix socket; it does not wait for Wi-Fi, internet access,
+or a Tailscale peer. If the network is unavailable, `tailscaled` remains in the
+background and retries connectivity. Disabling autostart removes the hook only
+when it exactly matches the app's source copy; an unexpected file is reported
+as a conflict and is not changed.
+
+This uses OnionOS's extension directory and does not edit `runtime.sh` or other
+core files. See the [OnionOS runtime startup loop](https://github.com/OnionUI/Onion/blob/main/static/build/.tmp_update/runtime.sh).
+
+## Install and Deploy
+
+Install the ignored static ARM Tailscale binaries on the PC:
+
+```powershell
+.\scripts\install-from-pc.ps1
+```
+
+Build the tracked SDL 1.2 selector from the repository toolchain:
+
+```powershell
+.\scripts\build-selector.ps1
+```
+
+Deploy application files and binaries:
+
+```powershell
+.\scripts\deploy.ps1 -DeviceHost root@DEVICE_ADDRESS
+```
+
+Deployment creates the app directories but never copies or changes `state/` or
+`logs/`. Tailscale binaries, archives, node state, and logs remain ignored by
+git; the small ARMv7 selector binary is tracked with its source.
+
+## Existing State Migration
+
+State adoption is deliberately separate from deployment. Stop every
+`tailscaled` process, then copy an existing state with:
+
+```sh
+/mnt/SDCARD/App/Tailscale/scripts/migrate-state.sh /path/to/tailscaled.state
+```
+
+The command refuses to run while a daemon is active and refuses to overwrite an
+existing destination. It copies rather than moves the source so rollback
+remains possible. Start the standalone app, verify identity and proxy traffic,
+and retain the old state until the migration has been proven across a reboot.
+
+## Diagnostics
+
+```sh
+cd /mnt/SDCARD/App/Tailscale/scripts
+./status.sh
+./resource.sh
+./test.sh http://TAILNET_SERVER/api/status
+./stop.sh
+```
+
+Detailed historical networking measurements are in [docs/poc.md](docs/poc.md).
+The controller app, migration, and autostart evidence is in
+[docs/management-app.md](docs/management-app.md).
 
 ## Extract Later
 
-Because all source, scripts, docs, and ignore rules live below this directory,
-it can be split while retaining history with a tool such as `git filter-repo`:
+Run repository extraction only in a fresh clone:
 
 ```powershell
 git filter-repo --path onion-tailscale/ --path-rename onion-tailscale/:
 ```
-
-Run repository extraction only in a fresh clone, not in the working
-PocketStremio checkout.
