@@ -343,8 +343,9 @@ streams_flow() {
 
   "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(.value.name)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
-    log "no playable streams"
-    message "PocketStremio" "No playable streams"
+    stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
+    log "no playable streams message=$stream_error"
+    message "PocketStremio" "$stream_error"
     return 0
   fi
 

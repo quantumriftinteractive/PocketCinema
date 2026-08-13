@@ -211,6 +211,17 @@ Because Cinemeta search did not return Big Buck Bunny for `big buck bunny` durin
 
 Normal searches such as `alien` are returned directly from Cinemeta without this supplement.
 
+## Local Open-Media Addon
+
+PocketStremio also starts a small, localhost-only Stremio addon at
+`127.0.0.1:8756`. It currently resolves one public-domain direct HTTP stream for
+*Night of the Living Dead* (1968), `tt0063350`. This keeps the media source
+behind the same opaque `/api/streams` and `/api/play` contracts used by other
+addons and does not expose another service to the Miyoo.
+
+Implementation and current confirmation status are documented in
+[Real Stream Resolution POC](real-stream-resolution.md).
+
 ## Assumptions
 
 - Movie-only support is enough for this milestone.

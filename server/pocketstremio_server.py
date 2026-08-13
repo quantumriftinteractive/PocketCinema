@@ -12,6 +12,11 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+try:
+    from server import open_media_addon
+except ImportError:
+    import open_media_addon
+
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 DEFAULT_TIMEOUT = 15
@@ -91,6 +96,23 @@ def stream_label(stream, fallback):
     if description:
         return f"{name} - {description[:80]}"
     return name
+
+
+def manifest_supports(manifest, resource, item_type):
+    resources = manifest.get("resources") or []
+    resource_names = {
+        item.get("name") if isinstance(item, dict) else item
+        for item in resources
+    }
+    types = manifest.get("types") or []
+    return resource in resource_names and (not types or item_type in types)
+
+
+def nonnegative_int(value):
+    try:
+        return max(0, int(float(value or 0)))
+    except (TypeError, ValueError):
+        return 0
 
 
 class ProgressStore:
@@ -173,7 +195,7 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.3"
+    server_version = "PocketStremio/0.4"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -184,7 +206,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.3-subtitles-progress-poc",
+                    "version": "0.4-real-stream-poc",
                     "message": "PocketStremio server is reachable",
                     "stream_addons": len(self.server.stream_addons),
                     "continue_watching": len(self.server.progress_store.list_items()),
@@ -335,6 +357,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def handle_streams(self, item_type, item_id):
         streams = []
+        failures = []
 
         if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
             test_video = self.server.media_dir / "test-video.mp4"
@@ -353,12 +376,27 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         for addon_index, addon in enumerate(self.server.stream_addons):
             manifest_url = addon["manifest_url"]
+            try:
+                manifest = self.server.manifest_cache.get(manifest_url)
+                if manifest is None:
+                    manifest = fetch_json(manifest_url)
+                    self.server.manifest_cache[manifest_url] = manifest
+                if not manifest_supports(manifest, "stream", item_type):
+                    continue
+            except Exception as exc:
+                source = addon.get("name") or "stream source"
+                print(f"stream addon manifest failed: {manifest_url}: {exc}", flush=True)
+                failures.append({"source": source, "message": f"{source} is unavailable"})
+                continue
+
             base = addon_base_from_manifest(manifest_url)
             url = f"{base}/stream/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"
             try:
                 data = fetch_json(url)
             except Exception as exc:
                 print(f"stream addon failed: {manifest_url}: {exc}", flush=True)
+                source = addon.get("name") or "stream source"
+                failures.append({"source": source, "message": f"{source} is unavailable"})
                 continue
 
             for stream_index, raw in enumerate(data.get("streams", [])):
@@ -377,6 +415,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "url": stream_url if playable else "",
                         "video_hash": behavior_hints.get("videoHash") or "",
                         "video_size": behavior_hints.get("videoSize") or 0,
+                        "duration_seconds": nonnegative_int(raw.get("durationSeconds")),
                     }
                 )
 
@@ -391,7 +430,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             }
             for stream in streams
         ]
-        self.write_json({"count": len(public_items), "items": public_items})
+        self.write_json({"count": len(public_items), "items": public_items, "failures": failures})
 
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
@@ -481,28 +520,50 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         self.proxy_remote_url(subtitle["url"])
 
     def proxy_remote_url(self, url):
-        headers = {"User-Agent": "PocketStremio/0.1"}
+        headers = {"User-Agent": "PocketStremio/0.4", "Accept-Encoding": "identity"}
         if self.headers.get("Range"):
             headers["Range"] = self.headers["Range"]
 
         req = urllib.request.Request(url, headers=headers)
+        response_started = False
         try:
             with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT) as resp:
                 self.send_response(resp.status)
-                for key in ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"]:
+                for key in [
+                    "Content-Type",
+                    "Content-Length",
+                    "Content-Range",
+                    "Accept-Ranges",
+                    "Cache-Control",
+                    "ETag",
+                    "Last-Modified",
+                ]:
                     value = resp.headers.get(key)
                     if value:
                         self.send_header(key, value)
+                self.send_header("Connection", "close")
                 self.end_headers()
+                response_started = True
                 while True:
                     chunk = resp.read(1024 * 256)
                     if not chunk:
                         break
                     self.wfile.write(chunk)
         except urllib.error.HTTPError as exc:
-            self.write_json({"error": "upstream_http_error", "status": exc.code}, status=502)
+            if not response_started:
+                self.write_json({"error": "upstream_http_error", "status": exc.code}, status=502)
+        except (BrokenPipeError, ConnectionResetError):
+            print("playback client disconnected", flush=True)
         except Exception as exc:
-            self.write_json({"error": "upstream_fetch_failed", "message": str(exc)}, status=502)
+            if response_started:
+                print(f"upstream stream interrupted: {exc}", flush=True)
+            else:
+                self.write_json(
+                    {"error": "upstream_fetch_failed", "message": "Stream source is unavailable"},
+                    status=502,
+                )
+        finally:
+            self.close_connection = True
 
     def log_message(self, fmt, *args):
         print("%s - %s" % (self.address_string(), fmt % args), flush=True)
@@ -577,6 +638,8 @@ def main():
     parser.add_argument("--port", type=int, default=8755)
     parser.add_argument("--public-host", default=None)
     parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
+    parser.add_argument("--open-media-addon-port", type=int, default=8756)
+    parser.add_argument("--disable-open-media-addon", action="store_true")
     parser.add_argument(
         "--stream-addons",
         default=str(Path(__file__).resolve().parent / "config" / "stream_addons.json"),
@@ -611,17 +674,41 @@ def main():
     httpd.server_port = args.port
     httpd.stremio_service_url = args.stremio_service_url.rstrip("/") if args.stremio_service_url else ""
     httpd.stream_addons = load_stream_addons(args.stream_addons, httpd.stremio_service_url)
+    open_media_server = None
+    open_media_thread = None
+    if not args.disable_open_media_addon:
+        open_media_server = open_media_addon.create_server("127.0.0.1", args.open_media_addon_port)
+        open_media_thread = threading.Thread(target=open_media_server.serve_forever, daemon=True)
+        open_media_thread.start()
+        httpd.stream_addons.append(
+            {
+                "name": "PocketStremio Open Media",
+                "manifest_url": f"http://127.0.0.1:{args.open_media_addon_port}/manifest.json",
+            }
+        )
     httpd.stream_cache = {}
     httpd.subtitle_cache = {}
     httpd.play_sessions = {}
+    httpd.manifest_cache = {}
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
 
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
     print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
+    if open_media_server:
+        print(
+            f"Open-media addon: http://127.0.0.1:{args.open_media_addon_port}/manifest.json",
+            flush=True,
+        )
     print(f"Media directory: {media_dir}", flush=True)
     print(f"Data directory: {data_dir}", flush=True)
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    finally:
+        if open_media_server:
+            open_media_server.shutdown()
+            open_media_server.server_close()
+            open_media_thread.join(timeout=5)
 
 
 if __name__ == "__main__":

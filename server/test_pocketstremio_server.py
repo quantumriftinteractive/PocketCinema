@@ -3,10 +3,48 @@ import tempfile
 import threading
 import unittest
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
+from server import open_media_addon
 from server import pocketstremio_server as pocket
+
+
+class RedirectingMediaHandler(BaseHTTPRequestHandler):
+    content = bytes(range(256)) * 8
+
+    def do_GET(self):
+        if self.path == "/redirect":
+            self.send_response(302)
+            self.send_header("Location", "/video.mp4")
+            self.end_headers()
+            return
+
+        if self.path != "/video.mp4":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        range_header = self.headers.get("Range", "")
+        if range_header.startswith("bytes="):
+            start_text, _, end_text = range_header[6:].partition("-")
+            start = int(start_text)
+            end = min(int(end_text), len(self.content) - 1)
+            body = self.content[start : end + 1]
+            self.send_response(206)
+            self.send_header("Content-Range", f"bytes {start}-{end}/{len(self.content)}")
+        else:
+            body = self.content
+            self.send_response(200)
+        self.send_header("Content-Type", "video/mp4")
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        pass
 
 
 class PocketStremioServerTest(unittest.TestCase):
@@ -34,6 +72,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
         self.server.play_sessions = {}
+        self.server.manifest_cache = {}
         self.server.progress_store = pocket.ProgressStore(
             root / "data" / "continue_watching.json"
         )
@@ -143,6 +182,60 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(
             self.server.subtitle_cache[subtitle["id"]]["url"], upstream_url
         )
+
+    def test_open_media_addon_resolves_opaque_real_stream(self):
+        addon = open_media_addon.create_server("127.0.0.1", 0)
+        addon_thread = threading.Thread(target=addon.serve_forever, daemon=True)
+        addon_thread.start()
+        manifest_url = f"http://127.0.0.1:{addon.server_address[1]}/manifest.json"
+        self.server.stream_addons = [
+            {"name": "PocketStremio Open Media", "manifest_url": manifest_url}
+        ]
+        try:
+            with urllib.request.urlopen(manifest_url, timeout=5) as response:
+                manifest = json.load(response)
+            self.assertIn("stream", manifest["resources"])
+
+            _, streams = self.get_json("/api/streams/movie/tt0063350")
+            self.assertEqual(streams["count"], 1)
+            stream = streams["items"][0]
+            self.assertEqual(stream["name"], "Open Media - Internet Archive")
+            self.assertEqual(stream["duration_seconds"], 5752)
+            self.assertNotIn("url", stream)
+            self.assertNotIn("source", stream)
+            self.assertEqual(
+                self.server.stream_cache[stream["id"]]["url"],
+                open_media_addon.NIGHT_OF_THE_LIVING_DEAD_URL,
+            )
+        finally:
+            addon.shutdown()
+            addon.server_close()
+            addon_thread.join(timeout=5)
+
+    def test_play_proxy_preserves_range_across_redirect(self):
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RedirectingMediaHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        stream_id = "redirect-test"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Redirect test",
+            "url": f"http://127.0.0.1:{upstream.server_address[1]}/redirect",
+        }
+        try:
+            _, play = self.post_json("/api/play", {"stream_id": stream_id})
+            request = urllib.request.Request(
+                play["url"], headers={"Range": "bytes=100-199"}
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                self.assertEqual(response.status, 206)
+                self.assertEqual(response.headers["Content-Type"], "video/mp4")
+                self.assertEqual(response.headers["Content-Range"], "bytes 100-199/2048")
+                self.assertEqual(response.read(), RedirectingMediaHandler.content[100:200])
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
 
     def test_continue_watching_persists_and_completed_item_is_removed(self):
         payload = {

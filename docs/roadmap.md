@@ -118,11 +118,18 @@ another compatible player is deliberately introduced and measured.
 
 Evidence: [Subtitles and Continue Watching POC](subtitles-progress-poc.md)
 
-## Next Milestone
-
 ### 7. Real Stream Resolution
 
-**Status: Next**
+**Status: Confirmed**
+
+The public-domain *Night of the Living Dead* (1968) Internet Archive derivative
+is resolved through a localhost-only Stremio addon. PocketStremio hides the
+upstream URL and relays redirects and byte ranges through Tailscale. Manual
+selection, visible and audible playback, acceptable initial smoothness, normal B
+exit, progress saving, and cleanup were physically confirmed from the OnionOS
+Apps context.
+
+Evidence: [Real Stream Resolution POC](real-stream-resolution.md)
 
 Goal: replace the hosted test stream as the only proven source with at least one
 real, legally accessible HTTP(S) stream resolved by a server-side addon or
@@ -162,9 +169,11 @@ Not part of this milestone:
 - accounts or library integration;
 - posters or a larger UI framework.
 
+## Next Milestone
+
 ### 8. Playback Compatibility and Reliability
 
-**Status: Planned**
+**Status: Next**
 
 - Record the codecs, containers, resolution, bitrate, and audio formats FFplay
   can sustain on the device.

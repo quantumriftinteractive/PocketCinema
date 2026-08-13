@@ -39,6 +39,12 @@ Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
 Apps -> PocketStremio -> Continue Watching -> Resume -> stream -> FFplay
 ```
 
+Both the hosted Big Buck Bunny regression fixture and the public-domain *Night
+of the Living Dead* stream resolved by the localhost open-media addon have been
+physically played from the OnionOS Apps context. The latter confirmed H.264
+Constrained Baseline 320x240 video, AAC stereo audio initialization, normal B
+exit, progress saving, and cleanup.
+
 Continue Watching persists on the gaming PC and resume uses FFplay `-ss` with
 an approximate wall-clock-derived position. The target FFplay build does not
 include the `subtitles` video filter; do not expose an external subtitle option
