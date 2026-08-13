@@ -14,15 +14,24 @@ JQ="$SYS_DIR/bin/jq"
 KBINPUT="$SYS_DIR/bin/kbinput"
 SHELLECT="$SYS_DIR/script/shellect.sh"
 SDL_SELECTOR="$BASE_DIR/bin/pocketstremio-selector"
+PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
+LOADING_PID=""
+PAUSE_MONITOR_PID=""
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
 
 cleanup() {
-  rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt
+  stop_loading
+  if [ -n "$PAUSE_MONITOR_PID" ] && kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
+    kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
+    wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
+  fi
+  rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
+    /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds
 }
 
 trap cleanup EXIT
@@ -40,6 +49,27 @@ message() {
   "$INFOPANEL" --title "$title" --message "$body" --auto >/dev/null 2>&1 || true
 }
 
+start_loading() {
+  loading_title="$1"
+  loading_message="$2"
+  stop_loading
+  rm -f /tmp/dismiss_info_panel
+  "$INFOPANEL" --title "$loading_title" --message "$loading_message" --persistent >/dev/null 2>&1 &
+  LOADING_PID=$!
+  log "loading start pid=$LOADING_PID message=$loading_message"
+}
+
+stop_loading() {
+  [ -n "$LOADING_PID" ] || return 0
+  if kill -0 "$LOADING_PID" 2>/dev/null; then
+    touch /tmp/dismiss_info_panel
+    wait "$LOADING_PID" 2>/dev/null || true
+  fi
+  log "loading stop pid=$LOADING_PID"
+  LOADING_PID=""
+  rm -f /tmp/dismiss_info_panel
+}
+
 api_get() {
   path="$1"
   timeout="${2:-30}"
@@ -51,7 +81,7 @@ api_post_play() {
   id="$2"
   stream_id="$3"
   body="{\"type\":\"$type\",\"id\":\"$id\",\"stream_id\":\"$stream_id\"}"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play")
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play")
 }
 
 api_post_progress() {
@@ -84,6 +114,15 @@ play_url() {
   subtitle_file="${3:-}"
   PLAYBACK_RC=1
   PLAYBACK_ELAPSED=0
+  PLAYBACK_STARTUP=0
+  PLAYBACK_PAUSED=0
+  PAUSE_TRACKING_VALID=0
+  PLAYBACK_VALID=0
+  playback_visible_started=0
+  ffplay_log=/tmp/pocketstremio-ffplay.log
+  pause_result=/tmp/pocketstremio-paused-seconds
+  PAUSE_MONITOR_PID=""
+  rm -f "$ffplay_log" "$pause_result"
   log "ffplay launch url=$url resume_seconds=$resume_seconds subtitles=${subtitle_file:-none}"
   touch /tmp/stay_awake
   cd "$SYS_DIR" || return 1
@@ -93,20 +132,71 @@ play_url() {
     HTTP_PROXY="$PROXY" \
     http_proxy="$PROXY" \
     LD_PRELOAD="$PADSP" \
-    "$FFPLAY" -hide_banner -autoexit -ss "$resume_seconds" -vf "subtitles=$subtitle_file,hflip,vflip" -i "$url" >> "$LOG_FILE" 2>&1
+    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "subtitles=$subtitle_file,hflip,vflip" -i "$url" >"$ffplay_log" 2>&1 &
   else
     HOME=/mnt/SDCARD \
     HTTP_PROXY="$PROXY" \
     http_proxy="$PROXY" \
     LD_PRELOAD="$PADSP" \
-    "$FFPLAY" -hide_banner -autoexit -ss "$resume_seconds" -vf "hflip,vflip" -i "$url" >> "$LOG_FILE" 2>&1
+    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "hflip,vflip" -i "$url" >"$ffplay_log" 2>&1 &
   fi
+  ffplay_pid=$!
+  while kill -0 "$ffplay_pid" 2>/dev/null; do
+    if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
+      playback_visible_started=$(date +%s)
+      PLAYBACK_STARTUP=$((playback_visible_started - playback_started))
+      log "ffplay video ready startup_seconds=$PLAYBACK_STARTUP"
+      if [ -x "$PAUSE_MONITOR" ]; then
+        "$PAUSE_MONITOR" "$pause_result" >>"$LOG_FILE" 2>&1 &
+        PAUSE_MONITOR_PID=$!
+        log "pause monitor start pid=$PAUSE_MONITOR_PID"
+      else
+        log "pause monitor unavailable"
+      fi
+      break
+    fi
+    sleep 1
+  done
+  wait "$ffplay_pid"
   PLAYBACK_RC=$?
+  if [ -n "$PAUSE_MONITOR_PID" ]; then
+    if kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
+      kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
+    fi
+    wait "$PAUSE_MONITOR_PID" 2>/dev/null
+    pause_monitor_rc=$?
+    PAUSE_MONITOR_PID=""
+    if [ "$pause_monitor_rc" -eq 0 ] && [ -f "$pause_result" ]; then
+      PLAYBACK_PAUSED=$(cat "$pause_result")
+      case "$PLAYBACK_PAUSED" in
+        ''|*[!0-9]*) PLAYBACK_PAUSED=0 ;;
+        *) PAUSE_TRACKING_VALID=1 ;;
+      esac
+    fi
+  fi
+  cat "$ffplay_log" >>"$LOG_FILE"
+  if grep -q '^Input #0' "$ffplay_log" \
+    && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
+    && ! grep -Eq 'HTTP error|Input/output error|partial file' "$ffplay_log"; then
+    PLAYBACK_VALID=1
+  fi
+  rm -f "$ffplay_log"
+  if [ "$PLAYBACK_VALID" -ne 1 ] && [ "$PLAYBACK_RC" -eq 0 ]; then
+    PLAYBACK_RC=1
+  fi
   playback_ended=$(date +%s)
-  PLAYBACK_ELAPSED=$((playback_ended - playback_started))
+  if [ "$playback_visible_started" -gt 0 ] 2>/dev/null; then
+    PLAYBACK_ELAPSED=$((playback_ended - playback_visible_started))
+    if [ "$PLAYBACK_PAUSED" -ge "$PLAYBACK_ELAPSED" ] 2>/dev/null; then
+      PLAYBACK_ELAPSED=0
+    else
+      PLAYBACK_ELAPSED=$((PLAYBACK_ELAPSED - PLAYBACK_PAUSED))
+    fi
+  fi
   rm -f /tmp/stay_awake
   [ -n "$subtitle_file" ] && rm -f "$subtitle_file"
-  log "ffplay exit rc=$PLAYBACK_RC elapsed_seconds=$PLAYBACK_ELAPSED"
+  rm -f "$pause_result"
+  log "ffplay exit rc=$PLAYBACK_RC startup_seconds=$PLAYBACK_STARTUP paused_seconds=$PLAYBACK_PAUSED watched_seconds=$PLAYBACK_ELAPSED valid=$PLAYBACK_VALID pause_tracking=$PAUSE_TRACKING_VALID"
   return "$PLAYBACK_RC"
 }
 
@@ -336,7 +426,11 @@ streams_flow() {
   year="$4"
   resume_seconds="${5:-0}"
   log "resolve streams type=$type id=$id"
-  if ! api_get "/api/streams/$type/$id" >/tmp/pocketstremio-streams.json; then
+  start_loading "PocketStremio" "Finding streams..."
+  api_get "/api/streams/$type/$id" >/tmp/pocketstremio-streams.json
+  stream_lookup_rc=$?
+  stop_loading
+  if [ "$stream_lookup_rc" -ne 0 ]; then
     message "PocketStremio" "Stream lookup failed"
     return 1
   fi
@@ -372,7 +466,11 @@ streams_flow() {
     break
   done
 
-  if ! api_post_play "$type" "$id" "$stream_id" >/tmp/pocketstremio-play.json; then
+  start_loading "PocketStremio" "Checking compatibility..."
+  api_post_play "$type" "$id" "$stream_id" >/tmp/pocketstremio-play.json
+  play_setup_rc=$?
+  stop_loading
+  if [ "$play_setup_rc" -ne 0 ]; then
     message "PocketStremio" "Playback setup failed"
     return 1
   fi
@@ -402,6 +500,9 @@ streams_flow() {
   fi
 
   log "playback url received"
+  start_loading "PocketStremio" "Starting video..."
+  sleep 1
+  stop_loading
   if ! play_url "$play_url_value" "$resume_seconds" "$subtitle_file"; then
     message "PocketStremio" "Playback failed"
   fi
@@ -411,7 +512,7 @@ streams_flow() {
   if [ "$duration_seconds" -gt 0 ] 2>/dev/null && [ $((new_position * 10)) -ge $((duration_seconds * 9)) ]; then
     completed=true
   fi
-  if [ "$PLAYBACK_RC" -eq 0 ] 2>/dev/null && [ "$PLAYBACK_ELAPSED" -gt 0 ] 2>/dev/null; then
+  if [ "$PLAYBACK_VALID" -eq 1 ] 2>/dev/null && [ "$PAUSE_TRACKING_VALID" -eq 1 ] 2>/dev/null && [ "$PLAYBACK_RC" -eq 0 ] 2>/dev/null && [ "$PLAYBACK_ELAPSED" -gt 0 ] 2>/dev/null; then
     if api_post_progress "$type" "$id" "$title" "$year" "$new_position" "$duration_seconds" "$completed" >/tmp/pocketstremio-progress.json; then
       log "progress saved position_seconds=$new_position duration_seconds=$duration_seconds completed=$completed"
     else

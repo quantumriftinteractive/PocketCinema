@@ -75,7 +75,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.subtitle_cache = {}
         self.server.play_sessions = pocket.SessionStore()
         self.server.manifest_cache = {}
-        self.server.probe_cache = {}
+        self.server.probe_cache = pocket.ProbeCache(root / "data" / "probe_cache.json")
         self.server.ffprobe_path = ""
         self.server.probe_timeout = 5
         self.server.progress_store = pocket.ProgressStore(
@@ -370,6 +370,35 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(first["duration_seconds"], 60)
         self.assertNotEqual(first["session_id"], second["session_id"])
         probe.assert_called_once()
+
+        cache_text = self.server.probe_cache.path.read_text(encoding="utf-8")
+        self.assertNotIn("media.example", cache_text)
+        reloaded = pocket.ProbeCache(self.server.probe_cache.path)
+        self.assertEqual(
+            reloaded.get("https://media.example/candidate.webm")["status"],
+            "candidate",
+        )
+
+    def test_probe_cache_expires_and_evicts_oldest(self):
+        cache = pocket.ProbeCache(
+            Path(self.temp_dir.name) / "expiring-probe-cache.json",
+            ttl_seconds=10,
+            max_items=2,
+        )
+        with mock.patch.object(pocket.time, "time", return_value=100):
+            cache.set("https://media.example/video.mp4", {"status": "confirmed"})
+        with mock.patch.object(pocket.time, "time", return_value=101):
+            cache.set("https://media.example/second.mp4", {"status": "candidate"})
+        with mock.patch.object(pocket.time, "time", return_value=102):
+            cache.set("https://media.example/third.mp4", {"status": "candidate"})
+            self.assertIsNone(cache.get("https://media.example/video.mp4"))
+        with mock.patch.object(pocket.time, "time", return_value=109):
+            self.assertEqual(
+                cache.get("https://media.example/second.mp4")["status"],
+                "candidate",
+            )
+        with mock.patch.object(pocket.time, "time", return_value=111):
+            self.assertIsNone(cache.get("https://media.example/second.mp4"))
 
     def test_session_store_expires_and_evicts_oldest_sessions(self):
         store = pocket.SessionStore(ttl_seconds=10, max_items=2)

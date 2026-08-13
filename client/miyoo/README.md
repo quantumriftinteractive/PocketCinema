@@ -12,6 +12,10 @@
 - selects external subtitles through the server when FFplay advertises the
   `subtitles` filter;
 - resumes saved items with FFplay `-ss` and reports approximate progress.
+- shows persistent OnionOS loading panels during stream discovery and server-side
+  media compatibility inspection.
+- excludes network startup and A-button pause intervals from reported progress
+  with the app-local `pocketstremio-pause-monitor` helper.
 
 Inside FFplay, the Miyoo Menu button exits playback. B advances one frame; it is
 not the playback exit control on the confirmed OnionOS FFplay build.
@@ -19,6 +23,10 @@ not the playback exit control on the confirmed OnionOS FFplay build.
 The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set
 `POCKETSTREMIO_AUTO_FIRST=1` to restore the development auto-select path.
+
+The pause observer is `bin/pocketstremio-pause-monitor`; its source is
+`pause_monitor.c`. It opens `/dev/input/event0` as an additional reader and does
+not grab, transform, or consume controller events.
 
 Confirmed device flow:
 

@@ -42,7 +42,7 @@ Apps -> PocketStremio -> Continue Watching -> Resume -> stream -> FFplay
 Both the hosted Big Buck Bunny regression fixture and the public-domain *Night
 of the Living Dead* stream resolved by the localhost open-media addon have been
 physically played from the OnionOS Apps context. The latter confirmed H.264
-Constrained Baseline 320x240 video, AAC stereo audio initialization, normal B
+Constrained Baseline 320x240 video, AAC stereo audio initialization, Menu-button
 exit, progress saving, and cleanup.
 
 The server can use gaming-PC `ffprobe` during `/api/play` to classify media.
@@ -96,6 +96,8 @@ client/miyoo/pocketstremio-ui.sh
   -> /mnt/SDCARD/App/PocketStremio/client/pocketstremio-ui.sh
 client/miyoo/bin/pocketstremio-selector
   -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-selector
+client/miyoo/bin/pocketstremio-pause-monitor
+  -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-pause-monitor
 ```
 
 Do not store target addresses or credentials in new committed files. Use the
@@ -117,6 +119,13 @@ of git.
 - Keep logs under the app-local `logs/` directory and avoid logging private
   upstream stream URLs.
 - Always remove `/tmp/stay_awake` after playback, including failure paths.
+- Derive watched time from SDL video readiness, not total FFplay process time;
+  initial remote media startup must not advance Continue Watching.
+- Observe A-button pause toggles through a non-grabbing app-local evdev reader.
+  If pause tracking fails, suppress the progress update rather than overcounting.
+- Use OnionOS `infoPanel --persistent` for blocking network/preflight work and
+  dismiss only the app-started panel with `/tmp/dismiss_info_panel`. Clear the
+  flag during cleanup so it cannot affect a later panel.
 
 ### SDL Selector
 

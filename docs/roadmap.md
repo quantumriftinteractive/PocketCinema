@@ -105,7 +105,8 @@ Continue Watching is implemented and physically confirmed:
 - Search, Continue Watching, and Exit home actions;
 - Resume and Play from Start actions;
 - FFplay resume seeking with `-ss`;
-- approximate progress updates based on FFplay wall-clock playback time;
+- approximate progress updates measured after video readiness with A-button
+  pause intervals excluded;
 - completed-item removal when duration is known;
 - clean return to the home menu with no stale processes or temporary files.
 
@@ -125,9 +126,9 @@ Evidence: [Subtitles and Continue Watching POC](subtitles-progress-poc.md)
 The public-domain *Night of the Living Dead* (1968) Internet Archive derivative
 is resolved through a localhost-only Stremio addon. PocketStremio hides the
 upstream URL and relays redirects and byte ranges through Tailscale. Manual
-selection, visible and audible playback, acceptable initial smoothness, normal B
-exit, progress saving, and cleanup were physically confirmed from the OnionOS
-Apps context.
+selection, visible and audible playback, acceptable initial smoothness,
+Menu-button exit, progress saving, and cleanup were physically confirmed from
+the OnionOS Apps context.
 
 Evidence: [Real Stream Resolution POC](real-stream-resolution.md)
 
@@ -247,11 +248,12 @@ acceptance criteria rather than expanding an earlier milestone.
   confirmed probes.
 - Direct streams may use codecs, headers, redirects, or seek behavior that the
   current FFplay proxy path does not support.
-- Stream, probe, and play-session state remains in memory. Play sessions now
-  expire after six hours and are bounded to 128 entries; stream and probe caches
-  still reset only when the server restarts.
-- Resume positions currently use elapsed wall-clock time because the OnionOS
-  FFplay build has not exposed a confirmed machine-readable progress channel.
+- Stream and play-session state remains in memory. Play sessions expire after
+  six hours and are bounded to 128 entries; normalized probe results persist for
+  seven days in an ignored cache file.
+- Resume positions remain approximate because the OnionOS FFplay build has not
+  exposed a machine-readable progress channel. Startup and A-button pauses are
+  excluded, but seeks and buffering after video readiness are not yet measured.
 - The client depends on OnionOS utilities and SDL 1.2 behavior that should be
   rechecked when the target OnionOS version changes.
 

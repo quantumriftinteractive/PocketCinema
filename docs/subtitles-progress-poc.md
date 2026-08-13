@@ -86,13 +86,15 @@ to FFplay with `-ss`.
 This POC estimates position as:
 
 ```text
-saved resume offset + FFplay wall-clock run time
+saved resume offset + (time after SDL video readiness - A-button pause time)
 ```
 
-This is deliberately documented as approximate. It includes some player startup
-time and cannot distinguish every end-of-file condition for streams whose
-duration is unknown. A later compatibility milestone should replace it with a
-machine-readable player position if the OnionOS FFplay build exposes one.
+This remains approximate because the OnionOS FFplay build exposes no confirmed
+machine-readable player position. Network and decoder startup are excluded, and
+an app-local non-grabbing evdev observer excludes A-button pause intervals. The
+client suppresses progress updates when playback validation or pause tracking
+fails. Seeks and buffering after video readiness can still differ from the
+estimated position.
 
 ## Confirmed Device Result
 

@@ -58,9 +58,14 @@ The server inspects only normalized format information:
 - audio channels and sample rate;
 - duration and total bitrate.
 
-Probe results are cached by opaque stream ID. The first remote-film preflight
-took 3.48 seconds; subsequent requests use the cache. The raw upstream URL
-remains server-side and is never returned in compatibility data.
+Probe results are cached for seven days by a SHA-256 hash of the upstream URL.
+The normalized cache persists in the ignored `server/data/probe_cache.json`
+file, stores no upstream URL, and is bounded to 256 entries. The first
+remote-film preflight took 3.48
+seconds under normal source conditions, while a later Internet Archive slowdown
+took 33.3 seconds. The server therefore allows 45 seconds for an initial probe
+and the Miyoo keeps the loading panel visible for up to 60 seconds. Subsequent
+requests and server restarts use the cache.
 
 An unsupported profile returns HTTP `409` with a concise message before FFplay
 starts. Probe timeout or source inspection failure returns HTTP `502`. The
@@ -77,6 +82,31 @@ Stream choices use compact prefixes:
 The final ffprobe result is logged by status and summary when playback is
 created. Private source URLs are not logged.
 
+The Miyoo displays an OnionOS-native persistent loading panel while resolving
+streams and while waiting for ffprobe/session creation. PocketStremio tracks the
+panel process it starts and dismisses it through OnionOS's standard
+`/tmp/dismiss_info_panel` flag before showing an error, returning to a selector,
+launching FFplay, or exiting.
+
+After session creation the panel changes to `Starting video...` before FFplay
+takes over the framebuffer. This prevents a slow upstream connection from
+leaving a stale compatibility message on screen. Remote media reads have a
+separate 30-second timeout because the confirmed Internet Archive edge has been
+observed taking 14-23 seconds to establish a byte-range response.
+
+The client validates each FFplay run from its isolated run log. Progress is
+saved only when FFplay opened the input and video output without HTTP, partial
+file, or input/output errors. Startup time is measured separately, and watched
+time starts only when FFplay logs `SDL_SetVideoMode`. This prevents network and
+decoder startup, as well as FFplay's misleading zero exit code on input failure,
+from advancing Continue Watching.
+
+FFplay exposes no machine-readable playback clock or pause state in this OnionOS
+build. Its documented A button maps to `KEY_SPACE`, so a small app-local ARM
+helper observes that evdev event without grabbing input and subtracts complete
+pause intervals. The client suppresses progress updates if the helper does not
+return a valid duration.
+
 ## Session Reliability
 
 Play sessions now use random opaque IDs and are bounded to:
@@ -88,8 +118,8 @@ maximum active sessions: 128
 
 Expired sessions return HTTP `410`. When the maximum is reached, the oldest
 session is removed. Expired entries are cleaned during create, lookup, and
-status requests. Session and probe caches remain in memory and reset on server
-restart.
+status requests. Play sessions remain in memory and reset on server restart;
+normalized probe results persist for seven days in the ignored cache file.
 
 ## Confirmed Checks
 
@@ -111,6 +141,44 @@ Range bytes=1048576-1114111:
   video/mp4
   65,536 bytes returned
 ```
+
+A later work-network regression exposed a source-latency failure:
+
+```text
+compatibility cache lookup: less than 1 second
+old media relay timeout: 15 seconds
+observed Internet Archive range startup: 14-23 seconds
+FFplay result: HTTP 502/partial-file errors but rc=0
+incorrect saved position: advanced from 114 to 322 seconds
+```
+
+The relay timeout is now 30 seconds, FFplay runs with isolated validation logs,
+and invalid input runs no longer update progress. The incorrect position was
+restored to the last physically confirmed 114 seconds. After deployment, a
+Miyoo-originated 1 KiB range request completed through the Tailscale HTTP proxy
+with HTTP `206` in 3.71 seconds.
+
+The first physical regression of that validation still exposed incorrect
+progress accounting. Two 5-10 second playback checks had FFplay process
+lifetimes of 86 and 56 seconds because startup was included, advancing progress
+from 114 to 256 seconds. Progress accounting now begins at SDL video readiness,
+not process launch.
+
+A subsequent physical pause regression confirmed the app-local observer:
+
+```text
+resume position: 117 seconds
+media startup before SDL video readiness: 10 seconds
+time after video readiness: 231 seconds
+A-button pause time: 228 seconds
+counted watched time: 3 seconds
+saved position: 120 seconds
+```
+
+The user confirmed video pause/resume behavior during the run. Pause tracking
+returned valid, Menu exited FFplay normally, and no FFplay, pause observer,
+loading panel, or temporary marker remained. A separate device measurement
+reported the 5.6 KiB helper at 164 KiB RSS and 1,588 KiB virtual size.
 
 Physically confirmed from a work network over Tailscale on August 13, 2026:
 

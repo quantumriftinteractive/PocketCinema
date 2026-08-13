@@ -23,10 +23,13 @@ except ImportError:
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 DEFAULT_TIMEOUT = 15
+MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
 MAX_CONTINUE_ITEMS = 50
 DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
+DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
+DEFAULT_MAX_PROBE_CACHE = 256
 
 
 def fetch_json(url, timeout=DEFAULT_TIMEOUT):
@@ -164,6 +167,89 @@ class SessionStore:
             return len(self.items)
 
 
+class ProbeCache:
+    def __init__(
+        self,
+        path,
+        ttl_seconds=DEFAULT_PROBE_CACHE_TTL,
+        max_items=DEFAULT_MAX_PROBE_CACHE,
+    ):
+        self.path = Path(path)
+        self.ttl_seconds = max(1, int(ttl_seconds))
+        self.max_items = max(1, int(max_items))
+        self.lock = threading.Lock()
+        self.items = self._load()
+
+    @staticmethod
+    def key(url):
+        return hashlib.sha256(url.encode()).hexdigest()
+
+    def _load(self):
+        if not self.path.is_file():
+            return {}
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _save(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
+        temp_path.write_text(
+            json.dumps(self.items, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        os.replace(temp_path, self.path)
+
+    def _prune(self, now):
+        expired = [
+            key
+            for key, item in self.items.items()
+            if not isinstance(item, dict)
+            or now - item.get("updated_at", 0) >= self.ttl_seconds
+        ]
+        for key in expired:
+            self.items.pop(key, None)
+
+        overflow = len(self.items) - self.max_items
+        if overflow > 0:
+            oldest = sorted(
+                self.items,
+                key=lambda key: self.items[key].get("updated_at", 0),
+            )[:overflow]
+            for key in oldest:
+                self.items.pop(key, None)
+        return bool(expired or overflow > 0)
+
+    def get(self, url):
+        cache_key = self.key(url)
+        with self.lock:
+            changed = self._prune(time.time())
+            item = self.items.get(cache_key)
+            if changed:
+                self._save()
+            if not item:
+                return None
+            return dict(item.get("compatibility") or {}) or None
+
+    def set(self, url, compatibility):
+        cache_key = self.key(url)
+        with self.lock:
+            self.items[cache_key] = {
+                "updated_at": int(time.time()),
+                "compatibility": compatibility,
+            }
+            self._prune(time.time())
+            self._save()
+
+    def __len__(self):
+        with self.lock:
+            if self._prune(time.time()):
+                self._save()
+            return len(self.items)
+
+
 class ProgressStore:
     def __init__(self, path):
         self.path = Path(path)
@@ -261,6 +347,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "continue_watching": len(self.server.progress_store.list_items()),
                     "play_sessions": len(self.server.play_sessions),
                     "media_preflight": bool(self.server.ffprobe_path),
+                    "probe_cache": len(self.server.probe_cache),
                 }
             )
             return
@@ -387,7 +474,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         )
 
     def preflight_stream(self, stream_id, stream):
-        cached = self.server.probe_cache.get(stream_id)
+        del stream_id
+        cached = self.server.probe_cache.get(stream["url"])
         if cached:
             return cached
 
@@ -405,7 +493,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "status": "candidate",
                     "message": "Media preflight is unavailable",
                 }
-        self.server.probe_cache[stream_id] = compatibility
+        self.server.probe_cache.set(stream["url"], compatibility)
         return compatibility
 
     def handle_progress(self):
@@ -649,7 +737,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         req = urllib.request.Request(url, headers=headers)
         response_started = False
         try:
-            with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT) as resp:
+            with urllib.request.urlopen(req, timeout=MEDIA_TIMEOUT) as resp:
                 self.send_response(resp.status)
                 for key in [
                     "Content-Type",
@@ -767,7 +855,9 @@ def main():
         default=os.environ.get("POCKETSTREMIO_FFPROBE", ""),
         help="Optional ffprobe executable used for media preflight",
     )
-    parser.add_argument("--probe-timeout", type=int, default=20)
+    parser.add_argument("--probe-timeout", type=int, default=45)
+    parser.add_argument("--probe-cache-ttl", type=int, default=DEFAULT_PROBE_CACHE_TTL)
+    parser.add_argument("--max-probe-cache", type=int, default=DEFAULT_MAX_PROBE_CACHE)
     parser.add_argument("--session-ttl", type=int, default=DEFAULT_SESSION_TTL)
     parser.add_argument("--max-sessions", type=int, default=DEFAULT_MAX_SESSIONS)
     parser.add_argument(
@@ -820,7 +910,9 @@ def main():
     httpd.subtitle_cache = {}
     httpd.play_sessions = SessionStore(args.session_ttl, args.max_sessions)
     httpd.manifest_cache = {}
-    httpd.probe_cache = {}
+    httpd.probe_cache = ProbeCache(
+        data_dir / "probe_cache.json", args.probe_cache_ttl, args.max_probe_cache
+    )
     httpd.ffprobe_path = playback_compatibility.resolve_ffprobe(args.ffprobe)
     httpd.probe_timeout = max(1, args.probe_timeout)
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
