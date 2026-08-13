@@ -7,6 +7,7 @@
 - uses OnionOS `kbinput` for search text and the bundled SDL 1.2 selector for lists;
 - supports D-pad navigation, A selection, and B/back in selector screens;
 - parses API responses with OnionOS `jq`;
+- browses normalized series seasons and episodes with the SDL selector;
 - launches FFplay in the working OnionOS framebuffer/audio context.
 - offers Search and Continue Watching from a lightweight home menu;
 - selects external subtitles through the server when FFplay advertises the
@@ -32,6 +33,7 @@ Confirmed device flow:
 
 ```text
 Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
+Apps -> PocketStremio -> search -> series -> season -> episode -> Play -> stream -> FFplay
 ```
 
 The standalone `json-client.sh` remains as the lightweight structured JSON

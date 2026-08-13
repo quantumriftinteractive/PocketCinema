@@ -194,11 +194,17 @@ Evidence: [Playback Compatibility and Reliability](playback-compatibility.md)
 Acceptance criterion: supported streams play predictably, while unsupported
 streams fail before FFplay with a useful message.
 
-## Next Milestone
-
 ### 9. Series and Episode Browsing
 
-**Status: Next**
+**Status: Confirmed**
+
+Movie and series search results are normalized together. Series metadata exposes
+compact season and episode records, and the Miyoo adds controller-driven season
+and episode selectors before the existing stream and playback flow. A local
+two-season fixture proved the full path without an Internet media dependency;
+episode progress and B/back navigation were also physically confirmed.
+
+Evidence: [Series and Episode Browsing](series-episode-browsing.md)
 
 - Extend search and metadata normalization to series.
 - Add season and episode selection screens using the existing SDL selector.
@@ -208,11 +214,13 @@ streams fail before FFplay with a useful message.
 Acceptance criterion: a user can search for a series, choose an episode, select
 a compatible stream, and start playback.
 
+## Next Milestone
+
 ### 10. Operational Resilience
 
-**Status: Planned**
+**Status: Next**
 
-- Add bounded play-session lifetime and cache cleanup.
+- Verify session and cache cleanup across restarts and expected failures.
 - Improve server health details and client connectivity errors.
 - Make server address and non-secret client settings easy to configure.
 - Define repeatable deployment and upgrade steps.

@@ -25,6 +25,7 @@ CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
+TEST_SERIES_ID = "pocketstremio-test-series"
 MAX_CONTINUE_ITEMS = 50
 DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
@@ -63,8 +64,70 @@ COMPATIBILITY_FIXTURES = (
         },
     },
 )
+SERIES_PLAYBACK_FIXTURE = {
+    "filename": "series-av-sync.mp4",
+    "name": "Offline episode A/V sync test",
+    "description": "30-second H.264/AAC fixture with matching flashes and beeps",
+    "duration_seconds": 30,
+    "compatibility": {
+        "status": "confirmed",
+        "message": "Confirmed H.264/AAC 640x360 profile",
+    },
+}
 COMPATIBILITY_FIXTURE_NAMES = {
     fixture["filename"] for fixture in COMPATIBILITY_FIXTURES
+} | {SERIES_PLAYBACK_FIXTURE["filename"]}
+TEST_SERIES_META = {
+    "id": TEST_SERIES_ID,
+    "type": "series",
+    "name": "PocketStremio Test Series",
+    "releaseInfo": "2026",
+    "description": "Deterministic offline fixture for season and episode browsing.",
+    "videos": [
+        {
+            "id": f"{TEST_SERIES_ID}:1:1",
+            "season": 1,
+            "episode": 1,
+            "name": "First Contact",
+            "released": "2026-01-01",
+            "overview": "Tests selection of the first episode.",
+        },
+        {
+            "id": f"{TEST_SERIES_ID}:1:2",
+            "season": 1,
+            "episode": 2,
+            "name": "The Proxy Path",
+            "released": "2026-01-08",
+            "overview": "Tests episode identity through the Tailscale proxy.",
+        },
+        {
+            "id": f"{TEST_SERIES_ID}:1:3",
+            "season": 1,
+            "episode": 3,
+            "name": "Playback Ready",
+            "released": "2026-01-15",
+            "overview": "Tests the existing playback handoff.",
+        },
+        {
+            "id": f"{TEST_SERIES_ID}:2:1",
+            "season": 2,
+            "episode": 1,
+            "name": "Return to OnionOS",
+            "released": "2026-02-01",
+            "overview": "Tests navigation into a second season.",
+        },
+        {
+            "id": f"{TEST_SERIES_ID}:2:2",
+            "season": 2,
+            "episode": 2,
+            "name": "The Final Range",
+            "released": "2026-02-08",
+            "overview": "Tests byte-range playback for another episode ID.",
+        },
+    ],
+}
+TEST_SERIES_EPISODES = {
+    video["id"]: video for video in TEST_SERIES_META["videos"]
 }
 
 
@@ -115,22 +178,84 @@ def addon_base_from_manifest(manifest_url):
     return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
 
 
-def normalize_meta(meta):
-    release = str(meta.get("releaseInfo") or meta.get("year") or "")
-    year = None
+def nonnegative_int(value):
+    try:
+        return max(0, int(float(value or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def release_year(value):
+    release = str(value or "")
     for token in release.replace("-", " ").split():
         if len(token) >= 4 and token[:4].isdigit():
-            year = int(token[:4])
-            break
+            return int(token[:4])
+    return None
 
-    return {
+
+def normalize_meta(meta):
+    release = str(meta.get("releaseInfo") or meta.get("year") or "")
+    item_type = meta.get("type") or "movie"
+    normalized = {
         "id": meta.get("id") or meta.get("imdb_id"),
         "imdb_id": meta.get("imdb_id") or meta.get("id"),
-        "type": meta.get("type") or "movie",
+        "type": item_type,
         "title": meta.get("name") or meta.get("title") or "",
-        "year": year,
+        "year": release_year(release),
         "poster": meta.get("poster") or "",
         "description": meta.get("description") or "",
+    }
+    if item_type != "series" or "videos" not in meta:
+        return normalized
+
+    episodes = []
+    season_counts = {}
+    for video in meta.get("videos") or []:
+        video_id = str(video.get("id") or "")
+        season = nonnegative_int(video.get("season"))
+        episode = nonnegative_int(video.get("episode"))
+        if not video_id or season < 1 or episode < 1:
+            continue
+        episodes.append(
+            {
+                "id": video_id,
+                "title": video.get("name") or video.get("title") or f"Episode {episode}",
+                "season": season,
+                "episode": episode,
+                "year": release_year(video.get("released")) or normalized["year"],
+                "released": video.get("released") or "",
+                "description": video.get("overview") or video.get("description") or "",
+            }
+        )
+        season_counts[season] = season_counts.get(season, 0) + 1
+
+    episodes.sort(key=lambda item: (item["season"], item["episode"]))
+    normalized["seasons"] = [
+        {"number": season, "episode_count": season_counts[season]}
+        for season in sorted(season_counts)
+    ]
+    normalized["episodes"] = episodes
+    return normalized
+
+
+def normalize_test_episode(item_id):
+    video = TEST_SERIES_EPISODES.get(item_id)
+    if not video:
+        return None
+    season = nonnegative_int(video["season"])
+    episode = nonnegative_int(video["episode"])
+    return {
+        "id": item_id,
+        "imdb_id": "",
+        "type": "series",
+        "title": f"PocketStremio Test Series S{season}E{episode}: {video['name']}",
+        "year": release_year(video.get("released")),
+        "poster": "",
+        "description": video.get("overview") or "",
+        "series_id": TEST_SERIES_ID,
+        "series_title": TEST_SERIES_META["name"],
+        "season": season,
+        "episode": episode,
     }
 
 
@@ -150,13 +275,6 @@ def manifest_supports(manifest, resource, item_type):
     }
     types = manifest.get("types") or []
     return resource in resource_names and (not types or item_type in types)
-
-
-def nonnegative_int(value):
-    try:
-        return max(0, int(float(value or 0)))
-    except (TypeError, ValueError):
-        return 0
 
 
 class SessionStore:
@@ -366,18 +484,20 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.6"
+    server_version = "PocketStremio/0.7"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        parts = [part for part in parsed.path.split("/") if part]
+        parts = [
+            urllib.parse.unquote(part) for part in parsed.path.split("/") if part
+        ]
 
         if parsed.path == "/api/status":
             self.write_json(
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.6-playback-reliability",
+                    "version": "0.7-series-browsing-poc",
                     "message": "PocketStremio server is reachable",
                     "stream_addons": len(self.server.stream_addons),
                     "continue_watching": len(self.server.progress_store.list_items()),
@@ -557,24 +677,82 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"query": "", "count": 0, "items": [], "results": []})
             return
 
+        if query.lower() in {
+            "pocketstremio test series",
+            "test series",
+            "offline test series",
+        }:
+            summary = {
+                key: value for key, value in TEST_SERIES_META.items() if key != "videos"
+            }
+            item = normalize_meta(summary)
+            items = [item]
+            self.write_json(
+                {"query": query, "count": len(items), "items": items, "results": items}
+            )
+            return
+
         extra = urllib.parse.quote(f"search={query}", safe="=")
-        url = f"{CINEMETA_BASE}/catalog/movie/top/{extra}.json"
-        try:
-            data = fetch_json(url)
-            items = [normalize_meta(meta) for meta in data.get("metas", [])[:12]]
-            if "bunny" in query.lower() or "big buck" in query.lower():
+        catalogs = []
+        failures = []
+        catalog_successes = 0
+        for item_type in ("movie", "series"):
+            url = f"{CINEMETA_BASE}/catalog/{item_type}/top/{extra}.json"
+            try:
+                data = fetch_json(url)
+                catalogs.append(
+                    [normalize_meta(meta) for meta in data.get("metas", [])[:12]]
+                )
+                catalog_successes += 1
+            except Exception as exc:
+                failures.append(exc)
+                catalogs.append([])
+
+        if catalog_successes == 0:
+            message = str(failures[0]) if failures else "No search catalog responded"
+            self.write_json({"error": "search_failed", "message": message}, status=502)
+            return
+
+        items = []
+        seen = set()
+        for index in range(max(len(catalog) for catalog in catalogs)):
+            for catalog in catalogs:
+                if index >= len(catalog):
+                    continue
+                item = catalog[index]
+                key = (item.get("type"), item.get("id"))
+                if not item.get("id") or key in seen:
+                    continue
+                seen.add(key)
+                items.append(item)
+                if len(items) >= 12:
+                    break
+            if len(items) >= 12:
+                break
+
+        if "bunny" in query.lower() or "big buck" in query.lower():
+            try:
                 bbb = normalize_meta(
-                    fetch_json(f"{CINEMETA_BASE}/meta/movie/{BIG_BUCK_BUNNY_ID}.json").get("meta") or {}
+                    fetch_json(
+                        f"{CINEMETA_BASE}/meta/movie/{BIG_BUCK_BUNNY_ID}.json"
+                    ).get("meta")
+                    or {}
                 )
                 if bbb.get("id") and all(item.get("id") != bbb["id"] for item in items):
                     items.insert(0, bbb)
-        except Exception as exc:
-            self.write_json({"error": "search_failed", "message": str(exc)}, status=502)
-            return
+            except Exception:
+                pass
 
         self.write_json({"query": query, "count": len(items), "items": items, "results": items})
 
     def handle_meta(self, item_type, item_id):
+        if item_type == "series" and item_id == TEST_SERIES_ID:
+            self.write_json(normalize_meta(TEST_SERIES_META))
+            return
+        if item_type == "series" and item_id in TEST_SERIES_EPISODES:
+            self.write_json(normalize_test_episode(item_id))
+            return
+
         url = f"{CINEMETA_BASE}/meta/{urllib.parse.quote(item_type)}/{urllib.parse.quote(item_id)}.json"
         try:
             data = fetch_json(url)
@@ -609,6 +787,29 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "url": stream_url if path.is_file() else "",
                     }
                 )
+
+        if item_type == "series" and item_id in TEST_SERIES_EPISODES:
+            fixture = SERIES_PLAYBACK_FIXTURE
+            path = self.server.media_dir / fixture["filename"]
+            if not path.is_file():
+                fixture = COMPATIBILITY_FIXTURES[0]
+                path = self.server.media_dir / fixture["filename"]
+            stream_url = (
+                f"http://{self.server.public_host}:{self.server.server_port}"
+                f"/media/compatibility/{urllib.parse.quote(fixture['filename'])}"
+            )
+            streams.append(
+                {
+                    "id": f"series-fixture-{hashlib.sha1(item_id.encode()).hexdigest()[:8]}",
+                    "name": fixture["name"],
+                    "description": fixture["description"],
+                    "duration_seconds": fixture["duration_seconds"],
+                    "playable": path.is_file(),
+                    "compatibility": fixture["compatibility"],
+                    "source": "pocketstremio-series-fixture",
+                    "url": stream_url if path.is_file() else "",
+                }
+            )
 
         for addon_index, addon in enumerate(self.server.stream_addons):
             manifest_url = addon["manifest_url"]

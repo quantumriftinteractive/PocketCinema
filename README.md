@@ -7,7 +7,7 @@ A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running O
 The current prototype completes this controller-driven OnionOS flow:
 
 ```text
-Apps -> PocketStremio -> search -> select media -> Play -> select stream -> FFplay
+Apps -> PocketStremio -> search -> select media or episode -> Play -> select stream -> FFplay
 ```
 
 It uses the existing Tailscale userspace HTTP proxy on the Miyoo, a lightweight
@@ -512,13 +512,14 @@ PocketStremio/
 **Experimental / working vertical slice**
 
 Tailscale networking, structured JSON communication, OnionOS FFplay playback,
-and controller-driven movie selection are confirmed on the Miyoo Mini Plus.
+and controller-driven movie and series episode selection are confirmed on the
+Miyoo Mini Plus.
 Continue Watching and resume seeking are now physically confirmed. External SRT
 rendering is blocked because the target FFplay build lacks the `subtitles`
 filter. Real server-side stream resolution is now confirmed through a
-localhost-only addon and a public-domain direct stream. The next milestone is
-playback compatibility and reliability across representative media formats and
-within the existing PocketStremio boundary. See
+localhost-only addon and a public-domain direct stream. Series, season, and
+episode browsing are confirmed with a deterministic local fixture. The next
+milestone is operational resilience. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 

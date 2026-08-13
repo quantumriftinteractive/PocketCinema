@@ -342,6 +342,12 @@ search_flow() {
   "$JQ" -r '.items | to_entries[] | "\(.key + 1). \(.value.title) (\(.value.year // "????"))\t\(.value.type)\t\(.value.id)\t\(.value.title)\t\(.value.year // "")"' /tmp/pocketstremio-search.json >/tmp/pocketstremio-results.tsv
   if [ "${POCKETSTREMIO_DRY_RUN:-0}" = "1" ]; then
     head -n 5 /tmp/pocketstremio-results.tsv >> "$LOG_FILE"
+    series_id=$("$JQ" -r '.items[] | select(.type == "series") | .id' /tmp/pocketstremio-search.json | head -n 1)
+    if [ -n "$series_id" ]; then
+      series_title=$("$JQ" -r --arg id "$series_id" '.items[] | select(.id == $id) | .title' /tmp/pocketstremio-search.json)
+      series_year=$("$JQ" -r --arg id "$series_id" '.items[] | select(.id == $id) | (.year // "")' /tmp/pocketstremio-search.json)
+      series_dry_run "$series_id" "$series_title" "$series_year"
+    fi
     log "dry run stopping before interactive selection"
     return 0
   fi
@@ -370,7 +376,121 @@ search_flow() {
     year=$(printf '%s' "$line" | cut -f5)
     log "selected media type=$type id=$id title=$title year=$year"
 
-    media_flow "$type" "$id" "$title" "$year" 0
+    if [ "$type" = "series" ]; then
+      series_flow "$id" "$title" "$year"
+    else
+      media_flow "$type" "$id" "$title" "$year" 0
+    fi
+    flow_rc=$?
+    [ "$flow_rc" -eq 10 ] || return "$flow_rc"
+  done
+}
+
+write_season_choices() {
+  "$JQ" -r '.seasons[] | "Season \(.number) (\(.episode_count) episodes)\t\(.number)"' "$1" >"$2"
+}
+
+write_episode_choices() {
+  "$JQ" -r --argjson season "$2" --arg year "$4" '
+    .episodes[]
+    | select(.season == $season)
+    | "\(.episode). \(.title)\t\(.id)\t\(.title)\t\(.year // $year)\t\(.season)\t\(.episode)"
+  ' "$1" >"$3"
+}
+
+series_dry_run() {
+  dry_series_id="$1"
+  dry_series_title="$2"
+  dry_series_year="$3"
+  if ! api_get "/api/meta/series/$dry_series_id" >/tmp/pocketstremio-series-meta.json; then
+    log "series dry run metadata failed id=$dry_series_id"
+    return 1
+  fi
+  write_season_choices /tmp/pocketstremio-series-meta.json /tmp/pocketstremio-seasons.tsv
+  log "series dry run id=$dry_series_id title=$dry_series_title"
+  cat /tmp/pocketstremio-seasons.tsv >>"$LOG_FILE"
+  dry_season=$(head -n 1 /tmp/pocketstremio-seasons.tsv | cut -f2)
+  if [ -n "$dry_season" ]; then
+    write_episode_choices /tmp/pocketstremio-series-meta.json "$dry_season" /tmp/pocketstremio-episodes.tsv "$dry_series_year"
+    cat /tmp/pocketstremio-episodes.tsv >>"$LOG_FILE"
+  fi
+}
+
+series_flow() {
+  series_id="$1"
+  series_title="$2"
+  series_year="$3"
+
+  if ! api_get "/api/meta/series/$series_id" >/tmp/pocketstremio-series-meta.json; then
+    message "PocketStremio" "Series details unavailable"
+    return 1
+  fi
+  write_season_choices /tmp/pocketstremio-series-meta.json /tmp/pocketstremio-seasons.tsv
+  if [ ! -s /tmp/pocketstremio-seasons.tsv ]; then
+    message "PocketStremio" "No seasons available"
+    return 0
+  fi
+
+  while :; do
+    if [ "$AUTO_FIRST" = "1" ]; then
+      season_line=$(head -n 1 /tmp/pocketstremio-seasons.tsv)
+      season_selected=$(printf '%s' "$season_line" | cut -f1)
+      log "auto-selected first season selected=$season_selected"
+    else
+      season_selected=$(select_from_file "$series_title" /tmp/pocketstremio-seasons.tsv)
+      [ -z "$season_selected" ] && return 10
+      season_line=$(grep -F "$season_selected	" /tmp/pocketstremio-seasons.tsv | head -n 1)
+      if [ -z "$season_line" ]; then
+        log "season selection did not match selected=$season_selected"
+        message "PocketStremio" "Selection failed"
+        return 1
+      fi
+    fi
+    season_number=$(printf '%s' "$season_line" | cut -f2)
+    log "selected season series_id=$series_id season=$season_number"
+
+    episodes_flow "$series_id" "$series_title" "$series_year" "$season_number"
+    flow_rc=$?
+    [ "$flow_rc" -eq 10 ] || return "$flow_rc"
+  done
+}
+
+episodes_flow() {
+  episode_series_id="$1"
+  episode_series_title="$2"
+  episode_series_year="$3"
+  episode_season="$4"
+  write_episode_choices /tmp/pocketstremio-series-meta.json "$episode_season" /tmp/pocketstremio-episodes.tsv "$episode_series_year"
+  if [ ! -s /tmp/pocketstremio-episodes.tsv ]; then
+    message "PocketStremio" "No episodes available"
+    return 10
+  fi
+
+  while :; do
+    if [ "$AUTO_FIRST" = "1" ]; then
+      episode_line=$(head -n 1 /tmp/pocketstremio-episodes.tsv)
+      episode_selected=$(printf '%s' "$episode_line" | cut -f1)
+      log "auto-selected first episode selected=$episode_selected"
+    else
+      episode_selected=$(select_from_file "Season $episode_season" /tmp/pocketstremio-episodes.tsv)
+      [ -z "$episode_selected" ] && return 10
+      episode_line=$(grep -F "$episode_selected	" /tmp/pocketstremio-episodes.tsv | head -n 1)
+      if [ -z "$episode_line" ]; then
+        log "episode selection did not match selected=$episode_selected"
+        message "PocketStremio" "Selection failed"
+        return 1
+      fi
+    fi
+
+    episode_id=$(printf '%s' "$episode_line" | cut -f2)
+    episode_title=$(printf '%s' "$episode_line" | cut -f3)
+    episode_year=$(printf '%s' "$episode_line" | cut -f4)
+    episode_number=$(printf '%s' "$episode_line" | cut -f6)
+    episode_saved_title="$episode_series_title - S${episode_season}E${episode_number} $episode_title"
+    episode_display_title="S${episode_season}E${episode_number} $episode_title"
+    log "selected episode series_id=$episode_series_id id=$episode_id season=$episode_season episode=$episode_number"
+
+    media_flow "series" "$episode_id" "$episode_saved_title" "$episode_year" 0 "$episode_display_title"
     flow_rc=$?
     [ "$flow_rc" -eq 10 ] || return "$flow_rc"
   done
@@ -382,6 +502,7 @@ media_flow() {
   title="$3"
   year="$4"
   saved_position="${5:-0}"
+  display_title="${6:-$title}"
 
   api_get "/api/meta/$type/$id" >/tmp/pocketstremio-meta.json || {
     message "PocketStremio" "Details unavailable"
@@ -401,7 +522,7 @@ media_flow() {
       else
         printf 'Play\tstart\nBack\tback\n' >/tmp/pocketstremio-actions.tsv
       fi
-      action=$(select_from_file "$title ($year)" /tmp/pocketstremio-actions.tsv)
+      action=$(select_from_file "$display_title ($year)" /tmp/pocketstremio-actions.tsv)
       [ -z "$action" ] && return 10
       action_line=$(grep -F "$action	" /tmp/pocketstremio-actions.tsv | head -n 1)
       action=$(printf '%s' "$action_line" | cut -f2)

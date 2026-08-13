@@ -36,6 +36,10 @@ The media endpoint supports single HTTP byte-range requests because FFplay seeks
 
 Search and metadata use the official Cinemeta addon protocol endpoints. Stream results are resolved server-side from configured stream addon manifest URLs.
 
+Search includes movies and series. Series detail responses normalize Stremio
+video records into compact season and episode lists, and episode video IDs are
+used directly with `/api/streams/series/{video_id}`.
+
 The server also probes local Stremio Service through `http://127.0.0.1:11470/local-addon/manifest.json` by default. Keep Stremio Service bound to localhost; do not expose port `11470` to the Miyoo.
 
 To configure stream-capable addons without committing private URLs or tokens:
@@ -57,6 +61,16 @@ from the hosted Big Buck Bunny clip:
 When present, the confirmed VP8/Vorbis and H.264/Opus rejection fixtures appear
 beside the normal Big Buck Bunny stream. Only explicitly allowlisted fixture
 filenames can be served through `/media/compatibility/`.
+
+For deterministic season, episode, and A/V synchronization testing, generate
+the ignored local series fixture:
+
+```powershell
+.\experiments\ffplay\generate-series-av-sync-fixture.ps1
+```
+
+Search for `test series` to use the two-season fixture without an upstream
+metadata or media dependency.
 
 Configured addons are also queried for Stremio subtitle resources. Subtitle URLs
 remain server-side and are proxied through opaque `/subtitle/{subtitle_id}`

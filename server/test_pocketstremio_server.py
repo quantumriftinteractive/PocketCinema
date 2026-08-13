@@ -117,7 +117,7 @@ class PocketStremioServerTest(unittest.TestCase):
     def test_search_and_meta_are_normalized(self):
         def fake_fetch(url, timeout=pocket.DEFAULT_TIMEOUT):
             del timeout
-            if "/catalog/" in url:
+            if "/catalog/movie/" in url:
                 return {
                     "metas": [
                         {
@@ -125,6 +125,17 @@ class PocketStremioServerTest(unittest.TestCase):
                             "type": "movie",
                             "name": "Alien",
                             "releaseInfo": "1979",
+                        }
+                    ]
+                }
+            if "/catalog/series/" in url:
+                return {
+                    "metas": [
+                        {
+                            "id": "tt9999999",
+                            "type": "series",
+                            "name": "Alien Test Series",
+                            "releaseInfo": "2026",
                         }
                     ]
                 }
@@ -142,9 +153,67 @@ class PocketStremioServerTest(unittest.TestCase):
             status, search = self.get_json("/api/search?q=alien")
             self.assertEqual(status, 200)
             self.assertEqual(search["items"][0]["title"], "Alien")
+            self.assertEqual(search["items"][1]["type"], "series")
             status, meta = self.get_json("/api/meta/movie/tt0078748")
             self.assertEqual(status, 200)
             self.assertEqual(meta["year"], 1979)
+
+    def test_offline_series_fixture_browses_and_plays_without_upstream(self):
+        (self.server.media_dir / "series-av-sync.mp4").write_bytes(
+            bytes(range(256)) * 16
+        )
+        with mock.patch.object(
+            pocket,
+            "fetch_json",
+            side_effect=AssertionError("offline series fixture used an upstream"),
+        ):
+            status, search = self.get_json("/api/search?q=pocketstremio%20test%20series")
+            self.assertEqual(status, 200)
+            self.assertEqual(search["count"], 1)
+            series = search["items"][0]
+            self.assertEqual(series["id"], pocket.TEST_SERIES_ID)
+            self.assertEqual(series["type"], "series")
+            self.assertNotIn("episodes", series)
+
+            _, meta = self.get_json(f"/api/meta/series/{pocket.TEST_SERIES_ID}")
+            self.assertEqual(meta["seasons"], [
+                {"number": 1, "episode_count": 3},
+                {"number": 2, "episode_count": 2},
+            ])
+            self.assertEqual(len(meta["episodes"]), 5)
+            episode = meta["episodes"][3]
+            self.assertEqual(episode["id"], f"{pocket.TEST_SERIES_ID}:2:1")
+
+            _, episode_meta = self.get_json(
+                f"/api/meta/series/{episode['id']}"
+            )
+            self.assertEqual(episode_meta["series_id"], pocket.TEST_SERIES_ID)
+            self.assertEqual(episode_meta["season"], 2)
+            self.assertEqual(episode_meta["episode"], 1)
+
+            _, streams = self.get_json(f"/api/streams/series/{episode['id']}")
+            self.assertEqual(streams["count"], 1)
+            stream = streams["items"][0]
+            self.assertTrue(stream["playable"])
+            self.assertEqual(stream["name"], "Offline episode A/V sync test")
+            self.assertEqual(stream["duration_seconds"], 30)
+            self.assertEqual(stream["compatibility"]["status"], "confirmed")
+            self.assertNotIn("url", stream)
+
+            _, play = self.post_json(
+                "/api/play",
+                {
+                    "type": "series",
+                    "id": episode["id"],
+                    "stream_id": stream["id"],
+                },
+            )
+            request = urllib.request.Request(
+                play["url"], headers={"Range": "bytes=20-39"}
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                self.assertEqual(response.status, 206)
+                self.assertEqual(len(response.read()), 20)
 
     def test_play_and_subtitle_proxies_hide_upstream_urls(self):
         _, streams = self.get_json("/api/streams/movie/tt1254207")

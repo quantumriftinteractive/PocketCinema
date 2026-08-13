@@ -211,6 +211,16 @@ Because Cinemeta search did not return Big Buck Bunny for `big buck bunny` durin
 
 Normal searches such as `alien` are returned directly from Cinemeta without this supplement.
 
+## Series and Episode Mapping
+
+PocketStremio searches both Cinemeta movie and series catalogs. Series metadata
+normalizes Stremio `videos` into season and episode records, retaining each
+video ID for `/api/streams/series/{video_id}`. The controller and playback path
+is physically confirmed with a deterministic local two-season fixture; real
+series streams remain dependent on configured addons.
+
+Evidence: [Series and Episode Browsing](series-episode-browsing.md)
+
 ## Local Open-Media Addon
 
 PocketStremio also starts a small, localhost-only Stremio addon at
@@ -224,7 +234,6 @@ Implementation and current confirmation status are documented in
 
 ## Assumptions
 
-- Movie-only support is enough for this milestone.
 - Addons that return direct HTTP(S) `url` streams are playable candidates.
 - Addons returning non-URL stream identifiers, external URLs, torrents, or debrid workflows are treated as not directly playable until a later resolver/transcoding milestone.
 
@@ -232,6 +241,6 @@ Implementation and current confirmation status are documented in
 
 - `/play/{session}` proxies HTTP(S) streams through the PocketStremio server and forwards single Range requests where the upstream supports them.
 - No stream URLs are persisted. Sessions are in memory and disappear when the server restarts.
-- No account sync, library sync, series support, external subtitle rendering,
-  or transcoding is implemented. Subtitle discovery/proxy contracts exist, but
-  the target FFplay build cannot render a separate SRT.
+- No account sync, library sync, external subtitle rendering, or transcoding is
+  implemented. Subtitle discovery/proxy contracts exist, but the target FFplay
+  build cannot render a separate SRT.

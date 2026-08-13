@@ -37,6 +37,7 @@ The physically confirmed flow is:
 ```text
 Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
 Apps -> PocketStremio -> Continue Watching -> Resume -> stream -> FFplay
+Apps -> PocketStremio -> series -> season -> episode -> Play -> stream -> FFplay
 ```
 
 Both the hosted Big Buck Bunny regression fixture and the public-domain *Night
@@ -70,6 +71,12 @@ Miyoo shell/SDL client
 
 The hosted Big Buck Bunny video is a deterministic regression fixture, not a
 general stream resolver.
+
+Series browsing is physically confirmed with the local two-season
+`PocketStremio Test Series` fixture. Its generated 30-second H.264/AAC media is
+ignored by git and reproducible through
+`experiments/ffplay/generate-series-av-sync-fixture.ps1`. Real-series playback
+through an addon remains unconfirmed.
 
 ## Repository Layout
 
