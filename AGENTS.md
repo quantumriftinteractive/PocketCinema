@@ -49,6 +49,13 @@ physically played from the OnionOS Apps context. The latter confirmed H.264
 Constrained Baseline 320x240 video, AAC stereo audio initialization, Menu-button
 exit, progress saving, and cleanup.
 
+The real *Beverly Hillbillies* S1E1 path is also physically confirmed through
+search, season and episode browsing, playback, Continue Watching, Resume, and
+Play from Start. Resume advanced a saved 44-second position to 69 seconds after
+25 measured playback seconds. Play from Start used a zero seek and replaced the
+saved position with only post-readiness playback time. B returned from the
+pre-playback action menu and Menu exited FFplay cleanly.
+
 The server uses gaming-PC `ffprobe` during `/api/play` to classify media. The
 measured H.264/AAC MP4 and VP8/Vorbis WebM envelopes at up to 640x360 and 30
 fps are confirmed. Opus audio is rejected before FFplay. Treat other advertised

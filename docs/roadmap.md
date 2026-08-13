@@ -272,8 +272,6 @@ empty, can retain the confirmed remote path when a generic proxy is configured,
 and contains no code that starts or inspects Tailscale. The standalone
 Tailscale folder must be independently deployable without PocketStremio files.
 
-## Next Milestone
-
 ### 12. Real Series Stream Validation
 
 **Status: Confirmed**
@@ -302,11 +300,19 @@ on the Miyoo through the configured network transport.
 Not part of this milestone: accounts, library sync, torrents, debrid,
 transcoding, external subtitle rendering, posters, or a larger UI framework.
 
-## Next Milestone
-
 ### 13. Real Episode Resume and Reliability
 
-**Status: Next**
+**Status: Confirmed**
+
+The real episode appears in Continue Watching with a clear series, season,
+episode, year, and position label. B navigation returned cleanly from its action
+menu. Resume passed the saved 44-second offset to FFplay, visibly started
+partway into the episode, and advanced progress to a plausible 69 seconds after
+25 measured playback seconds. Play from Start passed a zero offset, visibly
+showed the opening, and replaced progress with only 3 seconds measured after
+video readiness. Both Menu exits returned cleanly to OnionOS.
+
+Evidence: [Real Episode Resume and Reliability](real-episode-resume.md)
 
 - Verify the real episode appears in Continue Watching with a clear series and
   episode label.
@@ -319,6 +325,31 @@ transcoding, external subtitle rendering, posters, or a larger UI framework.
 Acceptance criterion: the real episode can be resumed from Continue Watching,
 starts near the saved position, reports plausible new progress, and returns
 cleanly to OnionOS without stale state or processes.
+
+## Next Milestone
+
+### 14. Local Stremio Service Backend
+
+**Status: Next**
+
+- Inspect and document the localhost Stremio Service API and runtime capabilities
+  actually available at `127.0.0.1:11470`.
+- Add a bounded PocketStremio backend adapter instead of exposing the service to
+  the Miyoo or tailnet.
+- Route one legal test title through the service-backed metadata or stream path
+  while preserving the current direct-addon regression fixtures.
+- Surface specific server-side diagnostics when the service is unavailable or
+  has no usable addon result.
+- Confirm PocketStremio remains the Miyoo's only server endpoint and that raw
+  upstream URLs remain private.
+
+Acceptance criterion: PocketStremio obtains a usable metadata or direct-stream
+result for one legal test item through the localhost Stremio Service, relays it
+through the existing opaque API, and completes an Apps-context playback without
+making port `11470` remotely reachable.
+
+Not part of this milestone: Stremio account authentication or library sync,
+torrents, debrid, transcoding, external subtitle rendering, or a larger UI.
 
 ## Deferred Features
 

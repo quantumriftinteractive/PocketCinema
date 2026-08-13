@@ -516,8 +516,10 @@ localhost-only addon and a public-domain direct stream. Series, season, and
 episode browsing are confirmed with a deterministic local fixture. Direct and
 optional-proxy transport modes are confirmed, and Tailscale-specific code is
 isolated under `onion-tailscale/`. A real public-domain series episode now plays
-through the same opaque server pipeline. The active milestone is real episode
-resume and reliability. See
+through the same opaque server pipeline. Its Continue Watching label, Resume,
+Play from Start, progress replacement, B navigation, and Menu exit are also
+physically confirmed. The active milestone is localhost Stremio Service backend
+integration. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 
