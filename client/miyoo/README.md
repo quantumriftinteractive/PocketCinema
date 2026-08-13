@@ -5,13 +5,16 @@
 - starts Tailscale if its userspace socket is missing;
 - calls PocketStremio through `HTTP_PROXY=http://127.0.0.1:1055/`;
 - uses OnionOS `kbinput` for search text and the bundled SDL 1.2 selector for lists;
-- supports D-pad navigation, A selection, and B/back;
+- supports D-pad navigation, A selection, and B/back in selector screens;
 - parses API responses with OnionOS `jq`;
 - launches FFplay in the working OnionOS framebuffer/audio context.
 - offers Search and Continue Watching from a lightweight home menu;
 - selects external subtitles through the server when FFplay advertises the
   `subtitles` filter;
 - resumes saved items with FFplay `-ss` and reports approximate progress.
+
+Inside FFplay, the Miyoo Menu button exits playback. B advances one frame; it is
+not the playback exit control on the confirmed OnionOS FFplay build.
 
 The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set

@@ -175,6 +175,17 @@ Not part of this milestone:
 
 **Status: Next**
 
+The first reliability layer is implemented: gaming-PC ffprobe preflight,
+confirmed/candidate/unsupported classification, client-visible rejection
+messages, cached probes, and bounded six-hour play sessions. The confirmed
+H.264/AAC MP4 stream passes desktop preflight and relay checks. Broader
+Apps-context format measurements remain before this milestone can be confirmed.
+The open-media profile also passed an Apps-context resume regression while the
+Miyoo was on a separate work network, including normal Menu-button exit and
+cleanup.
+
+Evidence: [Playback Compatibility and Reliability](playback-compatibility.md)
+
 - Record the codecs, containers, resolution, bitrate, and audio formats FFplay
   can sustain on the device.
 - Add server-side compatibility classification before playback.
@@ -236,8 +247,9 @@ acceptance criteria rather than expanding an earlier milestone.
   confirmed probes.
 - Direct streams may use codecs, headers, redirects, or seek behavior that the
   current FFplay proxy path does not support.
-- The server currently keeps stream and play-session state only in memory and
-  does not expire it.
+- Stream, probe, and play-session state remains in memory. Play sessions now
+  expire after six hours and are bounded to 128 entries; stream and probe caches
+  still reset only when the server restarts.
 - Resume positions currently use elapsed wall-clock time because the OnionOS
   FFplay build has not exposed a confirmed machine-readable progress channel.
 - The client depends on OnionOS utilities and SDL 1.2 behavior that should be

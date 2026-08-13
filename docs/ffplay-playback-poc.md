@@ -104,7 +104,7 @@ On the Miyoo:
 2. Launch `PocketStremio`.
 3. Confirm whether video is visible.
 4. Confirm whether audio is audible.
-5. Test controls, especially exit/back/menu.
+5. Test controls, especially selector back and FFplay Menu-button exit.
 6. After exit, confirm OnionOS UI returns cleanly.
 
 Then collect logs over SSH:

@@ -45,6 +45,11 @@ physically played from the OnionOS Apps context. The latter confirmed H.264
 Constrained Baseline 320x240 video, AAC stereo audio initialization, normal B
 exit, progress saving, and cleanup.
 
+The server can use gaming-PC `ffprobe` during `/api/play` to classify media.
+Only the measured H.264/AAC MP4 envelope at up to 640x360 and 30 fps is
+confirmed. Treat other advertised FFplay demuxers and decoders as candidates
+until Apps-context measurements are documented.
+
 Continue Watching persists on the gaming PC and resume uses FFplay `-ss` with
 an approximate wall-clock-derived position. The target FFplay build does not
 include the `subtitles` video filter; do not expose an external subtitle option
@@ -119,6 +124,8 @@ of git.
   SDL_ttf, libpng, or another runtime without measuring memory and compatibility.
 - The Miyoo framebuffer requires a 180-degree rendering correction.
 - Confirmed keys are Up `273`, Down `274`, A `32`, and B `306`.
+- B/back applies to PocketStremio selector screens. During FFplay playback, the
+  Miyoo Menu button exits; B advances video frame by frame on this FFplay build.
 - Stdout is a strict data channel: on success emit exactly the selected value and
   a newline; on cancel emit nothing and return nonzero.
 - Vendor SDL diagnostics must stay off stdout. Send diagnostics to stderr or the
@@ -149,6 +156,8 @@ of git.
 - Follow Onion's FFplay context: work from `/mnt/SDCARD/.tmp_update`, preload
   `/mnt/SDCARD/miyoo/lib/libpadsp.so`, create `/tmp/stay_awake`, and use
   `-vf "hflip,vflip"`.
+- Do not describe B as the FFplay exit control. The physically confirmed
+  playback exit control is the Miyoo Menu button.
 
 ## Verification
 

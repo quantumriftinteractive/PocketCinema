@@ -42,6 +42,12 @@ class OpenMediaAddonHandler(BaseHTTPRequestHandler):
                         "description": "Public domain | H.264/AAC | 320x240 | 512 Kb/s",
                         "url": NIGHT_OF_THE_LIVING_DEAD_URL,
                         "durationSeconds": 5752,
+                        "behaviorHints": {
+                            "pocketstremio": {
+                                "status": "confirmed",
+                                "message": "Confirmed H.264/AAC 320x240 profile",
+                            }
+                        },
                     }
                 )
             self.write_json({"streams": streams})

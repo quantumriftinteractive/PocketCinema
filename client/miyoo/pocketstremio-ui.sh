@@ -51,7 +51,7 @@ api_post_play() {
   id="$2"
   stream_id="$3"
   body="{\"type\":\"$type\",\"id\":\"$id\",\"stream_id\":\"$stream_id\"}"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play")
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play")
 }
 
 api_post_progress() {
@@ -341,7 +341,7 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(.value.name)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
+  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.compatibility.status == "confirmed" then "[OK] " else "[TEST] " end)\(.value.name)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
     log "no playable streams message=$stream_error"
@@ -378,10 +378,16 @@ streams_flow() {
   fi
   play_url_value=$("$JQ" -r '.url // ""' /tmp/pocketstremio-play.json)
   if [ -z "$play_url_value" ]; then
-    message "PocketStremio" "Playback URL missing"
+    play_error=$("$JQ" -r '.message // "Playback setup failed"' /tmp/pocketstremio-play.json 2>/dev/null)
+    [ -n "$play_error" ] || play_error="Playback setup failed"
+    log "playback setup rejected message=$play_error"
+    message "PocketStremio" "$play_error"
     return 1
   fi
   duration_seconds=$("$JQ" -r '(.duration_seconds // 0) | floor' /tmp/pocketstremio-play.json)
+  compatibility_status=$("$JQ" -r '.compatibility.status // "unknown"' /tmp/pocketstremio-play.json)
+  compatibility_message=$("$JQ" -r '.compatibility.message // ""' /tmp/pocketstremio-play.json)
+  log "media preflight status=$compatibility_status message=$compatibility_message"
 
   subtitle_file=""
   if [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then

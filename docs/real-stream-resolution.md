@@ -188,8 +188,9 @@ system swap:     1,028 kB used
 process swap:        0 kB for tailscaled and FFplay
 ```
 
-After B was pressed, the log confirmed this was a normal exit rather than a
-crash:
+After the Miyoo Menu button was pressed, the log confirmed this was a normal
+exit rather than a crash. A later control check established that B is FFplay's
+frame-step control, not its exit control:
 
 ```text
 FFplay exit: rc=0 after 97 seconds

@@ -2,12 +2,14 @@ import json
 import tempfile
 import threading
 import unittest
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
 from server import open_media_addon
+from server import playback_compatibility
 from server import pocketstremio_server as pocket
 
 
@@ -71,8 +73,11 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.stream_addons = []
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
-        self.server.play_sessions = {}
+        self.server.play_sessions = pocket.SessionStore()
         self.server.manifest_cache = {}
+        self.server.probe_cache = {}
+        self.server.ffprobe_path = ""
+        self.server.probe_timeout = 5
         self.server.progress_store = pocket.ProgressStore(
             root / "data" / "continue_watching.json"
         )
@@ -98,6 +103,16 @@ class PocketStremioServerTest(unittest.TestCase):
         )
         with urllib.request.urlopen(request, timeout=5) as response:
             return response.status, json.load(response)
+
+    def post_json_error(self, path, payload):
+        request = urllib.request.Request(
+            self.base + path,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(request, timeout=5)
+        return caught.exception.code, json.load(caught.exception)
 
     def test_search_and_meta_are_normalized(self):
         def fake_fetch(url, timeout=pocket.DEFAULT_TIMEOUT):
@@ -212,6 +227,38 @@ class PocketStremioServerTest(unittest.TestCase):
             addon.server_close()
             addon_thread.join(timeout=5)
 
+    def test_declared_unsupported_stream_is_hidden_with_reason(self):
+        self.server.stream_addons = [
+            {
+                "name": "Unsupported source",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+
+        def fake_fetch(url, timeout=pocket.DEFAULT_TIMEOUT):
+            del timeout
+            if url.endswith("manifest.json"):
+                return {"resources": ["stream"], "types": ["movie"]}
+            return {
+                "streams": [
+                    {
+                        "name": "Unsupported stream",
+                        "url": "https://media.example/video.mp4",
+                        "behaviorHints": {
+                            "pocketstremio": {
+                                "status": "unsupported",
+                                "message": "AV1 is unsupported",
+                            }
+                        },
+                    }
+                ]
+            }
+
+        with mock.patch.object(pocket, "fetch_json", side_effect=fake_fetch):
+            _, streams = self.get_json("/api/streams/movie/tt0000001")
+        self.assertFalse(streams["items"][0]["playable"])
+        self.assertEqual(streams["failures"][0]["message"], "AV1 is unsupported")
+
     def test_play_proxy_preserves_range_across_redirect(self):
         upstream = ThreadingHTTPServer(("127.0.0.1", 0), RedirectingMediaHandler)
         upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
@@ -236,6 +283,107 @@ class PocketStremioServerTest(unittest.TestCase):
             upstream.shutdown()
             upstream.server_close()
             upstream_thread.join(timeout=5)
+
+    def test_preflight_classifies_confirmed_and_rejects_unsupported_media(self):
+        confirmed_probe = {
+            "format": {
+                "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+                "duration": "120.5",
+                "bit_rate": "800000",
+            },
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "h264",
+                    "profile": "Constrained Baseline",
+                    "width": 640,
+                    "height": 360,
+                    "r_frame_rate": "30/1",
+                },
+                {
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "sample_rate": "48000",
+                    "channels": 2,
+                },
+            ],
+        }
+        compatibility = playback_compatibility.classify_probe(confirmed_probe)
+        self.assertEqual(compatibility["status"], "confirmed")
+        self.assertEqual(compatibility["duration_seconds"], 120)
+
+        unsupported_probe = {
+            "format": {"format_name": "mov,mp4,m4a,3gp,3g2,mj2"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "av1",
+                    "width": 640,
+                    "height": 360,
+                }
+            ],
+        }
+        self.server.ffprobe_path = "test-ffprobe"
+        self.server.stream_cache["unsupported"] = {
+            "id": "unsupported",
+            "name": "Unsupported test",
+            "url": "https://media.example/unsupported.mp4",
+        }
+        with mock.patch.object(
+            playback_compatibility, "probe_media", return_value=unsupported_probe
+        ) as probe:
+            status, error = self.post_json_error(
+                "/api/play", {"stream_id": "unsupported"}
+            )
+        self.assertEqual(status, 409)
+        self.assertEqual(error["error"], "unsupported_media")
+        self.assertIn("av1", error["message"])
+        self.assertEqual(len(self.server.play_sessions), 0)
+        probe.assert_called_once()
+
+    def test_preflight_is_cached_and_returned_with_play_session(self):
+        self.server.ffprobe_path = "test-ffprobe"
+        self.server.stream_cache["candidate"] = {
+            "id": "candidate",
+            "name": "Candidate test",
+            "url": "https://media.example/candidate.webm",
+        }
+        probe_data = {
+            "format": {"format_name": "matroska,webm", "duration": "60"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "vp9",
+                    "width": 640,
+                    "height": 360,
+                    "r_frame_rate": "24/1",
+                },
+                {"codec_type": "audio", "codec_name": "vorbis", "channels": 2},
+            ],
+        }
+        with mock.patch.object(
+            playback_compatibility, "probe_media", return_value=probe_data
+        ) as probe:
+            _, first = self.post_json("/api/play", {"stream_id": "candidate"})
+            _, second = self.post_json("/api/play", {"stream_id": "candidate"})
+        self.assertEqual(first["compatibility"]["status"], "candidate")
+        self.assertEqual(first["duration_seconds"], 60)
+        self.assertNotEqual(first["session_id"], second["session_id"])
+        probe.assert_called_once()
+
+    def test_session_store_expires_and_evicts_oldest_sessions(self):
+        store = pocket.SessionStore(ttl_seconds=10, max_items=2)
+        with mock.patch.object(pocket.time, "time", return_value=100):
+            first = store.create({"url": "https://media.example/one"})
+        with mock.patch.object(pocket.time, "time", return_value=101):
+            second = store.create({"url": "https://media.example/two"})
+        with mock.patch.object(pocket.time, "time", return_value=102):
+            third = store.create({"url": "https://media.example/three"})
+            self.assertEqual(store.get(first), (None, False))
+            self.assertIsNotNone(store.get(second)[0])
+            self.assertIsNotNone(store.get(third)[0])
+        with mock.patch.object(pocket.time, "time", return_value=112):
+            self.assertEqual(store.get(second), (None, True))
 
     def test_continue_watching_persists_and_completed_item_is_removed(self):
         payload = {

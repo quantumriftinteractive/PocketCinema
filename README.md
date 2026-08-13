@@ -522,6 +522,11 @@ within the existing PocketStremio boundary. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
 
+The first compatibility layer now performs gaming-PC ffprobe inspection before
+playback, labels confirmed versus unmeasured profiles, rejects unsupported
+codecs before FFplay, and bounds opaque play sessions. See
+[docs/playback-compatibility.md](docs/playback-compatibility.md).
+
 The original priority sequence was:
 
 ```text

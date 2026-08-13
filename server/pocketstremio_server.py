@@ -4,6 +4,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import secrets
 import threading
 import time
 import urllib.error
@@ -14,14 +15,18 @@ from pathlib import Path
 
 try:
     from server import open_media_addon
+    from server import playback_compatibility
 except ImportError:
     import open_media_addon
+    import playback_compatibility
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 DEFAULT_TIMEOUT = 15
 BIG_BUCK_BUNNY_ID = "tt1254207"
 MAX_CONTINUE_ITEMS = 50
+DEFAULT_SESSION_TTL = 6 * 60 * 60
+DEFAULT_MAX_SESSIONS = 128
 
 
 def fetch_json(url, timeout=DEFAULT_TIMEOUT):
@@ -115,6 +120,50 @@ def nonnegative_int(value):
         return 0
 
 
+class SessionStore:
+    def __init__(self, ttl_seconds=DEFAULT_SESSION_TTL, max_items=DEFAULT_MAX_SESSIONS):
+        self.ttl_seconds = max(1, int(ttl_seconds))
+        self.max_items = max(1, int(max_items))
+        self.items = {}
+        self.lock = threading.Lock()
+
+    def _remove_expired(self, now):
+        expired = [
+            session_id
+            for session_id, item in self.items.items()
+            if now - item.get("created_at", 0) >= self.ttl_seconds
+        ]
+        for session_id in expired:
+            self.items.pop(session_id, None)
+
+    def create(self, item):
+        now = time.time()
+        with self.lock:
+            self._remove_expired(now)
+            while len(self.items) >= self.max_items:
+                oldest = min(self.items, key=lambda key: self.items[key].get("created_at", 0))
+                self.items.pop(oldest, None)
+            session_id = secrets.token_hex(8)
+            self.items[session_id] = {"created_at": now, **item}
+            return session_id
+
+    def get(self, session_id):
+        now = time.time()
+        with self.lock:
+            item = self.items.get(session_id)
+            if not item:
+                return None, False
+            if now - item.get("created_at", 0) >= self.ttl_seconds:
+                self.items.pop(session_id, None)
+                return None, True
+            return dict(item), False
+
+    def __len__(self):
+        with self.lock:
+            self._remove_expired(time.time())
+            return len(self.items)
+
+
 class ProgressStore:
     def __init__(self, path):
         self.path = Path(path)
@@ -195,7 +244,7 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.4"
+    server_version = "PocketStremio/0.5"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -206,10 +255,12 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.4-real-stream-poc",
+                    "version": "0.5-playback-compatibility-poc",
                     "message": "PocketStremio server is reachable",
                     "stream_addons": len(self.server.stream_addons),
                     "continue_watching": len(self.server.progress_store.list_items()),
+                    "play_sessions": len(self.server.play_sessions),
+                    "media_preflight": bool(self.server.ffprobe_path),
                 }
             )
             return
@@ -293,23 +344,69 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"error": "stream_not_playable"}, status=409)
             return
 
-        session_id = hashlib.sha1(f"{time.time()}:{stream_id}:{url}".encode()).hexdigest()[:16]
-        self.server.play_sessions[session_id] = {
-            "created_at": time.time(),
-            "stream_id": stream_id,
-            "url": url,
-            "name": stream.get("name", ""),
-            "duration_seconds": stream.get("duration_seconds", 0),
-        }
+        try:
+            compatibility = self.preflight_stream(stream_id, stream)
+        except playback_compatibility.ProbeError as exc:
+            self.write_json(
+                {"error": "media_preflight_failed", "message": str(exc)},
+                status=502,
+            )
+            return
+        if compatibility["status"] == "unsupported":
+            self.write_json(
+                {
+                    "error": "unsupported_media",
+                    "message": compatibility["message"],
+                    "compatibility": compatibility,
+                },
+                status=409,
+            )
+            return
+
+        duration_seconds = compatibility.get("duration_seconds") or stream.get(
+            "duration_seconds", 0
+        )
+        session_id = self.server.play_sessions.create(
+            {
+                "stream_id": stream_id,
+                "url": url,
+                "name": stream.get("name", ""),
+                "duration_seconds": duration_seconds,
+                "compatibility": compatibility,
+            }
+        )
 
         self.write_json(
             {
                 "url": f"http://{self.server.public_host}:{self.server.server_port}/play/{session_id}",
                 "session_id": session_id,
                 "stream_id": stream_id,
-                "duration_seconds": stream.get("duration_seconds", 0),
+                "duration_seconds": duration_seconds,
+                "compatibility": compatibility,
             }
         )
+
+    def preflight_stream(self, stream_id, stream):
+        cached = self.server.probe_cache.get(stream_id)
+        if cached:
+            return cached
+
+        if self.server.ffprobe_path:
+            data = playback_compatibility.probe_media(
+                self.server.ffprobe_path,
+                stream["url"],
+                timeout=self.server.probe_timeout,
+            )
+            compatibility = playback_compatibility.classify_probe(data)
+        else:
+            compatibility = dict(stream.get("compatibility") or {})
+            if not compatibility:
+                compatibility = {
+                    "status": "candidate",
+                    "message": "Media preflight is unavailable",
+                }
+        self.server.probe_cache[stream_id] = compatibility
+        return compatibility
 
     def handle_progress(self):
         payload = self.read_json_body()
@@ -369,6 +466,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "description": "Known-compatible H.264/AAC MP4 hosted by desktop-gaming",
                     "duration_seconds": 6,
                     "playable": test_video.is_file(),
+                    "compatibility": {
+                        "status": "confirmed",
+                        "message": "Confirmed H.264/AAC 640x360 regression fixture",
+                    },
                     "source": "pocketstremio-sample",
                     "url": stream_url if test_video.is_file() else "",
                 }
@@ -402,8 +503,22 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             for stream_index, raw in enumerate(data.get("streams", [])):
                 stream_url = raw.get("url")
                 behavior_hints = raw.get("behaviorHints") or {}
+                compatibility = playback_compatibility.declared_compatibility(
+                    behavior_hints
+                )
                 stream_id = f"a{addon_index}-s{stream_index}-{hashlib.sha1((stream_url or repr(raw)).encode()).hexdigest()[:8]}"
-                playable = bool(stream_url and stream_url.startswith(("http://", "https://")))
+                playable = bool(
+                    stream_url
+                    and stream_url.startswith(("http://", "https://"))
+                    and compatibility["status"] != "unsupported"
+                )
+                if stream_url and compatibility["status"] == "unsupported":
+                    failures.append(
+                        {
+                            "source": addon.get("name") or "stream source",
+                            "message": compatibility["message"],
+                        }
+                    )
                 streams.append(
                     {
                         "id": stream_id,
@@ -411,6 +526,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "description": raw.get("description") or "",
                         "label": stream_label(raw, f"Stream {stream_index + 1}"),
                         "playable": playable,
+                        "compatibility": compatibility,
                         "source": addon.get("name") or manifest_url,
                         "url": stream_url if playable else "",
                         "video_hash": behavior_hints.get("videoHash") or "",
@@ -506,9 +622,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         self.write_json({"count": len(public_items), "items": public_items})
 
     def handle_play_session(self, session_id):
-        session = self.server.play_sessions.get(session_id)
+        session, expired = self.server.play_sessions.get(session_id)
         if not session:
-            self.write_json({"error": "session_not_found"}, status=404)
+            if expired:
+                self.write_json(
+                    {"error": "session_expired", "message": "Playback session expired"},
+                    status=410,
+                )
+            else:
+                self.write_json({"error": "session_not_found"}, status=404)
             return
         self.proxy_remote_url(session["url"])
 
@@ -641,6 +763,14 @@ def main():
     parser.add_argument("--open-media-addon-port", type=int, default=8756)
     parser.add_argument("--disable-open-media-addon", action="store_true")
     parser.add_argument(
+        "--ffprobe",
+        default=os.environ.get("POCKETSTREMIO_FFPROBE", ""),
+        help="Optional ffprobe executable used for media preflight",
+    )
+    parser.add_argument("--probe-timeout", type=int, default=20)
+    parser.add_argument("--session-ttl", type=int, default=DEFAULT_SESSION_TTL)
+    parser.add_argument("--max-sessions", type=int, default=DEFAULT_MAX_SESSIONS)
+    parser.add_argument(
         "--stream-addons",
         default=str(Path(__file__).resolve().parent / "config" / "stream_addons.json"),
     )
@@ -688,13 +818,22 @@ def main():
         )
     httpd.stream_cache = {}
     httpd.subtitle_cache = {}
-    httpd.play_sessions = {}
+    httpd.play_sessions = SessionStore(args.session_ttl, args.max_sessions)
     httpd.manifest_cache = {}
+    httpd.probe_cache = {}
+    httpd.ffprobe_path = playback_compatibility.resolve_ffprobe(args.ffprobe)
+    httpd.probe_timeout = max(1, args.probe_timeout)
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
 
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
     print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
+    print(f"Media preflight: {httpd.ffprobe_path or 'disabled'}", flush=True)
+    print(
+        f"Play sessions: ttl={httpd.play_sessions.ttl_seconds}s "
+        f"max={httpd.play_sessions.max_items}",
+        flush=True,
+    )
     if open_media_server:
         print(
             f"Open-media addon: http://127.0.0.1:{args.open_media_addon_port}/manifest.json",
