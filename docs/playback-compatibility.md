@@ -6,11 +6,21 @@ bounded and diagnosable.
 
 ## Status
 
-**In progress. Server implementation, remote-network path, and confirmed-profile
-Apps-context regression pass; broader format testing remains.**
+**Confirmed on the Miyoo Mini Plus from the OnionOS Apps context on August 13,
+2026.**
 
 This work preserves the existing direct relay. It does not add remuxing,
 transcoding, or another player.
+
+Optional compatibility fixtures are generated from the ignored hosted Big Buck
+Bunny clip with:
+
+```powershell
+.\experiments\ffplay\generate-compatibility-fixtures.ps1
+```
+
+Generated media remains ignored. The server exposes a fixture only when its
+file exists and serves only an explicit filename allowlist.
 
 ## Target Player
 
@@ -34,18 +44,25 @@ the Miyoo's resolution, bitrate, frame rate, and memory constraints.
 - `unsupported`: a required container, video codec, or audio codec is absent
   from the target build's declared support.
 
-The current confirmed envelope is deliberately conservative:
+The current confirmed envelopes are deliberately conservative:
 
 ```text
-container: MP4/MOV
-video: H.264, at most 640x360 and 30 fps
-audio: AAC, at most stereo
-total bitrate: at most 1.6 Mb/s
+Profile 1
+  container: MP4/MOV
+  video: H.264, at most 640x360 and 30 fps
+  audio: AAC, at most stereo
+  total bitrate: at most 1.6 Mb/s
+
+Profile 2
+  container: WebM/Matroska
+  video: VP8, at most 640x360 and 30 fps
+  audio: Vorbis, at most stereo and 44.1 kHz
+  total bitrate: at most 600 kb/s
 ```
 
-This envelope is based on the physically confirmed Big Buck Bunny 640x360
-fixture and *Night of the Living Dead* 320x240 stream. Formats outside it can be
-offered as candidates, but are not labeled safe.
+These envelopes are based on the physically confirmed Big Buck Bunny 640x360
+fixtures and *Night of the Living Dead* 320x240 stream. Formats outside these
+limits can be offered as candidates, but are not labeled safe.
 
 ## Server Preflight
 
@@ -142,6 +159,68 @@ Range bytes=1048576-1114111:
   65,536 bytes returned
 ```
 
+Desktop compatibility matrix on August 13, 2026:
+
+```text
+H.264 High/AAC LC MP4
+  640x360, 30 fps, stereo 44.1 kHz, 1,580,668 b/s
+  preflight: confirmed
+  Range: 206 video/mp4
+
+VP8/Vorbis WebM
+  640x360, 30 fps, stereo 44.1 kHz, 579,421 b/s
+  preflight before physical confirmation: candidate
+  Range: 206 video/webm
+
+H.264 High/Opus Matroska
+  640x360, 30 fps, stereo 48 kHz, 1,518,734 b/s
+  preflight: HTTP 409 unsupported
+  reason: Audio codec opus is unsupported
+  play session created: no
+```
+
+All fixture URLs remain absent from Miyoo-facing stream responses. Cached play
+preflight returned in at most 0.015 seconds during the alternate-server check.
+
+Physical compatibility matrix on August 13, 2026:
+
+```text
+H.264 High/AAC LC MP4
+  result: visible and audible playback, smooth during the test
+  startup after FFplay launch: 2 seconds
+  FFplay RSS: approximately 22.7 MB peak
+  tailscaled RSS: approximately 29.7-31.1 MB
+  minimum MemFree: approximately 1.9 MB
+  MemAvailable during playback: approximately 51.4 MB
+  system swap used: at most 540 kB
+  FFplay/tailscaled VmSwap: 0 kB
+
+VP8/Vorbis WebM
+  result: visible and audible playback, smooth during the test
+  startup after FFplay launch: 1 second
+  FFplay RSS: approximately 16.1 MB
+  tailscaled RSS: approximately 33.4-33.6 MB
+  minimum MemFree: approximately 2.6 MB
+  MemAvailable during playback: approximately 55.8 MB
+  system swap used: 524 kB
+  FFplay/tailscaled VmSwap: 0 kB
+
+H.264 High/Opus Matroska
+  result: HTTP 409 before FFplay launch
+  device message: Audio codec opus is unsupported
+```
+
+The VP8 fixture produced one FFplay `Unknown entry 0x55B0` Matroska warning,
+but opened and played successfully. Both playable runs exited normally through
+the Menu button and produced valid five-second progress updates. The Opus test
+created no play session and did not start FFplay.
+
+These measurements justify direct relay for the two confirmed envelopes. Opus
+audio requires server-side conversion to AAC or another confirmed audio codec;
+that transcoding/remuxing path remains deferred because direct playback and
+clean preflight rejection satisfy this milestone without increasing Miyoo RAM
+usage.
+
 A later work-network regression exposed a source-latency failure:
 
 ```text
@@ -207,6 +286,7 @@ FFplay Menu button: exit playback
 Automated tests cover:
 
 - confirmed H.264/AAC MP4 classification;
+- confirmed VP8/Vorbis WebM classification;
 - unsupported AV1 rejection before session creation;
 - candidate VP9/Vorbis WebM classification;
 - probe-result caching;
@@ -214,15 +294,13 @@ Automated tests cover:
 - session TTL and oldest-session eviction;
 - existing search, stream, relay, subtitle, and progress contracts.
 
-## Remaining Milestone Work
+The automated suite contains 12 server tests. The optional fixture API test also
+verifies that media filenames are allowlisted, byte ranges work, and stream
+responses do not expose fixture URLs.
 
-- Physically regress the Big Buck Bunny fixture with preflight enabled; the
-  open-media confirmed stream has passed.
-- Test representative candidate formats at conservative resolutions and
-  bitrates.
-- Record startup time, buffering, smoothness, RSS, free memory, and swap.
-- Define practical rejection limits from measurements rather than decoder lists.
-- Decide whether any common candidate needs remuxing or transcoding.
+## Outcome
 
-The milestone remains **Next** until supported profiles play predictably and a
-representative unsupported profile returns a useful device-visible failure.
+Milestone 8 is **Confirmed**. Supported profiles play predictably, a
+representative unsupported profile fails before FFplay with a device-visible
+reason, and the measured resource cost remains within the existing playback
+baseline. Series and episode browsing is the next milestone.

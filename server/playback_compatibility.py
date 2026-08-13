@@ -132,7 +132,7 @@ def classify_probe(data):
             **details,
         }
 
-    confirmed = (
+    confirmed_h264 = (
         video_codec == "h264"
         and audio_codec == "aac"
         and bool(containers & {"mov", "mp4"})
@@ -142,8 +142,23 @@ def classify_probe(data):
         and (not bitrate or bitrate <= 1_600_000)
         and _positive_int(audio.get("channels")) <= 2
     )
-    if confirmed:
+    if confirmed_h264:
         message = "Confirmed Miyoo profile: H.264/AAC MP4 up to 640x360"
+        return {"status": "confirmed", "message": message, **details}
+
+    confirmed_vp8 = (
+        video_codec == "vp8"
+        and audio_codec == "vorbis"
+        and bool(containers & {"matroska", "webm"})
+        and 0 < width <= 640
+        and 0 < height <= 360
+        and (not frame_rate or frame_rate <= 30.0)
+        and (not bitrate or bitrate <= 600_000)
+        and _positive_int(audio.get("channels")) <= 2
+        and _positive_int(audio.get("sample_rate")) <= 44_100
+    )
+    if confirmed_vp8:
+        message = "Confirmed Miyoo profile: VP8/Vorbis WebM up to 640x360"
         return {"status": "confirmed", "message": message, **details}
 
     message = "Decoder available, but this media profile is not physically confirmed"

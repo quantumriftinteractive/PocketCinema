@@ -47,6 +47,17 @@ notepad .\server\config\stream_addons.json
 
 `stream_addons.json` is ignored by git. You can also set `POCKETSTREMIO_STREAM_ADDONS` to a comma-separated list of manifest URLs.
 
+For playback compatibility measurements, generate the ignored local fixtures
+from the hosted Big Buck Bunny clip:
+
+```powershell
+.\experiments\ffplay\generate-compatibility-fixtures.ps1
+```
+
+When present, the confirmed VP8/Vorbis and H.264/Opus rejection fixtures appear
+beside the normal Big Buck Bunny stream. Only explicitly allowlisted fixture
+filenames can be served through `/media/compatibility/`.
+
 Configured addons are also queried for Stremio subtitle resources. Subtitle URLs
 remain server-side and are proxied through opaque `/subtitle/{subtitle_id}`
 routes. The bundled `fixtures/test-subtitle.srt` is a deterministic rendering

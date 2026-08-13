@@ -170,20 +170,16 @@ Not part of this milestone:
 - accounts or library integration;
 - posters or a larger UI framework.
 
-## Next Milestone
-
 ### 8. Playback Compatibility and Reliability
 
-**Status: Next**
+**Status: Confirmed**
 
-The first reliability layer is implemented: gaming-PC ffprobe preflight,
-confirmed/candidate/unsupported classification, client-visible rejection
-messages, cached probes, and bounded six-hour play sessions. The confirmed
-H.264/AAC MP4 stream passes desktop preflight and relay checks. Broader
-Apps-context format measurements remain before this milestone can be confirmed.
-The open-media profile also passed an Apps-context resume regression while the
-Miyoo was on a separate work network, including normal Menu-button exit and
-cleanup.
+Gaming-PC ffprobe preflight, confirmed/candidate/unsupported classification,
+client-visible rejection messages, cached probes, and bounded six-hour play
+sessions are implemented. H.264/AAC MP4 and VP8/Vorbis WebM played visibly,
+audibly, and smoothly from the Apps context. H.264/Opus was rejected with a
+useful message before FFplay started. Startup, RSS, free memory, and swap were
+measured for both playable profiles.
 
 Evidence: [Playback Compatibility and Reliability](playback-compatibility.md)
 
@@ -198,9 +194,11 @@ Evidence: [Playback Compatibility and Reliability](playback-compatibility.md)
 Acceptance criterion: supported streams play predictably, while unsupported
 streams fail before FFplay with a useful message.
 
+## Next Milestone
+
 ### 9. Series and Episode Browsing
 
-**Status: Planned**
+**Status: Next**
 
 - Extend search and metadata normalization to series.
 - Add season and episode selection screens using the existing SDL selector.

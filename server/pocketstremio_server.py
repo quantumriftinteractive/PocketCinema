@@ -30,6 +30,42 @@ DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
 DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
+COMPATIBILITY_FIXTURES = (
+    {
+        "filename": "test-video.mp4",
+        "name": "PocketStremio hosted test video",
+        "description": "H.264 High/AAC MP4 | 640x360 | 30 fps | 1.58 Mb/s",
+        "duration_seconds": 6,
+        "compatibility": {
+            "status": "confirmed",
+            "message": "Confirmed H.264/AAC 640x360 regression fixture",
+        },
+        "required": True,
+    },
+    {
+        "filename": "compat-vp8-vorbis.webm",
+        "name": "Compatibility test - VP8/Vorbis WebM",
+        "description": "VP8/Vorbis WebM | 640x360 | 30 fps | local fixture",
+        "duration_seconds": 6,
+        "compatibility": {
+            "status": "confirmed",
+            "message": "Confirmed VP8/Vorbis 640x360 regression fixture",
+        },
+    },
+    {
+        "filename": "compat-h264-opus.mkv",
+        "name": "Compatibility rejection - H.264/Opus Matroska",
+        "description": "Expected rejection: this FFplay build lacks Opus audio",
+        "duration_seconds": 6,
+        "compatibility": {
+            "status": "candidate",
+            "message": "Server preflight must inspect the audio codec",
+        },
+    },
+)
+COMPATIBILITY_FIXTURE_NAMES = {
+    fixture["filename"] for fixture in COMPATIBILITY_FIXTURES
+}
 
 
 def fetch_json(url, timeout=DEFAULT_TIMEOUT):
@@ -330,7 +366,7 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.5"
+    server_version = "PocketStremio/0.6"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -341,7 +377,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.5-playback-compatibility-poc",
+                    "version": "0.6-playback-reliability",
                     "message": "PocketStremio server is reachable",
                     "stream_addons": len(self.server.stream_addons),
                     "continue_watching": len(self.server.progress_store.list_items()),
@@ -383,6 +419,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/media/test-video.mp4":
             self.write_file(self.server.media_dir / "test-video.mp4")
+            return
+
+        if parsed.path.startswith("/media/compatibility/"):
+            filename = urllib.parse.unquote(parsed.path.rsplit("/", 1)[-1])
+            if filename not in COMPATIBILITY_FIXTURE_NAMES:
+                self.write_json({"error": "media_not_found"}, status=404)
+                return
+            self.write_file(self.server.media_dir / filename)
             return
 
 
@@ -545,23 +589,26 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         failures = []
 
         if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
-            test_video = self.server.media_dir / "test-video.mp4"
-            stream_url = f"http://{self.server.public_host}:{self.server.server_port}/media/test-video.mp4"
-            streams.append(
-                {
-                    "id": f"sample-{BIG_BUCK_BUNNY_ID}",
-                    "name": "PocketStremio hosted test video",
-                    "description": "Known-compatible H.264/AAC MP4 hosted by desktop-gaming",
-                    "duration_seconds": 6,
-                    "playable": test_video.is_file(),
-                    "compatibility": {
-                        "status": "confirmed",
-                        "message": "Confirmed H.264/AAC 640x360 regression fixture",
-                    },
-                    "source": "pocketstremio-sample",
-                    "url": stream_url if test_video.is_file() else "",
-                }
-            )
+            for fixture in COMPATIBILITY_FIXTURES:
+                path = self.server.media_dir / fixture["filename"]
+                if not path.is_file() and not fixture.get("required"):
+                    continue
+                stream_url = (
+                    f"http://{self.server.public_host}:{self.server.server_port}"
+                    f"/media/compatibility/{urllib.parse.quote(fixture['filename'])}"
+                )
+                streams.append(
+                    {
+                        "id": f"fixture-{Path(fixture['filename']).stem}",
+                        "name": fixture["name"],
+                        "description": fixture["description"],
+                        "duration_seconds": fixture["duration_seconds"],
+                        "playable": path.is_file(),
+                        "compatibility": fixture["compatibility"],
+                        "source": "pocketstremio-compatibility-fixture",
+                        "url": stream_url if path.is_file() else "",
+                    }
+                )
 
         for addon_index, addon in enumerate(self.server.stream_addons):
             manifest_url = addon["manifest_url"]

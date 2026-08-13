@@ -45,10 +45,11 @@ physically played from the OnionOS Apps context. The latter confirmed H.264
 Constrained Baseline 320x240 video, AAC stereo audio initialization, Menu-button
 exit, progress saving, and cleanup.
 
-The server can use gaming-PC `ffprobe` during `/api/play` to classify media.
-Only the measured H.264/AAC MP4 envelope at up to 640x360 and 30 fps is
-confirmed. Treat other advertised FFplay demuxers and decoders as candidates
-until Apps-context measurements are documented.
+The server uses gaming-PC `ffprobe` during `/api/play` to classify media. The
+measured H.264/AAC MP4 and VP8/Vorbis WebM envelopes at up to 640x360 and 30
+fps are confirmed. Opus audio is rejected before FFplay. Treat other advertised
+FFplay demuxers and decoders as candidates until Apps-context measurements are
+documented.
 
 Continue Watching persists on the gaming PC and resume uses FFplay `-ss` with
 an approximate wall-clock-derived position. The target FFplay build does not

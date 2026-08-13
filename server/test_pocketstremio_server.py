@@ -172,6 +172,36 @@ class PocketStremioServerTest(unittest.TestCase):
             self.assertEqual(response.status, 206)
             self.assertEqual(len(response.read()), 10)
 
+    def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
+        vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"
+        opus_path = self.server.media_dir / "compat-h264-opus.mkv"
+        vp8_path.write_bytes(bytes(range(128)) * 4)
+        opus_path.write_bytes(bytes(range(128)) * 4)
+
+        _, streams = self.get_json("/api/streams/movie/tt1254207")
+        fixtures = {item["id"]: item for item in streams["items"]}
+        self.assertEqual(streams["count"], 3)
+        self.assertEqual(
+            fixtures["fixture-compat-vp8-vorbis"]["compatibility"]["status"],
+            "confirmed",
+        )
+        self.assertNotIn("url", fixtures["fixture-compat-vp8-vorbis"])
+
+        request = urllib.request.Request(
+            f"{self.base}/media/compatibility/{vp8_path.name}",
+            headers={"Range": "bytes=10-19"},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.read(), vp8_path.read_bytes()[10:20])
+
+        with self.assertRaises(urllib.error.HTTPError) as rejected:
+            urllib.request.urlopen(
+                f"{self.base}/media/compatibility/not-allowlisted.mp4",
+                timeout=5,
+            )
+        self.assertEqual(rejected.exception.code, 404)
+
     def test_configured_addon_subtitle_is_normalized(self):
         self.server.stream_addons = [
             {
@@ -311,6 +341,32 @@ class PocketStremioServerTest(unittest.TestCase):
         compatibility = playback_compatibility.classify_probe(confirmed_probe)
         self.assertEqual(compatibility["status"], "confirmed")
         self.assertEqual(compatibility["duration_seconds"], 120)
+
+        confirmed_vp8_probe = {
+            "format": {
+                "format_name": "matroska,webm",
+                "duration": "6.0",
+                "bit_rate": "579421",
+            },
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "vp8",
+                    "width": 640,
+                    "height": 360,
+                    "r_frame_rate": "30/1",
+                },
+                {
+                    "codec_type": "audio",
+                    "codec_name": "vorbis",
+                    "sample_rate": "44100",
+                    "channels": 2,
+                },
+            ],
+        }
+        compatibility = playback_compatibility.classify_probe(confirmed_vp8_probe)
+        self.assertEqual(compatibility["status"], "confirmed")
+        self.assertIn("VP8/Vorbis", compatibility["message"])
 
         unsupported_probe = {
             "format": {"format_name": "mov,mp4,m4a,3gp,3g2,mj2"},
