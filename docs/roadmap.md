@@ -214,11 +214,20 @@ Evidence: [Series and Episode Browsing](series-episode-browsing.md)
 Acceptance criterion: a user can search for a series, choose an episode, select
 a compatible stream, and start playback.
 
-## Next Milestone
-
 ### 10. Operational Resilience
 
-**Status: Next**
+**Status: Confirmed**
+
+Server health now exposes bounded runtime-state details. A background lifecycle
+manager handles health checks and stale PID files, persistent cache/progress
+state survives restarts, and ephemeral play sessions are deliberately cleared.
+The Miyoo supports app-local non-secret configuration and specific connectivity
+errors. Repeatable client deployment and selector build scripts are included.
+An unreachable-server test physically displayed the expected error from the
+OnionOS Apps context and left no stale UI, selector, FFplay, infoPanel, or
+temporary playback state.
+
+Evidence: [Operational Resilience](operational-resilience.md)
 
 - Verify session and cache cleanup across restarts and expected failures.
 - Improve server health details and client connectivity errors.
@@ -228,6 +237,27 @@ a compatible stream, and start playback.
 
 Acceptance criterion: expected network and server failures return the user to a
 working OnionOS screen without stale processes or persistent-state damage.
+
+## Next Milestone
+
+### 11. Real Series Stream Validation
+
+**Status: Next**
+
+- Search Cinemeta for a real series and normalize its real season/episode data.
+- Resolve one legal direct-HTTP episode through a server-side addon.
+- Reuse compatibility preflight, opaque play sessions, progress, and the current
+  OnionOS player path without exposing the upstream URL.
+- Keep the local two-season fixture as the deterministic regression path.
+- Document stream availability, compatibility, startup, controls, audio/video,
+  progress behavior, and cleanup from an Apps-context run.
+
+Acceptance criterion: a user can search for a real series, choose a real episode
+and compatible direct stream, and complete visible and audible playback startup
+on the Miyoo through the existing Tailscale userspace proxy.
+
+Not part of this milestone: accounts, library sync, torrents, debrid,
+transcoding, external subtitle rendering, posters, or a larger UI framework.
 
 ## Deferred Features
 

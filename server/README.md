@@ -14,6 +14,21 @@ or:
 .\server\start-server.ps1
 ```
 
+For normal background operation, use the health-checked lifecycle manager:
+
+```powershell
+$env:POCKETSTREMIO_HOST = "TAILSCALE_IP_OR_INTERFACE_ADDRESS"
+.\server\manage-server.ps1 start
+.\server\manage-server.ps1 status
+.\server\manage-server.ps1 restart
+.\server\manage-server.ps1 stop
+```
+
+Its PID and redirected logs are stored under ignored `server/data/`. It removes
+stale PID files, rejects duplicate managed instances, and verifies `/api/status`
+after startup. `start-server.ps1` remains the foreground development entry
+point.
+
 Endpoints:
 
 ```text
@@ -29,6 +44,10 @@ GET /play/{session}
 GET /subtitle/{subtitle_id}
 GET /media/test-video.mp4
 ```
+
+`/api/status` includes uptime, bounded play-session and probe-cache counts and
+TTLs, progress count, and which state survives a server restart. Existing
+top-level status fields remain available for client compatibility.
 
 `/media/test-video.mp4` is only for the later FFplay network playback experiment. It returns `404` until a compatible MP4 is placed at `server/media/test-video.mp4`.
 

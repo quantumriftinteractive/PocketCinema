@@ -22,6 +22,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
+SERVER_VERSION = "0.8-operational-resilience-poc"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -484,7 +485,7 @@ class ProgressStore:
 
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.7"
+    server_version = "PocketStremio/0.8"
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -493,17 +494,38 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         ]
 
         if parsed.path == "/api/status":
+            session_count = len(self.server.play_sessions)
+            probe_count = len(self.server.probe_cache)
+            progress_count = len(self.server.progress_store.list_items())
             self.write_json(
                 {
                     "status": "ok",
                     "service": "pocketstremio-server",
-                    "version": "0.7-series-browsing-poc",
+                    "version": SERVER_VERSION,
                     "message": "PocketStremio server is reachable",
+                    "uptime_seconds": max(
+                        0, int(time.time() - self.server.started_at)
+                    ),
                     "stream_addons": len(self.server.stream_addons),
-                    "continue_watching": len(self.server.progress_store.list_items()),
-                    "play_sessions": len(self.server.play_sessions),
+                    "continue_watching": progress_count,
+                    "play_sessions": session_count,
                     "media_preflight": bool(self.server.ffprobe_path),
-                    "probe_cache": len(self.server.probe_cache),
+                    "probe_cache": probe_count,
+                    "sessions": {
+                        "active": session_count,
+                        "maximum": self.server.play_sessions.max_items,
+                        "ttl_seconds": self.server.play_sessions.ttl_seconds,
+                    },
+                    "cache": {
+                        "entries": probe_count,
+                        "maximum": self.server.probe_cache.max_items,
+                        "ttl_seconds": self.server.probe_cache.ttl_seconds,
+                    },
+                    "state": {
+                        "progress_items": progress_count,
+                        "play_sessions_persistent": False,
+                        "probe_cache_persistent": True,
+                    },
                 }
             )
             return
@@ -1164,6 +1186,8 @@ def main():
     httpd.ffprobe_path = playback_compatibility.resolve_ffprobe(args.ffprobe)
     httpd.probe_timeout = max(1, args.probe_timeout)
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
+    httpd.started_at = time.time()
+    httpd.daemon_threads = True
 
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
@@ -1184,6 +1208,7 @@ def main():
     try:
         httpd.serve_forever()
     finally:
+        httpd.server_close()
         if open_media_server:
             open_media_server.shutdown()
             open_media_server.server_close()

@@ -25,6 +25,29 @@ The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set
 `POCKETSTREMIO_AUTO_FIRST=1` to restore the development auto-select path.
 
+The production UI optionally reads app-local non-secret settings from:
+
+```text
+/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf
+```
+
+Use `pocketstremio.conf.example` as the template. Environment variables take
+precedence over the file. The client validates settings before starting and
+distinguishes Tailscale startup, local proxy, and gaming-PC server failures.
+
+From the repository root, deploy tracked app files without replacing the real
+config or Tailscale state:
+
+```powershell
+.\scripts\deploy-miyoo.ps1 -DeviceHost root@DEVICE_ADDRESS
+```
+
+Rebuild and compare the selector with the committed ARMv7 binary using:
+
+```powershell
+.\scripts\build-miyoo-selector.ps1 -VerifyCommitted
+```
+
 The pause observer is `bin/pocketstremio-pause-monitor`; its source is
 `pause_monitor.c`. It opens `/dev/input/event0` as an additional reader and does
 not grab, transform, or consume controller events.

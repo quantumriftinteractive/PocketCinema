@@ -1,0 +1,6 @@
+# Copy this file to config/pocketstremio.conf on the Miyoo.
+# Environment variables still take precedence over these values.
+SERVER_BASE=
+PROXY=http://127.0.0.1:1055/
+DEFAULT_QUERY=big buck bunny
+AUTO_FIRST=0

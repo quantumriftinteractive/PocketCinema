@@ -5,10 +5,12 @@ SYS_DIR=/mnt/SDCARD/.tmp_update
 MIYOO_DIR=/mnt/SDCARD/miyoo
 LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/pocketstremio-ui.log"
-SERVER_BASE="${POCKETSTREMIO_SERVER:-http://100.85.171.67:8755}"
-PROXY="${POCKETSTREMIO_PROXY:-http://127.0.0.1:1055/}"
-AUTO_FIRST="${POCKETSTREMIO_AUTO_FIRST:-0}"
-DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-big buck bunny}"
+CONFIG_FILE="$BASE_DIR/config/pocketstremio.conf"
+HTTP_ERROR_FILE=/tmp/pocketstremio-http-error
+SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
+PROXY="${POCKETSTREMIO_PROXY:-}"
+AUTO_FIRST="${POCKETSTREMIO_AUTO_FIRST:-}"
+DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-}"
 CURL="$SYS_DIR/bin/curl"
 JQ="$SYS_DIR/bin/jq"
 KBINPUT="$SYS_DIR/bin/kbinput"
@@ -20,9 +22,44 @@ FFPLAY="$SYS_DIR/bin/ffplay"
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
 PAUSE_MONITOR_PID=""
+READY_ERROR=""
+CONFIG_ERROR=""
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
+
+load_config() {
+  [ -f "$CONFIG_FILE" ] || return 0
+  while IFS='=' read -r config_key config_value; do
+    config_value=$(printf '%s' "$config_value" | tr -d '\r')
+    case "$config_key" in
+      ''|'#'*) continue ;;
+      SERVER_BASE) [ -n "$SERVER_BASE" ] || SERVER_BASE="$config_value" ;;
+      PROXY) [ -n "$PROXY" ] || PROXY="$config_value" ;;
+      DEFAULT_QUERY) [ -n "$DEFAULT_QUERY" ] || DEFAULT_QUERY="$config_value" ;;
+      AUTO_FIRST) [ -n "$AUTO_FIRST" ] || AUTO_FIRST="$config_value" ;;
+      *) CONFIG_ERROR="Unknown setting: $config_key" ;;
+    esac
+  done <"$CONFIG_FILE"
+}
+
+load_config
+SERVER_BASE="${SERVER_BASE:-http://100.85.171.67:8755}"
+PROXY="${PROXY:-http://127.0.0.1:1055/}"
+AUTO_FIRST="${AUTO_FIRST:-0}"
+DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
+case "$SERVER_BASE" in
+  http://*|https://*) ;;
+  *) CONFIG_ERROR="SERVER_BASE must be an HTTP URL" ;;
+esac
+case "$PROXY" in
+  http://*) ;;
+  *) CONFIG_ERROR="PROXY must be an HTTP URL" ;;
+esac
+case "$AUTO_FIRST" in
+  0|1) ;;
+  *) CONFIG_ERROR="AUTO_FIRST must be 0 or 1" ;;
+esac
 
 cleanup() {
   stop_loading
@@ -31,7 +68,8 @@ cleanup() {
     wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
   fi
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
-    /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds
+    /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
+    "$HTTP_ERROR_FILE"
 }
 
 trap cleanup EXIT
@@ -46,6 +84,10 @@ log() {
 message() {
   title="$1"
   body="$2"
+  if [ "${POCKETSTREMIO_HEADLESS:-0}" = "1" ]; then
+    log "message title=$title body=$body"
+    return 0
+  fi
   "$INFOPANEL" --title "$title" --message "$body" --auto >/dev/null 2>&1 || true
 }
 
@@ -73,15 +115,33 @@ stop_loading() {
 api_get() {
   path="$1"
   timeout="${2:-30}"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time "$timeout" "$SERVER_BASE$path")
+  rm -f "$HTTP_ERROR_FILE"
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time "$timeout" "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE")
+  http_rc=$?
+  if [ "$http_rc" -ne 0 ]; then
+    http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
+    log "api get failed path=$path rc=$http_rc detail=$http_detail"
+  fi
+  return "$http_rc"
 }
 
 api_post_play() {
   type="$1"
   id="$2"
   stream_id="$3"
-  body="{\"type\":\"$type\",\"id\":\"$id\",\"stream_id\":\"$stream_id\"}"
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play")
+  body=$("$JQ" -nc \
+    --arg type "$type" \
+    --arg id "$id" \
+    --arg stream_id "$stream_id" \
+    '{type:$type,id:$id,stream_id:$stream_id}')
+  rm -f "$HTTP_ERROR_FILE"
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE")
+  http_rc=$?
+  if [ "$http_rc" -ne 0 ]; then
+    http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
+    log "api post play failed rc=$http_rc detail=$http_detail"
+  fi
+  return "$http_rc"
 }
 
 api_post_progress() {
@@ -101,7 +161,14 @@ api_post_progress() {
     --argjson duration "$duration" \
     --argjson completed "$completed" \
     '{type:$type,id:$id,title:$title,year:$year,position_seconds:$position,duration_seconds:$duration,completed:$completed}')
-  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/progress")
+  rm -f "$HTTP_ERROR_FILE"
+  (unset LD_PRELOAD; HTTP_PROXY="$PROXY" http_proxy="$PROXY" "$CURL" -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/progress" 2>"$HTTP_ERROR_FILE")
+  http_rc=$?
+  if [ "$http_rc" -ne 0 ]; then
+    http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
+    log "api post progress failed rc=$http_rc detail=$http_detail"
+  fi
+  return "$http_rc"
 }
 
 ffplay_has_subtitles() {
@@ -243,24 +310,42 @@ read_keyboard() {
 }
 
 ensure_ready() {
+  ready_attempts="${POCKETSTREMIO_READY_ATTEMPTS:-6}"
+  ready_timeout="${POCKETSTREMIO_READY_TIMEOUT:-5}"
+  case "$ready_attempts:$ready_timeout" in
+    *[!0-9:]*|0:*|*:0) ready_attempts=6; ready_timeout=5 ;;
+  esac
   started=0
   if [ ! -S /tmp/pocketstremio-tailscale/tailscaled.sock ]; then
     log "tailscaled socket missing; starting"
-    (unset LD_PRELOAD; "$BASE_DIR/tailscale/scripts/start.sh") >> "$LOG_FILE" 2>&1 || return 1
+    if ! (unset LD_PRELOAD; "$BASE_DIR/tailscale/scripts/start.sh") >> "$LOG_FILE" 2>&1; then
+      READY_ERROR="Tailscale failed to start"
+      return 1
+    fi
     started=1
   fi
   [ "$started" = "1" ] && sleep 6
+  if [ ! -S /tmp/pocketstremio-tailscale/tailscaled.sock ]; then
+    READY_ERROR="Tailscale proxy unavailable"
+    return 1
+  fi
 
   attempts=0
-  while [ "$attempts" -lt 6 ]; do
-    if api_get "/api/status" 5 >/tmp/pocketstremio-status.json; then
-      log "server ready after attempts=$((attempts + 1))"
-      return 0
+  while [ "$attempts" -lt "$ready_attempts" ]; do
+    if api_get "/api/status" "$ready_timeout" >/tmp/pocketstremio-status.json; then
+      server_status=$("$JQ" -r '.status // ""' /tmp/pocketstremio-status.json 2>/dev/null)
+      if [ "$server_status" = "ok" ]; then
+        server_version=$("$JQ" -r '.version // "unknown"' /tmp/pocketstremio-status.json)
+        log "server ready after attempts=$((attempts + 1)) version=$server_version"
+        return 0
+      fi
+      log "server readiness returned invalid status=$server_status"
     fi
     attempts=$((attempts + 1))
     log "server readiness attempt=$attempts failed"
     sleep 2
   done
+  READY_ERROR="Gaming PC server unavailable"
   return 1
 }
 
@@ -326,7 +411,7 @@ search_flow() {
   [ -z "$query" ] && return 0
   log "search q=$query"
 
-  encoded=$(printf '%s' "$query" | sed 's/ /%20/g')
+  encoded=$(printf '%s' "$query" | "$JQ" -sRr @uri)
   if ! api_get "/api/search?q=$encoded" >/tmp/pocketstremio-search.json; then
     log "search failed"
     message "PocketStremio" "Server unavailable"
@@ -679,9 +764,15 @@ select_subtitle() {
 
 cd "$SYS_DIR" || exit 1
 log "PocketStremio UI start server=$SERVER_BASE proxy=$PROXY"
+if [ -n "$CONFIG_ERROR" ]; then
+  log "configuration error=$CONFIG_ERROR"
+  message "PocketStremio" "$CONFIG_ERROR"
+  exit 1
+fi
 if ! ensure_ready; then
-  log "server unavailable"
-  message "PocketStremio" "Server unavailable"
+  [ -n "$READY_ERROR" ] || READY_ERROR="PocketStremio unavailable"
+  log "startup unavailable message=$READY_ERROR"
+  message "PocketStremio" "$READY_ERROR"
   exit 1
 fi
 

@@ -78,6 +78,12 @@ ignored by git and reproducible through
 `experiments/ffplay/generate-series-av-sync-fixture.ps1`. Real-series playback
 through an addon remains unconfirmed.
 
+Operational resilience is physically confirmed for an unreachable gaming-PC
+server. The Apps-context client displayed a specific error and exited without
+stale UI, selector, FFplay, infoPanel, or temporary playback state. The server
+runs under `server/manage-server.ps1`; play sessions are ephemeral across a
+restart while the bounded probe cache and Continue Watching state persist.
+
 ## Repository Layout
 
 - `app/`: OnionOS app metadata and root launcher. `app/launch.sh` is the
@@ -92,6 +98,7 @@ through an addon remains unconfirmed.
 - `docs/`: confirmed POC evidence, architecture decisions, and canonical roadmap.
 - `experiments/`: isolated experiments that must not replace the production app
   path until confirmed.
+- `scripts/`: repeatable Miyoo deployment and ARM selector build entry points.
 
 Deployment maps repository files as follows:
 
@@ -106,11 +113,17 @@ client/miyoo/bin/pocketstremio-selector
   -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-selector
 client/miyoo/bin/pocketstremio-pause-monitor
   -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-pause-monitor
+client/miyoo/pocketstremio.conf.example
+  -> /mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf.example
 ```
 
 Do not store target addresses or credentials in new committed files. Use the
 existing defaults or environment overrides and keep deployment credentials out
 of git.
+
+The optional live device config is
+`/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf`. Deployment must never
+overwrite it. Environment variables take precedence over app-local config.
 
 ## Implementation Rules
 
@@ -160,6 +173,8 @@ of git.
 - Keep Stremio-specific and source-specific logic on the gaming PC.
 - Prefer the Python standard library until a dependency removes demonstrated
   complexity and has a clear deployment story.
+- Use `server/manage-server.ps1` for normal background lifecycle operations and
+  `server/start-server.ps1` only when an attached foreground process is useful.
 
 ## OnionOS Execution Context
 
@@ -183,7 +198,7 @@ Scale tests to the change. Before committing, run the relevant checks:
 - `python -m py_compile server/pocketstremio_server.py`
 - `python -m unittest server.test_pocketstremio_server -v`
 - Parse every changed `.sh` with `sh -n` or Git Bash `sh -n`.
-- Parse `server/start-server.ps1` with the PowerShell parser.
+- Parse all changed `.ps1` files with the PowerShell parser.
 - For server changes, exercise `/api/status`, search, metadata, streams, play
   session creation, and a byte-range media request on an alternate local port.
 - For selector changes, cross-compile with `-Wall -Wextra -Werror` and verify the
@@ -195,6 +210,11 @@ Scale tests to the change. Before committing, run the relevant checks:
 
 The cross-toolchains used during development live under ignored `.tmp/` paths
 and are not repository dependencies. Do not commit them.
+
+Use `scripts/deploy-miyoo.ps1` for repeatable tracked-file upgrades. It must
+continue preserving the live client config, logs, Tailscale runtime/state, and
+OnionOS files. Use `scripts/build-miyoo-selector.ps1 -VerifyCommitted` for the
+documented reproducible selector check.
 
 ## Documentation and Milestones
 

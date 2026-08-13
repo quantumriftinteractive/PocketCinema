@@ -81,6 +81,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.progress_store = pocket.ProgressStore(
             root / "data" / "continue_watching.json"
         )
+        self.server.started_at = 100
         self.base = f"http://127.0.0.1:{self.server.server_port}"
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -157,6 +158,20 @@ class PocketStremioServerTest(unittest.TestCase):
             status, meta = self.get_json("/api/meta/movie/tt0078748")
             self.assertEqual(status, 200)
             self.assertEqual(meta["year"], 1979)
+
+    def test_status_reports_bounded_runtime_state(self):
+        with mock.patch.object(pocket.time, "time", return_value=130):
+            status_code, status = self.get_json("/api/status")
+        self.assertEqual(status_code, 200)
+        self.assertEqual(status["status"], "ok")
+        self.assertEqual(status["version"], pocket.SERVER_VERSION)
+        self.assertEqual(status["uptime_seconds"], 30)
+        self.assertEqual(status["sessions"]["active"], 0)
+        self.assertEqual(
+            status["sessions"]["maximum"], self.server.play_sessions.max_items
+        )
+        self.assertFalse(status["state"]["play_sessions_persistent"])
+        self.assertTrue(status["state"]["probe_cache_persistent"])
 
     def test_offline_series_fixture_browses_and_plays_without_upstream(self):
         (self.server.media_dir / "series-av-sync.mp4").write_bytes(
@@ -524,6 +539,40 @@ class PocketStremioServerTest(unittest.TestCase):
             )
         with mock.patch.object(pocket.time, "time", return_value=111):
             self.assertIsNone(cache.get("https://media.example/second.mp4"))
+
+    def test_corrupt_persistent_state_recovers_without_runtime_failure(self):
+        root = Path(self.temp_dir.name) / "corrupt-state"
+        root.mkdir()
+        probe_path = root / "probe_cache.json"
+        progress_path = root / "continue_watching.json"
+        probe_path.write_text("{not json", encoding="utf-8")
+        progress_path.write_text("[] trailing", encoding="utf-8")
+
+        cache = pocket.ProbeCache(probe_path)
+        progress = pocket.ProgressStore(progress_path)
+        self.assertEqual(len(cache), 0)
+        self.assertEqual(progress.list_items(), [])
+
+        cache.set("https://media.example/recovered.mp4", {"status": "candidate"})
+        progress.update(
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "title": "Recovered",
+                "position_seconds": 10,
+                "duration_seconds": 100,
+            }
+        )
+        self.assertEqual(
+            pocket.ProbeCache(probe_path).get(
+                "https://media.example/recovered.mp4"
+            )["status"],
+            "candidate",
+        )
+        self.assertEqual(
+            pocket.ProgressStore(progress_path).list_items()[0]["id"],
+            "tt0000001",
+        )
 
     def test_session_store_expires_and_evicts_oldest_sessions(self):
         store = pocket.SessionStore(ttl_seconds=10, max_items=2)

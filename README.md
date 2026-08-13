@@ -14,11 +14,15 @@ It uses the existing Tailscale userspace HTTP proxy on the Miyoo, a lightweight
 SDL 1.2 selector, a Python server on the gaming PC, and the PC's localhost-only
 Stremio Service as an optional backend. The known-compatible Big Buck Bunny test
 stream plays as H.264 640x360 with AAC audio. See
-`docs/vertical-slice.md` and `docs/ffplay-playback-poc.md` for confirmed results
-and current limitations.
+`docs/vertical-slice.md`, `docs/ffplay-playback-poc.md`, and
+`docs/operational-resilience.md` for confirmed results and current limitations.
 
 See [docs/roadmap.md](docs/roadmap.md) for milestone status, acceptance criteria,
 sequencing, deferred features, and known risks.
+
+Normal server operations use `server/manage-server.ps1`. Tracked Miyoo app files
+can be upgraded with `scripts/deploy-miyoo.ps1`; the deployment preserves the
+app's real config, logs, Tailscale state, and OnionOS core files.
 
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
