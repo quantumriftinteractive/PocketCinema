@@ -11,6 +11,7 @@ from unittest import mock
 from server import open_media_addon
 from server import playback_compatibility
 from server import pocketstremio_server as pocket
+from server import stremio_account
 from server import stremio_service
 
 
@@ -73,6 +74,9 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.server_port = self.server.server_address[1]
         self.server.stream_addons = []
         self.server.stremio_service = stremio_service.StremioServiceBackend("", [])
+        self.server.stremio_account = stremio_account.StremioAccountBackend(
+            root / "config" / "stremio_account.json"
+        )
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
         self.server.play_sessions = pocket.SessionStore()
@@ -175,6 +179,101 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertFalse(status["state"]["play_sessions_persistent"])
         self.assertTrue(status["state"]["probe_cache_persistent"])
         self.assertFalse(status["stremio_service"]["configured"])
+        self.assertFalse(status["stremio_account"]["configured"])
+
+    def test_unconfigured_account_addon_endpoint_is_empty(self):
+        _, addons = self.get_json("/api/addons")
+        self.assertFalse(addons["configured"])
+        self.assertFalse(addons["authenticated"])
+        self.assertEqual(addons["count"], 0)
+
+    def test_account_addon_is_opaque_and_only_direct_http_streams_are_used(self):
+        config_path = self.server.stremio_account.config_path
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text(
+            json.dumps({"auth_key": "private-auth-key"}), encoding="utf-8"
+        )
+        transport_url = "https://account-addon.example/private/manifest.json"
+        upstream_url = "https://cdn.example/private-video.mp4?token=private"
+
+        def fake_post(payload):
+            self.assertEqual(payload["authKey"], "private-auth-key")
+            return {
+                "result": {
+                    "addons": [
+                        {
+                            "manifest": {
+                                "id": "org.example.account",
+                                "version": "1.0.0",
+                                "name": "Account Direct Media",
+                                "types": ["movie"],
+                                "resources": ["stream"],
+                            },
+                            "transportUrl": transport_url,
+                            "flags": {"official": False, "protected": False},
+                        }
+                    ]
+                }
+            }
+
+        def fake_fetch(url):
+            self.assertEqual(
+                url,
+                "https://account-addon.example/private/stream/movie/tt0000001.json",
+            )
+            return {
+                "streams": [
+                    {
+                        "name": "Direct account stream",
+                        "description": "private source https://do-not-expose.example/",
+                        "url": upstream_url,
+                    },
+                    {"name": "Torrent", "infoHash": "0123456789abcdef"},
+                    {
+                        "name": "External player",
+                        "externalUrl": "https://external.example/watch",
+                    },
+                    {"name": "Private host", "url": "http://127.0.0.1/video.mp4"},
+                    {
+                        "name": "[RD+] Debrid result",
+                        "url": "https://cdn.example/debrid.mp4",
+                    },
+                ]
+            }
+
+        self.server.stremio_account._post_json = mock.Mock(side_effect=fake_post)
+        self.server.stremio_account._fetch_json = mock.Mock(side_effect=fake_fetch)
+
+        _, addons = self.get_json("/api/addons?refresh=1")
+        self.assertTrue(addons["authenticated"])
+        self.assertEqual(addons["stream_addons"], 1)
+        addons_json = json.dumps(addons)
+        self.assertNotIn("private-auth-key", addons_json)
+        self.assertNotIn(transport_url, addons_json)
+
+        _, streams = self.get_json("/api/streams/movie/tt0000001")
+        self.assertEqual(streams["count"], 1)
+        stream = streams["items"][0]
+        self.assertEqual(stream["name"], "Direct account stream")
+        self.assertEqual(stream["description"], "")
+        self.assertNotIn("url", stream)
+        self.assertTrue(
+            any("non-HTTP" in failure["message"] for failure in streams["failures"])
+        )
+        internal = self.server.stream_cache[stream["id"]]
+        self.assertEqual(internal["url"], upstream_url)
+
+        _, play = self.post_json("/api/play", {"stream_id": stream["id"]})
+        public_json = json.dumps({"addons": addons, "streams": streams, "play": play})
+        self.assertNotIn("private-auth-key", public_json)
+        self.assertNotIn(transport_url, public_json)
+        self.assertNotIn(upstream_url, public_json)
+        self.assertNotIn("do-not-expose.example", public_json)
+        self.assertNotIn("Debrid result", public_json)
+
+        _, status = self.get_json("/api/status")
+        self.assertTrue(status["stremio_account"]["authenticated"])
+        self.assertEqual(status["stremio_account"]["stream_addons"], 1)
 
     def test_status_reports_bounded_stremio_service_diagnostics(self):
         backend = stremio_service.StremioServiceBackend(

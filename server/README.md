@@ -33,6 +33,7 @@ Endpoints:
 
 ```text
 GET /api/status
+GET /api/addons
 GET /api/search?q=alien
 GET /api/meta/{type}/{id}
 GET /api/streams/{type}/{id}
@@ -52,6 +53,21 @@ top-level status fields remain available for client compatibility.
 `/media/test-video.mp4` is only for the later FFplay network playback experiment. It returns `404` until a compatible MP4 is placed at `server/media/test-video.mp4`.
 
 The media endpoint supports single HTTP byte-range requests because FFplay seeks inside MP4 files.
+
+To link the gaming PC to a Stremio account without giving PocketStremio an email
+address or password:
+
+```powershell
+python .\server\link_stremio_account.py
+```
+
+Approve the temporary official Stremio link in the browser. The resulting auth
+key is stored only in ignored `server/config/stremio_account.json`.
+`GET /api/addons` exposes a sanitized, read-only capability list; add
+`?refresh=1` to refresh its five-minute cache. Auth keys, addon transport URLs,
+and raw stream URLs remain server-side. Account results are limited to direct
+public HTTP(S) media and reject P2P, debrid-labeled, external-player, local, and
+private-address results. See [Stremio Account Addon Discovery](../docs/stremio-account-addons.md).
 
 Search and metadata use the official Cinemeta addon protocol endpoints. Stream results are resolved server-side from configured stream addon manifest URLs.
 
@@ -123,5 +139,5 @@ at most 50 entries and removes completed items.
 Run the automated server checks with:
 
 ```powershell
-python -m unittest server.test_pocketstremio_server -v
+python -m unittest server.test_stremio_account server.test_pocketstremio_server -v
 ```

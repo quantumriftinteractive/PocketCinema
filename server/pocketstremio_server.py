@@ -16,15 +16,17 @@ from pathlib import Path
 try:
     from server import open_media_addon
     from server import playback_compatibility
+    from server import stremio_account
     from server import stremio_service
 except ImportError:
     import open_media_addon
     import playback_compatibility
+    import stremio_account
     import stremio_service
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.10-stremio-service-backend"
+SERVER_VERSION = "0.11-account-addon-discovery"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -186,6 +188,13 @@ def release_year(value):
         if len(token) >= 4 and token[:4].isdigit():
             return int(token[:4])
     return None
+
+
+def safe_addon_text(value, fallback="", maximum=240):
+    text = str(value or "").strip()
+    if any(marker in text.lower() for marker in ("http://", "https://", "file://")):
+        return fallback
+    return text[:maximum] or fallback
 
 
 def normalize_meta(meta):
@@ -560,12 +569,17 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "probe_cache_persistent": True,
                     },
                     "stremio_service": self.server.stremio_service.status(),
+                    "stremio_account": self.server.stremio_account.status(),
                 }
             )
             return
 
         if parsed.path == "/api/search":
             self.handle_search(parsed)
+            return
+
+        if parsed.path == "/api/addons":
+            self.handle_account_addons(parsed)
             return
 
         if len(parts) == 4 and parts[:2] == ["api", "meta"]:
@@ -729,6 +743,19 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"error": "invalid_progress", "message": str(exc)}, status=400)
             return
         self.write_json({"saved": item is not None, "item": item})
+
+    def handle_account_addons(self, parsed):
+        query = urllib.parse.parse_qs(parsed.query)
+        force = query.get("refresh", [""])[0].lower() in {"1", "true", "yes"}
+        try:
+            self.write_json(
+                self.server.stremio_account.public_collection(force=force)
+            )
+        except stremio_account.StremioAccountError as exc:
+            self.write_json(
+                {"error": "stremio_account_unavailable", "message": str(exc)},
+                status=502,
+            )
 
     def handle_search(self, parsed):
         query = urllib.parse.parse_qs(parsed.query).get("q", [""])[0].strip()
@@ -894,6 +921,75 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "message": str(exc),
                 }
             )
+
+        try:
+            account_sources = self.server.stremio_account.stream_sources(item_type)
+        except stremio_account.StremioAccountError as exc:
+            account_sources = []
+            failures.append({"source": "Stremio account", "message": str(exc)})
+
+        for source in account_sources:
+            source_name = safe_addon_text(source["name"], "Account addon", 120)
+            try:
+                raw_streams = self.server.stremio_account.fetch_streams(
+                    source, item_type, item_id
+                )
+            except stremio_account.StremioAccountError as exc:
+                failures.append({"source": source_name, "message": str(exc)})
+                continue
+
+            rejected = False
+            for stream_index, raw in enumerate(raw_streams):
+                if not isinstance(raw, dict):
+                    rejected = True
+                    continue
+                if stremio_account.is_debrid_stream(raw):
+                    rejected = True
+                    continue
+                stream_url = raw.get("url")
+                if not stremio_account.validate_direct_stream_url(stream_url):
+                    rejected = True
+                    continue
+                behavior_hints = raw.get("behaviorHints") or {}
+                compatibility = playback_compatibility.declared_compatibility(
+                    behavior_hints
+                )
+                if compatibility["status"] == "unsupported":
+                    failures.append(
+                        {"source": source_name, "message": compatibility["message"]}
+                    )
+                    continue
+                stream_name = safe_addon_text(
+                    raw.get("name") or raw.get("title"),
+                    f"{source_name} - Stream {stream_index + 1}",
+                    160,
+                )
+                stream_id = (
+                    f"u{source['key']}-s{stream_index}-"
+                    f"{hashlib.sha1(stream_url.encode()).hexdigest()[:8]}"
+                )
+                streams.append(
+                    {
+                        "id": stream_id,
+                        "name": stream_name,
+                        "description": safe_addon_text(raw.get("description"), ""),
+                        "label": stream_name,
+                        "playable": True,
+                        "compatibility": compatibility,
+                        "source": f"Stremio account: {source_name}",
+                        "url": stream_url,
+                        "video_hash": behavior_hints.get("videoHash") or "",
+                        "video_size": behavior_hints.get("videoSize") or 0,
+                        "duration_seconds": nonnegative_int(raw.get("durationSeconds")),
+                    }
+                )
+            if rejected:
+                failures.append(
+                    {
+                        "source": source_name,
+                        "message": "Unsupported P2P, debrid, or non-HTTP account stream was ignored",
+                    }
+                )
 
         if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
             for fixture in COMPATIBILITY_FIXTURES:
@@ -1248,6 +1344,13 @@ def main():
     parser.add_argument("--public-host", default=None)
     parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
     parser.add_argument(
+        "--stremio-account-config",
+        default=str(
+            Path(__file__).resolve().parent / "config" / "stremio_account.json"
+        ),
+        help="Ignored JSON file containing a Stremio auth_key",
+    )
+    parser.add_argument(
         "--stremio-local-media-root",
         action="append",
         default=[],
@@ -1302,6 +1405,9 @@ def main():
         args.stremio_service_url,
         service_roots,
     )
+    httpd.stremio_account = stremio_account.StremioAccountBackend(
+        args.stremio_account_config
+    )
     httpd.stream_addons = load_stream_addons(args.stream_addons)
     open_media_server = None
     open_media_thread = None
@@ -1339,6 +1445,15 @@ def main():
     print(
         "Stremio local media roots: "
         + ", ".join(str(root) for root in httpd.stremio_service.allowed_roots),
+        flush=True,
+    )
+    print(
+        "Stremio account: "
+        + (
+            "configured"
+            if httpd.stremio_account.status()["configured"]
+            else "not configured"
+        ),
         flush=True,
     )
     print(f"Media preflight: {httpd.ffprobe_path or 'disabled'}", flush=True)

@@ -2,6 +2,7 @@
 server/media/*
 !server/media/.gitkeep
 server/config/stream_addons.json
+server/config/stremio_account.json
 server/data/*
 !server/data/.gitkeep
 __pycache__/

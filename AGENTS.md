@@ -94,6 +94,15 @@ backend.
 The hosted Big Buck Bunny video is a deterministic regression fixture, not a
 general stream resolver.
 
+The server has a read-only Stremio account addon adapter. Account linking uses
+the official temporary browser approval flow and stores only the auth key in the
+ignored gaming-PC file `server/config/stremio_account.json`. Never print, copy,
+commit, or deploy that file. Account addon transports and stream URLs remain
+server-side. P2P, debrid-labeled, external-player, local/private-address, and
+non-HTTP results are rejected. The currently discovered legal ERT News result is
+HLS/H.264 High and is not compatible with the existing opaque progressive-media
+proxy; do not expose its playlist directly or mark Milestone 16 confirmed.
+
 Series browsing is physically confirmed with the local two-season
 `PocketStremio Test Series` fixture. Its generated 30-second H.264/AAC media is
 ignored by git and reproducible through
@@ -235,7 +244,7 @@ overwrite it. Environment variables take precedence over app-local config.
 Scale tests to the change. Before committing, run the relevant checks:
 
 - `python -m py_compile server/pocketstremio_server.py`
-- `python -m unittest server.test_pocketstremio_server -v`
+- `python -m unittest server.test_stremio_account server.test_pocketstremio_server -v`
 - Parse every changed `.sh` with `sh -n` or Git Bash `sh -n`.
 - Parse all changed `.ps1` files with the PowerShell parser.
 - For server changes, exercise `/api/status`, search, metadata, streams, play

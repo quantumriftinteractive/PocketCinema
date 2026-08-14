@@ -396,6 +396,16 @@ torrents, debrid, transcoding, external subtitle rendering, or a larger UI.
 
 **Status: Next**
 
+The server-side implementation is complete and linked on the current gaming PC.
+It discovered 15 addons without exposing credentials or transport URLs, and
+live probes confirmed that Torrentio RD and AIOStreams results are rejected.
+The only clearly legal direct account result found, ERT News, is HLS with H.264
+High profile and cannot use the current opaque progressive-media proxy. Device
+acceptance therefore remains pending rather than weakening the transport or
+compatibility boundary.
+
+Evidence: [Stremio Account Addon Discovery](stremio-account-addons.md)
+
 - Research the current supported account and addon-collection interfaces used by
   Stremio without reading or copying opaque desktop application state.
 - Keep authentication material and private addon URLs on the gaming PC in
