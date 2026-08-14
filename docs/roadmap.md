@@ -495,7 +495,7 @@ tokens.
 
 ### 19. Account Addon Catalog Browsing
 
-**Status: Next**
+**Status: Planned**
 
 Search and playback now use linked account addons, but the home screen does not
 yet expose their movie and series catalogs. Add lightweight server-normalized
@@ -511,6 +511,22 @@ catalog browsing without sending addon transports or tokens to the Miyoo.
 Acceptance criterion: a user can open an account addon catalog, select one movie
 or series with the controller, and reach the existing physically confirmed
 account-addon playback flow.
+
+### 20. Bounded English Subtitles and Downscaling
+
+**Status: Next**
+
+External subtitles cannot render on the target FFplay build, and physically
+tested 720p and 1080p sources exceed reliable direct-play behavior. Add one
+bounded gaming-PC FFmpeg path for English subtitle burn-in and conditional
+downscaling while keeping the Miyoo client and account credentials unchanged.
+
+Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
+
+Acceptance criterion: one account-addon movie displays burned-in English
+subtitles, one stuttering 720p episode becomes smooth at a bounded output
+profile, audio remains synchronized, resource use is measured, and Menu exit
+cleans up every server and device process without exposing upstream tokens.
 
 ## Deferred Features
 
@@ -537,6 +553,9 @@ acceptance criteria rather than expanding an earlier milestone.
   unmatched or newly added files may not appear until a normal service restart.
 - Direct streams may use codecs, headers, redirects, or seek behavior that the
   current FFplay proxy path does not support.
+- A 720p *Invincible* episode was physically watchable but dropped many frames
+  initially and continued to stutter. Treat 720p as requiring downscaling unless
+  later measurements establish a narrower direct-play exception.
 - The HLS bridge currently supports only unencrypted MPEG-TS renditions. It
   rejects encrypted and fragmented-MP4 playlists and remains physically measured
   only for a 29-second ERT News session.

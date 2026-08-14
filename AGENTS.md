@@ -120,6 +120,13 @@ episode also confirmed pause tracking, Menu exit, and progress saving. Account
 display text must remain whitespace-collapsed because embedded newlines become
 separate SDL selector values.
 
+The next milestone is the bounded gaming-PC subtitle/downscaling pipeline in
+`docs/bounded-transcoding.md`. The first slice is English subtitle burn-in plus
+conditional 640x360 downscaling. Feed FFmpeg through an opaque loopback relay so
+account media tokens never appear in Miyoo APIs, logs, or FFmpeg process
+arguments. A 720p *Invincible* episode is physically watchable but drops frames
+and stutters substantially; do not classify 720p as direct-play compatible.
+
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and
 polls after A; the retrieval code and auth key stay on the gaming PC. A linked
