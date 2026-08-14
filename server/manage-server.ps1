@@ -7,7 +7,8 @@ param(
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
   [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
-  [string]$FFprobePath = ""
+  [string]$FFprobePath = "",
+  [string]$FFmpegPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,6 +78,12 @@ function Start-ManagedServer {
       $script:FFprobePath = $candidate
     }
   }
+  if (-not $FFmpegPath) {
+    $candidate = Join-Path $env:LOCALAPPDATA "Programs\LNV\Stremio-4\ffmpeg.exe"
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+      $script:FFmpegPath = $candidate
+    }
+  }
   if (-not $StremioLocalMediaRoot) {
     $candidate = Join-Path $env:USERPROFILE "Videos\PocketStremio"
     if (Test-Path -LiteralPath $candidate -PathType Container) {
@@ -97,6 +104,9 @@ function Start-ManagedServer {
   }
   if ($FFprobePath) {
     $arguments += @("--ffprobe", $FFprobePath)
+  }
+  if ($FFmpegPath) {
+    $arguments += @("--ffmpeg", $FFmpegPath)
   }
 
   $python = (Get-Command python -ErrorAction Stop).Source

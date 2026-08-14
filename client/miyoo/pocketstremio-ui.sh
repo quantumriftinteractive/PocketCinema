@@ -157,11 +157,15 @@ api_post_play() {
   type="$1"
   id="$2"
   stream_id="$3"
+  subtitle_id="${4:-none}"
+  resume_seconds="${5:-0}"
   body=$("$JQ" -nc \
     --arg type "$type" \
     --arg id "$id" \
     --arg stream_id "$stream_id" \
-    '{type:$type,id:$id,stream_id:$stream_id}')
+    --arg subtitle_id "$subtitle_id" \
+    --argjson resume_seconds "$resume_seconds" \
+    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,resume_seconds:$resume_seconds}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -832,7 +836,7 @@ streams_flow() {
   done
 
   start_loading "PocketStremio" "Checking compatibility..."
-  api_post_play "$type" "$id" "$stream_id" >/tmp/pocketstremio-play.json
+  api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" >/tmp/pocketstremio-play.json
   play_setup_rc=$?
   stop_loading
   if [ "$play_setup_rc" -ne 0 ]; then
@@ -852,23 +856,17 @@ streams_flow() {
   compatibility_message=$("$JQ" -r '.compatibility.message // ""' /tmp/pocketstremio-play.json)
   log "media preflight status=$compatibility_status message=$compatibility_message"
 
-  subtitle_file=""
-  if [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
-    subtitle_file=/tmp/pocketstremio-subtitle.srt
-    rm -f "$subtitle_file"
-    if ! api_get "/subtitle/$subtitle_id" >"$subtitle_file"; then
-      rm -f "$subtitle_file"
-      message "PocketStremio" "Subtitle download failed"
-      return 1
-    fi
-    log "subtitle downloaded id=$subtitle_id"
-  fi
+  transcoded=$("$JQ" -r '.transcoded // false' /tmp/pocketstremio-play.json)
+  server_seek_applied=$("$JQ" -r '.server_seek_applied // false' /tmp/pocketstremio-play.json)
+  ffplay_resume_seconds="$resume_seconds"
+  [ "$server_seek_applied" = "true" ] && ffplay_resume_seconds=0
+  log "playback conversion=$transcoded subtitle_id=${subtitle_id:-none} server_seek=$server_seek_applied"
 
   log "playback url received"
   start_loading "PocketStremio" "Starting video..."
   sleep 1
   stop_loading
-  if ! play_url "$play_url_value" "$resume_seconds" "$subtitle_file"; then
+  if ! play_url "$play_url_value" "$ffplay_resume_seconds" ""; then
     message "PocketStremio" "Playback failed"
   fi
 
@@ -896,11 +894,6 @@ select_subtitle() {
   id="$2"
   stream_id="$3"
 
-  if ! ffplay_has_subtitles; then
-    log "ffplay subtitles filter unavailable"
-    printf '%s' "none"
-    return 0
-  fi
   if ! api_get "/api/subtitles/$type/$id?stream_id=$stream_id" >/tmp/pocketstremio-subtitles.json; then
     log "subtitle lookup failed"
     printf '%s' "none"

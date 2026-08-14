@@ -5,6 +5,7 @@ import json
 import mimetypes
 import os
 import secrets
+import subprocess
 import threading
 import time
 import urllib.error
@@ -20,6 +21,7 @@ try:
     from server import playback_compatibility
     from server import stremio_account
     from server import stremio_service
+    from server import transcoding
 except ImportError:
     import hls_relay
     import link_stremio_account
@@ -27,10 +29,11 @@ except ImportError:
     import playback_compatibility
     import stremio_account
     import stremio_service
+    import transcoding
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.15-account-direct"
+SERVER_VERSION = "0.16-bounded-transcode"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -41,6 +44,7 @@ DEFAULT_MAX_SESSIONS = 128
 DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
 MAX_LIVE_TV_ITEMS = 128
+MAX_SUBTITLE_BYTES = 2 * 1024 * 1024
 COMPATIBILITY_FIXTURES = (
     {
         "filename": "test-video.mp4",
@@ -578,6 +582,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             progress_count = len(self.server.progress_store.list_items())
             with self.server.hls_bridge_lock:
                 active_hls_bridges = self.server.active_hls_bridges
+            with self.server.transcode_state_lock:
+                active_transcodes = self.server.active_transcodes
             self.write_json(
                 {
                     "status": "ok",
@@ -593,6 +599,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "media_preflight": bool(self.server.ffprobe_path),
                     "probe_cache": probe_count,
                     "live_bridges": {"active": active_hls_bridges},
+                    "transcodes": {
+                        "active": active_transcodes,
+                        "available": bool(self.server.ffmpeg_path),
+                        "maximum": 1,
+                    },
                     "sessions": {
                         "active": session_count,
                         "maximum": self.server.play_sessions.max_items,
@@ -736,20 +747,61 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             )
             return
 
+        subtitle_id = str(payload.get("subtitle_id") or "")
+        subtitle = None
+        if subtitle_id and subtitle_id != "none":
+            subtitle = self.server.subtitle_cache.get(subtitle_id)
+            if not subtitle:
+                self.write_json({"error": "subtitle_not_found"}, status=404)
+                return
+            if subtitle.get("item_type") != payload.get("type") or subtitle.get(
+                "item_id"
+            ) != payload.get("id"):
+                self.write_json({"error": "subtitle_mismatch"}, status=409)
+                return
+
+        start_seconds = nonnegative_int(payload.get("resume_seconds"))
+        transcode = bool(subtitle) or transcoding.needs_downscale(compatibility)
+        if transcode and not self.server.ffmpeg_path:
+            self.write_json(
+                {
+                    "error": "transcoding_unavailable",
+                    "message": "Subtitle and downscaling service is unavailable",
+                },
+                status=503,
+            )
+            return
+
         duration_seconds = compatibility.get("duration_seconds") or stream.get(
             "duration_seconds", 0
         )
-        session_id = self.server.play_sessions.create(
-            {
+        session_data = {
+            "stream_id": stream_id,
+            "url": url,
+            "local_path": local_path,
+            "name": stream.get("name", ""),
+            "duration_seconds": duration_seconds,
+            "compatibility": compatibility,
+            "hls": compatibility.get("container") == "hls",
+        }
+        if transcode:
+            source_session_id = self.server.play_sessions.create(session_data)
+            source_url = (
+                f"http://{self.server.public_host}:{self.server.server_port}"
+                f"/play/{source_session_id}"
+            )
+            session_data = {
                 "stream_id": stream_id,
-                "url": url,
-                "local_path": local_path,
                 "name": stream.get("name", ""),
                 "duration_seconds": duration_seconds,
                 "compatibility": compatibility,
-                "hls": compatibility.get("container") == "hls",
+                "transcode": True,
+                "source_url": source_url,
+                "subtitle_url": subtitle.get("url", "") if subtitle else "",
+                "subtitle_path": subtitle.get("local_path", "") if subtitle else "",
+                "start_seconds": start_seconds,
             }
-        )
+        session_id = self.server.play_sessions.create(session_data)
 
         self.write_json(
             {
@@ -758,6 +810,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "stream_id": stream_id,
                 "duration_seconds": duration_seconds,
                 "compatibility": compatibility,
+                "transcoded": transcode,
+                "server_seek_applied": bool(transcode and start_seconds),
             }
         )
 
@@ -1264,6 +1318,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "lang": "eng",
                         "source": "pocketstremio-sample",
                         "url": f"http://{self.server.public_host}:{self.server.server_port}/media/test-subtitle.srt",
+                        "local_path": str(fixture.resolve()),
+                        "item_type": item_type,
+                        "item_id": item_id,
                     }
                 )
 
@@ -1294,7 +1351,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
                 for raw in data.get("subtitles", []):
                     subtitle_url = raw.get("url")
-                    if not subtitle_url or not subtitle_url.startswith(("http://", "https://")):
+                    if not stremio_account.validate_direct_stream_url(subtitle_url):
                         continue
                     if subtitle_url in seen_addon_urls:
                         continue
@@ -1304,20 +1361,76 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         f"{hashlib.sha1(subtitle_url.encode()).hexdigest()[:10]}"
                     )
                     lang = str(raw.get("lang") or raw.get("language") or "und")
+                    if lang.lower() not in {"en", "eng", "english"}:
+                        continue
                     subtitles.append(
                         {
                             "id": subtitle_id,
-                            "name": raw.get("name") or lang,
+                            "name": safe_addon_text(raw.get("name"), "English"),
                             "lang": lang,
                             "source": addon.get("name") or addon["manifest_url"],
                             "url": subtitle_url,
+                            "item_type": item_type,
+                            "item_id": item_id,
                         }
                     )
+
+        try:
+            account_sources = self.server.stremio_account.subtitle_sources(item_type)
+        except stremio_account.StremioAccountError:
+            account_sources = []
+        seen_account_urls = {subtitle["url"] for subtitle in subtitles}
+        for source in account_sources:
+            try:
+                raw_subtitles = self.server.stremio_account.fetch_subtitles(
+                    source, item_type, item_id
+                )
+            except stremio_account.StremioAccountError:
+                continue
+            for raw in raw_subtitles:
+                if not isinstance(raw, dict):
+                    continue
+                lang = str(raw.get("lang") or raw.get("language") or "und")
+                if lang.lower() not in {"en", "eng", "english"}:
+                    continue
+                subtitle_url = raw.get("url")
+                if (
+                    not stremio_account.validate_direct_stream_url(subtitle_url)
+                    or subtitle_url in seen_account_urls
+                ):
+                    continue
+                seen_account_urls.add(subtitle_url)
+                subtitle_id = (
+                    f"u{source['key']}-sub-"
+                    f"{hashlib.sha1(subtitle_url.encode()).hexdigest()[:10]}"
+                )
+                subtitles.append(
+                    {
+                        "id": subtitle_id,
+                        "name": safe_addon_text(
+                            raw.get("title") or raw.get("name"), "English"
+                        ),
+                        "lang": "eng",
+                        "source": f"Stremio account: {source['name']}",
+                        "url": subtitle_url,
+                        "item_type": item_type,
+                        "item_id": item_id,
+                    }
+                )
+                if len(subtitles) >= 40:
+                    break
+            if len(subtitles) >= 40:
+                break
 
         for subtitle in subtitles:
             self.server.subtitle_cache[subtitle["id"]] = subtitle
         public_items = [
-            {k: v for k, v in subtitle.items() if k not in {"url", "source"}}
+            {
+                k: v
+                for k, v in subtitle.items()
+                if k
+                not in {"url", "local_path", "source", "item_type", "item_id"}
+            }
             for subtitle in subtitles
         ]
         self.write_json({"count": len(public_items), "items": public_items})
@@ -1333,7 +1446,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             else:
                 self.write_json({"error": "session_not_found"}, status=404)
             return
-        if session.get("local_path"):
+        if session.get("transcode"):
+            self.stream_transcode(session)
+        elif session.get("local_path"):
             local_path = self.server.stremio_service.resolve_local_path(
                 session["local_path"]
             )
@@ -1351,6 +1466,148 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.stream_hls_transport(session)
         else:
             self.proxy_remote_url(session["url"])
+
+    def download_transcode_subtitle(self, url, local_path=""):
+        headers = {
+            "User-Agent": "PocketStremio/0.16",
+            "Accept-Encoding": "identity",
+        }
+        if local_path:
+            path = Path(local_path).resolve()
+            if path != (self.server.fixture_dir / "test-subtitle.srt").resolve():
+                raise OSError("Subtitle path is blocked")
+            payload = path.read_bytes()[: MAX_SUBTITLE_BYTES + 1]
+        else:
+            with open_media_url(
+                url, headers, MEDIA_TIMEOUT, validate_public=True
+            ) as response:
+                payload = response.read(MAX_SUBTITLE_BYTES + 1)
+        if not payload or len(payload) > MAX_SUBTITLE_BYTES:
+            raise OSError("Subtitle download is invalid")
+        suffix = transcoding.subtitle_suffix(payload)
+        path = self.server.transcode_dir / (
+            f"subtitle-{secrets.token_hex(8)}{suffix}"
+        )
+        path.write_bytes(payload)
+        return path
+
+    def stream_transcode(self, session):
+        if not self.server.transcode_job_lock.acquire(blocking=False):
+            self.write_json(
+                {
+                    "error": "transcode_busy",
+                    "message": "Another converted playback is active",
+                },
+                status=503,
+            )
+            return
+
+        process = None
+        subtitle_path = None
+        stderr_thread = None
+        stderr_buffer = bytearray()
+        response_started = False
+        with self.server.transcode_state_lock:
+            self.server.active_transcodes += 1
+        try:
+            subtitle_url = session.get("subtitle_url") or ""
+            subtitle_local_path = session.get("subtitle_path") or ""
+            if subtitle_url or subtitle_local_path:
+                subtitle_path = self.download_transcode_subtitle(
+                    subtitle_url, subtitle_local_path
+                )
+            command = transcoding.build_command(
+                self.server.ffmpeg_path,
+                session["source_url"],
+                subtitle_path.name if subtitle_path else "",
+                session.get("start_seconds", 0),
+            )
+            process = subprocess.Popen(
+                command,
+                cwd=self.server.transcode_dir,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+
+            def drain_stderr():
+                while True:
+                    chunk = process.stderr.read(4096)
+                    if not chunk:
+                        break
+                    stderr_buffer.extend(chunk)
+                    if len(stderr_buffer) > 32 * 1024:
+                        del stderr_buffer[: len(stderr_buffer) - 32 * 1024]
+
+            stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
+            stderr_thread.start()
+            prefix = process.stdout.read(188 * 3)
+            if len(prefix) < 188 * 3 or any(
+                prefix[offset] != 0x47 for offset in (0, 188, 376)
+            ):
+                raise OSError("Converted playback did not produce MPEG-TS")
+
+            self.send_response(200)
+            self.send_header("Content-Type", "video/mp2t")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            response_started = True
+            self.wfile.write(prefix)
+            while True:
+                chunk = process.stdout.read(1024 * 256)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            print("Transcode playback client disconnected", flush=True)
+        except (OSError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            diagnostic = type(exc).__name__
+            if process is not None and process.poll() is not None:
+                process.wait(timeout=3)
+            if stderr_thread is not None:
+                stderr_thread.join(timeout=1)
+            safe_lines = [
+                line
+                for line in stderr_buffer.decode("utf-8", "replace").splitlines()
+                if "http://" not in line.lower() and "https://" not in line.lower()
+            ]
+            if safe_lines:
+                print(
+                    "Transcode diagnostic: " + " | ".join(safe_lines[-4:])[:1000],
+                    flush=True,
+                )
+            if response_started:
+                print(f"Transcode interrupted: {diagnostic}", flush=True)
+            else:
+                self.write_json(
+                    {
+                        "error": "transcode_failed",
+                        "message": "Converted playback could not start",
+                    },
+                    status=502,
+                )
+        finally:
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=3)
+            if process is not None and process.stdout is not None:
+                process.stdout.close()
+            if process is not None and process.stderr is not None:
+                process.stderr.close()
+            if stderr_thread is not None:
+                stderr_thread.join(timeout=1)
+            if subtitle_path is not None:
+                subtitle_path.unlink(missing_ok=True)
+            with self.server.transcode_state_lock:
+                self.server.active_transcodes -= 1
+            self.server.transcode_job_lock.release()
+            self.close_connection = True
 
     def fetch_hls_playlist(self, url):
         headers = {
@@ -1660,6 +1917,11 @@ def main():
         default=os.environ.get("POCKETSTREMIO_FFPROBE", ""),
         help="Optional ffprobe executable used for media preflight",
     )
+    parser.add_argument(
+        "--ffmpeg",
+        default=os.environ.get("POCKETSTREMIO_FFMPEG", ""),
+        help="Optional ffmpeg executable used for bounded conversion",
+    )
     parser.add_argument("--probe-timeout", type=int, default=45)
     parser.add_argument("--probe-cache-ttl", type=int, default=DEFAULT_PROBE_CACHE_TTL)
     parser.add_argument("--max-probe-cache", type=int, default=DEFAULT_MAX_PROBE_CACHE)
@@ -1731,6 +1993,14 @@ def main():
         data_dir / "probe_cache.json", args.probe_cache_ttl, args.max_probe_cache
     )
     httpd.ffprobe_path = playback_compatibility.resolve_ffprobe(args.ffprobe)
+    httpd.ffmpeg_path = transcoding.resolve_ffmpeg(args.ffmpeg)
+    httpd.transcode_dir = data_dir / "transcode"
+    httpd.transcode_dir.mkdir(parents=True, exist_ok=True)
+    for stale_path in httpd.transcode_dir.glob("subtitle-*"):
+        stale_path.unlink(missing_ok=True)
+    httpd.transcode_job_lock = threading.Lock()
+    httpd.transcode_state_lock = threading.Lock()
+    httpd.active_transcodes = 0
     httpd.probe_timeout = max(1, args.probe_timeout)
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
     httpd.started_at = time.time()
@@ -1759,6 +2029,7 @@ def main():
         flush=True,
     )
     print(f"Media preflight: {httpd.ffprobe_path or 'disabled'}", flush=True)
+    print(f"Bounded conversion: {httpd.ffmpeg_path or 'disabled'}", flush=True)
     print(
         f"Play sessions: ttl={httpd.play_sessions.ttl_seconds}s "
         f"max={httpd.play_sessions.max_items}",

@@ -1,4 +1,5 @@
 import collections
+import io
 import json
 import tempfile
 import threading
@@ -16,6 +17,7 @@ from server import playback_compatibility
 from server import pocketstremio_server as pocket
 from server import stremio_account
 from server import stremio_service
+from server import transcoding
 
 
 class RedirectingMediaHandler(BaseHTTPRequestHandler):
@@ -228,6 +230,12 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.manifest_cache = {}
         self.server.probe_cache = pocket.ProbeCache(root / "data" / "probe_cache.json")
         self.server.ffprobe_path = ""
+        self.server.ffmpeg_path = ""
+        self.server.transcode_dir = root / "data" / "transcode"
+        self.server.transcode_dir.mkdir(parents=True)
+        self.server.transcode_job_lock = threading.Lock()
+        self.server.transcode_state_lock = threading.Lock()
+        self.server.active_transcodes = 0
         self.server.probe_timeout = 5
         self.server.progress_store = pocket.ProgressStore(
             root / "data" / "continue_watching.json"
@@ -741,6 +749,108 @@ class PocketStremioServerTest(unittest.TestCase):
         with urllib.request.urlopen(request, timeout=5) as response:
             self.assertEqual(response.status, 206)
             self.assertEqual(len(response.read()), 10)
+
+    def test_bounded_transcode_uses_opaque_source_and_cleans_up(self):
+        stream_id = "private-transcode"
+        upstream_url = "https://cdn.example/video.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Private transcode",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "confirmed",
+                "message": "test",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 640,
+                "height": 360,
+            },
+        )
+        subtitle_id = "english-test"
+        self.server.subtitle_cache[subtitle_id] = {
+            "id": subtitle_id,
+            "lang": "eng",
+            "item_type": "movie",
+            "item_id": "tt0000001",
+            "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+        }
+        self.server.ffmpeg_path = "test-ffmpeg"
+
+        _, play = self.post_json(
+            "/api/play",
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "stream_id": stream_id,
+                "subtitle_id": subtitle_id,
+                "resume_seconds": 12,
+            },
+        )
+        self.assertTrue(play["transcoded"])
+        self.assertTrue(play["server_seek_applied"])
+        self.assertNotIn(upstream_url, json.dumps(play))
+
+        transport = (b"\x47" + b"\x00" * 187) * 6
+
+        class FakeProcess:
+            def __init__(self):
+                self.stdout = io.BytesIO(transport)
+                self.stderr = io.BytesIO()
+
+            def poll(self):
+                return 0
+
+            def wait(self, timeout=None):
+                del timeout
+                return 0
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        with mock.patch.object(
+            pocket.subprocess, "Popen", return_value=FakeProcess()
+        ) as popen:
+            with urllib.request.urlopen(play["url"], timeout=5) as response:
+                self.assertEqual(response.headers["Content-Type"], "video/mp2t")
+                self.assertEqual(response.read(), transport)
+
+        command = popen.call_args.args[0]
+        self.assertIn("-ss", command)
+        self.assertIn("12", command)
+        self.assertTrue(any("/play/" in value for value in command))
+        self.assertNotIn(upstream_url, command)
+        self.assertFalse(any("token=private" in value for value in command))
+        self.assertEqual(self.server.active_transcodes, 0)
+        self.assertEqual(list(self.server.transcode_dir.iterdir()), [])
+
+    def test_transcode_policy_and_command_are_bounded(self):
+        self.assertTrue(transcoding.needs_downscale({"width": 1280, "height": 720}))
+        self.assertTrue(
+            transcoding.needs_downscale(
+                {"width": 640, "height": 360, "video_profile": "High 10"}
+            )
+        )
+        self.assertFalse(
+            transcoding.needs_downscale(
+                {"width": 640, "height": 360, "frame_rate": 30}
+            )
+        )
+        command = transcoding.build_command(
+            "ffmpeg", "http://server/play/opaque", "subtitle.vtt", 20
+        )
+        serialized = " ".join(command)
+        self.assertIn("scale=640:360", serialized)
+        self.assertIn("subtitles=subtitle.vtt", serialized)
+        self.assertIn("libx264", command)
+        self.assertIn("mpegts", command)
+        self.assertNotIn("https://upstream.example", serialized)
 
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"

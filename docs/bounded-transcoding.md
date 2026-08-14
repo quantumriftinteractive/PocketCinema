@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed for the next development session. No transcoding path is implemented
-or deployed yet.
+Implemented on the gaming PC and deployed to the Miyoo client. Automated and
+desktop-side account-stream checks pass. Apps-context playback confirmation is
+still pending.
 
 ## Device Evidence
 
@@ -22,7 +23,7 @@ Playback limits are also source dependent:
 Advertised quality is therefore only a sorting hint. FFprobe results and a
 measured device envelope must decide whether direct playback is allowed.
 
-## Proposed Architecture
+## Implemented Architecture
 
 The gaming PC should own one bounded FFmpeg pipeline. The Miyoo continues to
 receive only an opaque PocketStremio play URL.
@@ -39,10 +40,26 @@ receive only an opaque PocketStremio play URL.
 6. Terminate FFmpeg promptly on Menu/client disconnect, timeout, server stop, or
    upstream failure.
 
-An initial output target should be H.264 8-bit at no more than 640x360 and
-30 fps, AAC stereo, and a bitrate measured against the successful fixtures.
-Exact profile, level, bitrate, and preset must be validated on the Miyoo rather
-than assumed.
+The initial output is MPEG-TS containing H.264 Main level 3.0, 8-bit YUV420p at
+640x360 and 30 fps, plus AAC-LC stereo at 44.1 kHz. Video uses the `veryfast`
+preset, `zerolatency` tune, a 700 Kb/s target, 900 Kb/s maximum, and a 1.4 Mb
+buffer. Aspect ratio is preserved and unused pixels are padded black.
+
+Conversion is selected when an English subtitle is chosen, or automatically
+when ffprobe reports video above 640x360, above 30 fps, or a 10-bit profile.
+Compatible media still uses the existing byte-range direct-play path when no
+subtitle is selected.
+
+The public API accepts only the selected opaque stream and subtitle IDs.
+`/api/play` creates an inner opaque source session and gives only that
+PocketStremio URL to FFmpeg. It then returns a separate opaque MPEG-TS play
+session to the Miyoo. Resume offsets are applied by FFmpeg so the Miyoo does not
+seek the converted response a second time.
+
+The Miyoo now requests English subtitle choices from PocketStremio and shows a
+controller-driven `No subtitles` plus English-results selector. Subtitle files
+are downloaded only by the gaming PC and burned into the picture; no subtitle
+URL or file is sent to the device.
 
 ## Safety and Resource Bounds
 
@@ -56,6 +73,41 @@ than assumed.
 - Preserve direct playback for already-compatible media.
 - Treat resume seeking, progress, pause accounting, and Menu cleanup as required
   regressions.
+
+The implementation enforces one nonblocking conversion job. A second request
+receives a bounded `transcode_busy` response. FFmpeg is terminated on client
+disconnect, temporary subtitles are deleted in `finally`, stderr retention is
+bounded to 32 KiB, and URL-bearing FFmpeg diagnostics are omitted from logs.
+
+## Confirmed Desktop Results
+
+The server test suite contains 47 passing tests. Dedicated conversion tests
+confirm opaque FFmpeg input, seek forwarding, MPEG-TS output, single-job state,
+and temporary-file cleanup. Account subtitle tests confirm normalized source
+discovery without public addon transports or subtitle URLs.
+
+A live smoke test used the linked account's Torrentio RD 480p *Grimm* S1E1
+result and its first English subtitle. The input preflight measured H.264 High
+at 852x480 with AAC. PocketStremio returned only an opaque converted play URL;
+the captured output measured:
+
+```text
+container: MPEG-TS
+video:     H.264 Main, 640x360, 30 fps
+audio:     AAC-LC stereo, 44.1 kHz
+sample:    2,097,716 bytes
+```
+
+Closing the smoke-test client returned the active conversion count to zero and
+left zero temporary subtitle files. The account subtitle response contained 20
+English choices and no HTTP URL.
+
+## Pending Device Confirmation
+
+- visible burned-in English text;
+- smooth playback of the previously stuttering 720p *Invincible* episode;
+- audible synchronized audio and Menu-button cleanup;
+- gaming-PC and Miyoo resource measurements during converted playback.
 
 ## Acceptance Criteria
 

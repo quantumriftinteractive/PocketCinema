@@ -5,7 +5,8 @@ param(
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
   [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
-  [string]$FFprobePath = ""
+  [string]$FFprobePath = "",
+  [string]$FFmpegPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,6 +23,12 @@ if (-not $StremioLocalMediaRoot) {
     $StremioLocalMediaRoot = $candidate
   }
 }
+if (-not $FFmpegPath) {
+  $stremioFFmpeg = Join-Path $env:LOCALAPPDATA "Programs\LNV\Stremio-4\ffmpeg.exe"
+  if (Test-Path -LiteralPath $stremioFFmpeg) {
+    $FFmpegPath = $stremioFFmpeg
+  }
+}
 
 $arguments = @(
   (Join-Path $PSScriptRoot "pocketstremio_server.py")
@@ -36,5 +43,8 @@ if ($StremioLocalMediaRoot) {
 }
 if ($FFprobePath) {
   $arguments += @("--ffprobe", $FFprobePath)
+}
+if ($FFmpegPath) {
+  $arguments += @("--ffmpeg", $FFmpegPath)
 }
 python @arguments

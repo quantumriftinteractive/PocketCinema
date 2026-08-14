@@ -172,6 +172,31 @@ class StremioAccountBackendTest(unittest.TestCase):
             "https://addon.example/private-config/stream/series/tt123%3A1%3A2.json",
         )
 
+    def test_account_subtitle_source_and_fetch_are_normalized(self):
+        self.backend._post_json = mock.Mock(
+            return_value={"result": {"addons": [descriptor()]}}
+        )
+        sources = self.backend.subtitle_sources("series")
+        self.assertEqual(len(sources), 1)
+        self.backend._fetch_json = mock.Mock(
+            return_value={
+                "subtitles": [
+                    {
+                        "lang": "eng",
+                        "url": "https://subtitles.example/episode.vtt",
+                    }
+                ]
+            }
+        )
+        subtitles = self.backend.fetch_subtitles(
+            sources[0], "series", "tt123:1:2"
+        )
+        self.assertEqual(subtitles[0]["lang"], "eng")
+        self.assertEqual(
+            self.backend._fetch_json.call_args.args[0],
+            "https://addon.example/config/subtitles/series/tt123%3A1%3A2.json",
+        )
+
     def test_tv_catalog_sources_require_matching_stream_capability(self):
         tv_addon = descriptor(name="Greek TV")
         tv_addon["manifest"].update(

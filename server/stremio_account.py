@@ -317,6 +317,14 @@ class StremioAccountBackend:
             and manifest_supports(addon["manifest"], "stream", item_type)
         ]
 
+    def subtitle_sources(self, item_type):
+        return [
+            addon
+            for addon in self.collection()
+            if addon["usable"]
+            and manifest_supports(addon["manifest"], "subtitles", item_type)
+        ]
+
     def catalog_sources(self, item_type):
         catalogs = []
         for source in self.collection():
@@ -373,3 +381,19 @@ class StremioAccountBackend:
         ):
             raise StremioAccountError(f"{source['name']} returned an invalid response")
         return payload.get("streams") or []
+
+    def fetch_subtitles(self, source, item_type, item_id):
+        try:
+            url = resource_url(
+                source["transport_url"], "subtitles", item_type, item_id
+            )
+            payload = self._fetch_json(url)
+        except Exception as exc:
+            raise StremioAccountError(
+                f"{source['name']} is unavailable"
+            ) from exc
+        if not isinstance(payload, dict) or not isinstance(
+            payload.get("subtitles", []), list
+        ):
+            raise StremioAccountError(f"{source['name']} returned an invalid response")
+        return payload.get("subtitles") or []
