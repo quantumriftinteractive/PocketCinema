@@ -1,0 +1,2 @@
+client/miyoo/third_party/qrcodegen/* whitespace=-trailing-space
+onion-tailscale/third_party/qrcodegen/* whitespace=-trailing-space

@@ -68,6 +68,8 @@ cleanup() {
   fi
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
     /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
+    /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
+    /tmp/pocketstremio-addons.json \
     "$HTTP_ERROR_FILE"
 }
 
@@ -132,6 +134,20 @@ api_get() {
   if [ "$http_rc" -ne 0 ]; then
     http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
     log "api get failed path=$path rc=$http_rc detail=$http_detail"
+  fi
+  return "$http_rc"
+}
+
+api_post_empty() {
+  path="$1"
+  timeout="${2:-30}"
+  rm -f "$HTTP_ERROR_FILE"
+  curl_request -fsS --max-time "$timeout" -H 'Content-Type: application/json' \
+    -d '{}' "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE"
+  http_rc=$?
+  if [ "$http_rc" -ne 0 ]; then
+    http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
+    log "api post failed path=$path rc=$http_rc detail=$http_detail"
   fi
   return "$http_rc"
 }
@@ -307,6 +323,18 @@ select_from_file() {
   printf '%s' "$selected"
 }
 
+show_account_qr() {
+  account_link="$1"
+  log "account qr waiting for approval"
+  qr_action=$(printf '%s\n' "$account_link" | \
+    POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" "$SDL_SELECTOR" --qr \
+    "Connect Stremio" "Scan, approve, A Refresh, B Back" 2>>"$LOG_FILE")
+  qr_rc=$?
+  log "account qr exit rc=$qr_rc"
+  [ "$qr_rc" -eq 0 ] || return "$qr_rc"
+  printf '%s' "$qr_action"
+}
+
 read_keyboard() {
   initial="$1"
   title="$2"
@@ -362,7 +390,7 @@ home_flow() {
       action="Search"
       log "auto-selected home action=Search"
     else
-      printf 'Search\nContinue Watching\nExit\n' >/tmp/pocketstremio-home.tsv
+      printf 'Search\nContinue Watching\nStremio Account\nExit\n' >/tmp/pocketstremio-home.tsv
       action=$(select_from_file "PocketStremio" /tmp/pocketstremio-home.tsv)
     fi
     case "$action" in
@@ -372,11 +400,98 @@ home_flow() {
       "Continue Watching")
         continue_watching_flow
         ;;
+      "Stremio Account")
+        account_flow
+        ;;
       *)
         return 0
         ;;
     esac
     [ "$AUTO_FIRST" = "1" ] && return 0
+  done
+}
+
+account_flow() {
+  while :; do
+    start_loading "PocketStremio" "Checking Stremio account..."
+    api_get "/api/addons?refresh=1" 45 >/tmp/pocketstremio-addons.json
+    account_rc=$?
+    stop_loading
+    if [ "$account_rc" -ne 0 ]; then
+      message "PocketStremio" "Stremio account unavailable"
+      return 1
+    fi
+    account_configured=$("$JQ" -r '.configured // false' /tmp/pocketstremio-addons.json)
+    if [ "$account_configured" = "true" ]; then
+      account_authenticated=$("$JQ" -r '.authenticated // false' /tmp/pocketstremio-addons.json)
+      addon_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-addons.json)
+      if [ "$account_authenticated" = "true" ]; then
+        printf 'Connected - %s addons\nRefresh\nBack\n' "$addon_count" >/tmp/pocketstremio-account.tsv
+      else
+        printf 'Account unavailable\nRefresh\nBack\n' >/tmp/pocketstremio-account.tsv
+      fi
+      account_action=$(select_from_file "Stremio Account" /tmp/pocketstremio-account.tsv)
+      case "$account_action" in
+        Refresh) continue ;;
+        Back|'') return 0 ;;
+        *) message "Stremio Account" "$account_action" ;;
+      esac
+      continue
+    fi
+
+    printf 'Connect Account\nBack\n' >/tmp/pocketstremio-account.tsv
+    account_action=$(select_from_file "Stremio Account" /tmp/pocketstremio-account.tsv)
+    case "$account_action" in
+      "Connect Account") ;;
+      *) return 0 ;;
+    esac
+
+    start_loading "PocketStremio" "Creating account link..."
+    api_post_empty "/api/account/link" 30 >/tmp/pocketstremio-account-link.json
+    link_rc=$?
+    stop_loading
+    if [ "$link_rc" -ne 0 ]; then
+      message "PocketStremio" "Could not create account link"
+      return 1
+    fi
+    account_link=$("$JQ" -r '.link // ""' /tmp/pocketstremio-account-link.json)
+    [ -n "$account_link" ] || {
+      message "PocketStremio" "Account link unavailable"
+      return 1
+    }
+
+    while :; do
+      qr_action=$(show_account_qr "$account_link")
+      [ "$?" -eq 0 ] || return 0
+      [ "$qr_action" = "refresh" ] || return 0
+      start_loading "PocketStremio" "Checking account approval..."
+      api_get "/api/account?poll=1" 30 >/tmp/pocketstremio-account.json
+      poll_rc=$?
+      stop_loading
+      if [ "$poll_rc" -ne 0 ]; then
+        message "PocketStremio" "Account approval check failed"
+        return 1
+      fi
+      link_state=$("$JQ" -r '.link.state // "idle"' /tmp/pocketstremio-account.json)
+      case "$link_state" in
+        connected)
+          message "PocketStremio" "Stremio account connected"
+          break
+          ;;
+        waiting)
+          account_link=$("$JQ" -r '.link.link // ""' /tmp/pocketstremio-account.json)
+          [ -n "$account_link" ] || return 1
+          ;;
+        expired)
+          message "PocketStremio" "Account link expired"
+          return 0
+          ;;
+        *)
+          message "PocketStremio" "Account link unavailable"
+          return 1
+          ;;
+      esac
+    done
   done
 }
 

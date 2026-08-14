@@ -34,6 +34,7 @@ Endpoints:
 ```text
 GET /api/status
 GET /api/addons
+GET /api/account
 GET /api/search?q=alien
 GET /api/meta/{type}/{id}
 GET /api/streams/{type}/{id}
@@ -41,6 +42,7 @@ GET /api/subtitles/{type}/{id}?stream_id=...
 GET /api/continue-watching
 POST /api/play
 POST /api/progress
+POST /api/account/link
 GET /play/{session}
 GET /subtitle/{subtitle_id}
 GET /media/test-video.mp4
@@ -68,6 +70,11 @@ key is stored only in ignored `server/config/stremio_account.json`.
 and raw stream URLs remain server-side. Account results are limited to direct
 public HTTP(S) media and reject P2P, debrid-labeled, external-player, local, and
 private-address results. See [Stremio Account Addon Discovery](../docs/stremio-account-addons.md).
+
+The Miyoo **Stremio Account** screen uses `POST /api/account/link` and
+`GET /api/account?poll=1` for the same official flow. Linking is allowed only
+when the ignored account config is absent. Existing accounts cannot be replaced
+or removed remotely.
 
 Search and metadata use the official Cinemeta addon protocol endpoints. Stream results are resolved server-side from configured stream addon manifest URLs.
 

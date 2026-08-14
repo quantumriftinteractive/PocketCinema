@@ -5,8 +5,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "qrcodegen.h"
+
 #define MAX_ITEMS 16
 #define MAX_LINE 128
+#define MAX_QR_TEXT 1024
 
 static const unsigned char font[96][7] = {
     [0] = {0,0,0,0,0,0,0},
@@ -109,8 +112,36 @@ static void draw_text(SDL_Surface *screen, const char *value, int x, int y,
     }
 }
 
+static void draw_side_qr(SDL_Surface *screen, const uint8_t qrcode[]) {
+    Uint32 white = SDL_MapRGB(screen->format, 255, 255, 255);
+    Uint32 black = SDL_MapRGB(screen->format, 0, 0, 0);
+    int size = qrcodegen_getSize(qrcode);
+    int total = size + 8;
+    int scale = 220 / total;
+    int pixels;
+    int origin_x;
+    int origin_y;
+    int x;
+    int y;
+
+    if (scale < 1) scale = 1;
+    pixels = total * scale;
+    origin_x = 390 + (230 - pixels) / 2;
+    origin_y = 102;
+    rect(screen, origin_x, origin_y, pixels, pixels, white);
+    for (y = 0; y < size; y++) {
+        for (x = 0; x < size; x++) {
+            if (qrcodegen_getModule(qrcode, x, y)) {
+                rect(screen, origin_x + (x + 4) * scale,
+                     origin_y + (y + 4) * scale, scale, scale, black);
+            }
+        }
+    }
+}
+
 static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom,
-                      char **items, int count, int selected) {
+                      char **items, int count, int selected,
+                      const uint8_t side_qr[]) {
     Uint32 background = SDL_MapRGB(screen->format, 12, 14, 18);
     Uint32 row = SDL_MapRGB(screen->format, 30, 84, 116);
     Uint32 white = SDL_MapRGB(screen->format, 240, 244, 248);
@@ -124,7 +155,7 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
     for (index = 0; index < count; index++) {
         int y = 92 + index * 52;
         if (index == selected) {
-            rect(screen, 14, y - 10, 612, 38, row);
+            rect(screen, 14, y - 10, side_qr ? 360 : 612, 38, row);
             draw_text(screen, ">", 24, y, 2, accent, 1);
         }
         if (strncmp(items[index], "https://", 8) == 0) {
@@ -132,20 +163,68 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
                       index == selected ? white : muted, 90);
         } else {
             draw_text(screen, items[index], 52, y, 2,
-                      index == selected ? white : muted, 45);
+                      index == selected ? white : muted, side_qr ? 26 : 45);
         }
+    }
+
+    if (side_qr) {
+        draw_side_qr(screen, side_qr);
+        draw_text(screen, "Admin console", 426, 350, 2, muted, 18);
     }
 
     draw_text(screen, bottom, 20, 440, 2, muted, 48);
     SDL_Flip(screen);
 }
 
+static void draw_qr(SDL_Surface *screen, const char *title, const char *bottom,
+                    const char *value, const uint8_t qrcode[]) {
+    Uint32 background = SDL_MapRGB(screen->format, 12, 14, 18);
+    Uint32 white = SDL_MapRGB(screen->format, 255, 255, 255);
+    Uint32 black = SDL_MapRGB(screen->format, 0, 0, 0);
+    Uint32 muted = SDL_MapRGB(screen->format, 170, 180, 190);
+    int size = qrcodegen_getSize(qrcode);
+    int total = size + 8;
+    int scale = 340 / total;
+    int pixels;
+    int origin_x;
+    int origin_y;
+    int x;
+    int y;
+
+    if (scale < 1) scale = 1;
+    pixels = total * scale;
+    origin_x = (screen->w - pixels) / 2;
+    origin_y = 48 + (340 - pixels) / 2;
+
+    SDL_FillRect(screen, NULL, background);
+    draw_text(screen, title, 20, 16, 3, white, 32);
+    rect(screen, origin_x, origin_y, pixels, pixels, white);
+    for (y = 0; y < size; y++) {
+        for (x = 0; x < size; x++) {
+            if (qrcodegen_getModule(qrcode, x, y)) {
+                rect(screen, origin_x + (x + 4) * scale,
+                     origin_y + (y + 4) * scale, scale, scale, black);
+            }
+        }
+    }
+    draw_text(screen, value, 20, 398, 1, muted, 100);
+    draw_text(screen, bottom, 20, 438, 2, muted, 48);
+    SDL_Flip(screen);
+}
+
 int main(int argc, char **argv) {
-    const char *title = argc > 1 ? argv[1] : "Tailscale";
-    const char *bottom = argc > 2 ? argv[2] : "A Select  B Exit";
+    int qr_mode = argc > 1 && strcmp(argv[1], "--qr") == 0;
+    int menu_qr_mode = argc > 1 && strcmp(argv[1], "--menu-qr") == 0;
+    int title_index = qr_mode ? 2 : (menu_qr_mode ? 3 : 1);
+    int bottom_index = title_index + 1;
+    const char *title = argc > title_index ? argv[title_index] : "Tailscale";
+    const char *bottom = argc > bottom_index ? argv[bottom_index] : "A Select  B Exit";
     const char *log_path = getenv("ONION_TAILSCALE_SELECTOR_LOG");
     char *items[MAX_ITEMS];
     char line[MAX_LINE];
+    char qr_text[MAX_QR_TEXT];
+    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
     int count = 0;
     int selected = 0;
     int done = 0;
@@ -154,14 +233,37 @@ int main(int argc, char **argv) {
     FILE *result_out;
     SDL_Surface *screen;
 
-    while (count < MAX_ITEMS && fgets(line, sizeof(line), stdin)) {
-        line[strcspn(line, "\r\n")] = '\0';
-        if (!line[0]) continue;
-        items[count] = strdup(line);
-        if (!items[count]) return 2;
-        count++;
+    if (qr_mode) {
+        if (!fgets(qr_text, sizeof(qr_text), stdin)) return 3;
+        if (!strchr(qr_text, '\n') && !feof(stdin)) return 3;
+        qr_text[strcspn(qr_text, "\r\n")] = '\0';
+        if (!qr_text[0]) return 3;
+        if (!qrcodegen_encodeText(qr_text, temp_buffer, qrcode,
+                                  qrcodegen_Ecc_MEDIUM,
+                                  qrcodegen_VERSION_MIN, 20,
+                                  qrcodegen_Mask_AUTO, true)) {
+            return 3;
+        }
+    } else {
+        if (menu_qr_mode) {
+            const char *side_value = argc > 2 ? argv[2] : "";
+            if (!side_value[0] ||
+                !qrcodegen_encodeText(side_value, temp_buffer, qrcode,
+                                      qrcodegen_Ecc_MEDIUM,
+                                      qrcodegen_VERSION_MIN, 20,
+                                      qrcodegen_Mask_AUTO, true)) {
+                return 3;
+            }
+        }
+        while (count < MAX_ITEMS && fgets(line, sizeof(line), stdin)) {
+            line[strcspn(line, "\r\n")] = '\0';
+            if (!line[0]) continue;
+            items[count] = strdup(line);
+            if (!items[count]) return 2;
+            count++;
+        }
+        if (count == 0) return 3;
     }
-    if (count == 0) return 3;
 
     result_fd = dup(STDOUT_FILENO);
     result_out = result_fd >= 0 ? fdopen(result_fd, "w") : NULL;
@@ -180,7 +282,12 @@ int main(int argc, char **argv) {
         return 6;
     }
 
-    draw_menu(screen, title, bottom, items, count, selected);
+    if (qr_mode) {
+        draw_qr(screen, title, bottom, qr_text, qrcode);
+    } else {
+        draw_menu(screen, title, bottom, items, count, selected,
+                  menu_qr_mode ? qrcode : NULL);
+    }
     while (!done) {
         SDL_Event event;
         if (!SDL_WaitEvent(&event)) continue;
@@ -192,11 +299,17 @@ int main(int argc, char **argv) {
             snprintf(message, sizeof(message), "selector key=%d selected=%d", (int)key, selected);
             log_msg(log_path, message);
             if (key == SDLK_UP) {
-                selected = selected > 0 ? selected - 1 : count - 1;
-                draw_menu(screen, title, bottom, items, count, selected);
+                if (!qr_mode) {
+                    selected = selected > 0 ? selected - 1 : count - 1;
+                    draw_menu(screen, title, bottom, items, count, selected,
+                              menu_qr_mode ? qrcode : NULL);
+                }
             } else if (key == SDLK_DOWN) {
-                selected = selected + 1 < count ? selected + 1 : 0;
-                draw_menu(screen, title, bottom, items, count, selected);
+                if (!qr_mode) {
+                    selected = selected + 1 < count ? selected + 1 : 0;
+                    draw_menu(screen, title, bottom, items, count, selected,
+                              menu_qr_mode ? qrcode : NULL);
+                }
             } else if (key == SDLK_SPACE || key == SDLK_RETURN || key == SDLK_LALT) {
                 result = 0;
                 done = 1;
@@ -209,7 +322,7 @@ int main(int argc, char **argv) {
 
     SDL_Quit();
     if (result == 0) {
-        fprintf(result_out, "%s\n", items[selected]);
+        fprintf(result_out, "%s\n", qr_mode ? "refresh" : items[selected]);
         fflush(result_out);
     }
     fclose(result_out);

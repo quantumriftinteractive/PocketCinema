@@ -11,6 +11,8 @@ $compilerRootPath = Join-Path $repositoryRoot $CompilerRoot
 $sysrootPath = Join-Path $repositoryRoot $Sysroot
 $gcc = Join-Path $compilerRootPath "bin\arm-none-linux-gnueabihf-gcc.exe"
 $source = Join-Path $appRoot "ui\selector.c"
+$qrSource = Join-Path $appRoot "third_party\qrcodegen\qrcodegen.c"
+$qrInclude = Join-Path $appRoot "third_party\qrcodegen"
 $committed = Join-Path $appRoot "bin\onion-tailscale-selector"
 $outputDir = Join-Path $repositoryRoot ".tmp\build-onion-tailscale"
 $output = Join-Path $outputDir "onion-tailscale-selector"
@@ -28,7 +30,9 @@ $arguments = @(
   "--sysroot=$unixSysroot",
   "-Wall", "-Wextra", "-Werror", "-O2",
   "-I$unixSysroot/usr/include/SDL",
+  "-I$($qrInclude -replace '\\', '/')",
   $source,
+  $qrSource,
   "-L$unixSysroot/usr/lib",
   "-Wl,-rpath-link,$unixSysroot/usr/lib",
   "-lSDL", "-lts",

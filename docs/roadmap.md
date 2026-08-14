@@ -340,6 +340,12 @@ rollback state. Two disable/enable cycles restored `100.97.46.26` and proxy
 traffic. A physical reboot returned normally to MainUI and started the
 standalone daemon without opening the app.
 
+The home screen also renders a local QR code for the admin machines page. Its
+orientation, scan target, IP layout, D-pad navigation, and B exit are physically
+confirmed. The same renderer is wired to first-account verification without
+logging the one-time URL, though that unauthenticated path remains deliberately
+untested against the preserved working identity.
+
 Evidence: [OnionOS Tailscale Management App](../onion-tailscale/docs/management-app.md)
 
 - Show daemon state and the assigned Tailscale IPv4 address.
@@ -403,6 +409,12 @@ The only clearly legal direct account result found, ERT News, is HLS with H.264
 High profile and cannot use the current opaque progressive-media proxy. Device
 acceptance therefore remains pending rather than weakening the transport or
 compatibility boundary.
+
+Server-mediated account binding is also physically confirmed from the OnionOS
+Apps context: QR scan, browser approval, A refresh, 15-addon status, and B return
+all passed without placing an auth key or approval URL in Miyoo logs. Milestone
+status remains Next because its account-backed media playback criterion is still
+blocked by the available HLS result, not by account onboarding.
 
 Evidence: [Stremio Account Addon Discovery](stremio-account-addons.md)
 

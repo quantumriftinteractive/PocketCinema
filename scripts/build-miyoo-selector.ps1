@@ -10,6 +10,8 @@ $compilerRootPath = Join-Path $root $CompilerRoot
 $sysrootPath = Join-Path $root $Sysroot
 $gcc = Join-Path $compilerRootPath "bin\arm-none-linux-gnueabihf-gcc.exe"
 $source = Join-Path $root "client\miyoo\sdl_selector.c"
+$qrSource = Join-Path $root "client\miyoo\third_party\qrcodegen\qrcodegen.c"
+$qrInclude = Join-Path $root "client\miyoo\third_party\qrcodegen"
 $committed = Join-Path $root "client\miyoo\bin\pocketstremio-selector"
 $outputDir = Join-Path $root ".tmp\build-miyoo"
 $output = Join-Path $outputDir "pocketstremio-selector"
@@ -26,7 +28,9 @@ $arguments = @(
   "--sysroot=$unixSysroot",
   "-Wall", "-Wextra", "-Werror", "-O2",
   "-I$unixSysroot/usr/include/SDL",
+  "-I$($qrInclude -replace '\\', '/')",
   $source,
+  $qrSource,
   "-L$unixSysroot/usr/lib",
   "-Wl,-rpath-link,$unixSysroot/usr/lib",
   "-lSDL", "-lts",

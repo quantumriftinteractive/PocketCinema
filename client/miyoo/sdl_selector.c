@@ -5,8 +5,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "qrcodegen.h"
+
 #define MAX_ITEMS 64
 #define MAX_LINE 256
+#define MAX_QR_TEXT 1024
 
 static const unsigned char font[96][7] = {
     [0] = {0,0,0,0,0,0,0},          /* space */
@@ -133,22 +136,74 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
     SDL_Flip(screen);
 }
 
+static void draw_qr(SDL_Surface *screen, const char *title, const char *bottom,
+                    const char *value, const uint8_t qrcode[]) {
+    Uint32 background = SDL_MapRGB(screen->format, 12, 14, 18);
+    Uint32 white = SDL_MapRGB(screen->format, 255, 255, 255);
+    Uint32 black = SDL_MapRGB(screen->format, 0, 0, 0);
+    Uint32 muted = SDL_MapRGB(screen->format, 170, 180, 190);
+    int size = qrcodegen_getSize(qrcode);
+    int total = size + 8;
+    int scale = 340 / total;
+    int pixels;
+    int origin_x;
+    int origin_y;
+    int x;
+    int y;
+
+    if (scale < 1) scale = 1;
+    pixels = total * scale;
+    origin_x = (screen->w - pixels) / 2;
+    origin_y = 48 + (340 - pixels) / 2;
+    SDL_FillRect(screen, NULL, background);
+    draw_text(screen, title, 20, 16, 3, white, 32);
+    rect(screen, origin_x, origin_y, pixels, pixels, white);
+    for (y = 0; y < size; y++) {
+        for (x = 0; x < size; x++) {
+            if (qrcodegen_getModule(qrcode, x, y)) {
+                rect(screen, origin_x + (x + 4) * scale,
+                     origin_y + (y + 4) * scale, scale, scale, black);
+            }
+        }
+    }
+    draw_text(screen, value, 20, 398, 1, muted, 100);
+    draw_text(screen, bottom, 20, 438, 2, muted, 48);
+    SDL_Flip(screen);
+}
+
 int main(int argc, char **argv) {
-    const char *title = argc > 1 ? argv[1] : "PocketStremio";
-    const char *bottom = argc > 2 ? argv[2] : "Up/Down move  A select  B back";
+    int qr_mode = argc > 1 && strcmp(argv[1], "--qr") == 0;
+    const char *title = argc > (qr_mode ? 2 : 1) ? argv[qr_mode ? 2 : 1] : "PocketStremio";
+    const char *bottom = argc > (qr_mode ? 3 : 2) ? argv[qr_mode ? 3 : 2] : "Up/Down move  A select  B back";
     const char *log_path = getenv("POCKETSTREMIO_SELECTOR_LOG");
     char *items[MAX_ITEMS];
     char line[MAX_LINE];
+    char qr_text[MAX_QR_TEXT];
+    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
     int count = 0;
 
-    while (count < MAX_ITEMS && fgets(line, sizeof(line), stdin)) {
-        line[strcspn(line, "\r\n")] = '\0';
-        if (!line[0]) continue;
-        items[count] = strdup(line);
-        if (!items[count]) return 2;
-        count++;
+    if (qr_mode) {
+        if (!fgets(qr_text, sizeof(qr_text), stdin)) return 3;
+        if (!strchr(qr_text, '\n') && !feof(stdin)) return 3;
+        qr_text[strcspn(qr_text, "\r\n")] = '\0';
+        if (!qr_text[0] ||
+            !qrcodegen_encodeText(qr_text, temp_buffer, qrcode,
+                                  qrcodegen_Ecc_MEDIUM,
+                                  qrcodegen_VERSION_MIN, 20,
+                                  qrcodegen_Mask_AUTO, true)) {
+            return 3;
+        }
+    } else {
+        while (count < MAX_ITEMS && fgets(line, sizeof(line), stdin)) {
+            line[strcspn(line, "\r\n")] = '\0';
+            if (!line[0]) continue;
+            items[count] = strdup(line);
+            if (!items[count]) return 2;
+            count++;
+        }
+        if (count == 0) return 3;
     }
-    if (count == 0) return 3;
 
     /* The vendor SDL backend writes diagnostics to stdout. Keep stdout clean
        because the caller uses it as the selector's structured result. */
@@ -172,7 +227,11 @@ int main(int argc, char **argv) {
     int selected = 0;
     int done = 0;
     int rc = 1;
-    draw_menu(screen, title, bottom, items, count, selected);
+    if (qr_mode) {
+        draw_qr(screen, title, bottom, qr_text, qrcode);
+    } else {
+        draw_menu(screen, title, bottom, items, count, selected);
+    }
 
     while (!done) {
         SDL_Event event;
@@ -185,11 +244,15 @@ int main(int argc, char **argv) {
             snprintf(buf, sizeof(buf), "sdl-selector key=%d selected=%d", (int)key, selected);
             log_msg(log_path, buf);
             if (key == SDLK_UP) {
-                selected = selected > 0 ? selected - 1 : count - 1;
-                draw_menu(screen, title, bottom, items, count, selected);
+                if (!qr_mode) {
+                    selected = selected > 0 ? selected - 1 : count - 1;
+                    draw_menu(screen, title, bottom, items, count, selected);
+                }
             } else if (key == SDLK_DOWN) {
-                selected = selected + 1 < count ? selected + 1 : 0;
-                draw_menu(screen, title, bottom, items, count, selected);
+                if (!qr_mode) {
+                    selected = selected + 1 < count ? selected + 1 : 0;
+                    draw_menu(screen, title, bottom, items, count, selected);
+                }
             } else if (key == SDLK_SPACE || key == SDLK_RETURN || key == SDLK_LALT) {
                 rc = 0;
                 done = 1;
@@ -202,12 +265,12 @@ int main(int argc, char **argv) {
 
     char buf[160];
     snprintf(buf, sizeof(buf), "sdl-selector exit rc=%d selected_index=%d selected_value=%s",
-             rc, selected, rc == 0 ? items[selected] : "");
+             rc, selected, rc == 0 ? (qr_mode ? "refresh" : items[selected]) : "");
     log_msg(log_path, buf);
 
     SDL_Quit();
     if (rc == 0) {
-        fprintf(result_out, "%s\n", items[selected]);
+        fprintf(result_out, "%s\n", qr_mode ? "refresh" : items[selected]);
         fflush(result_out);
     }
     fclose(result_out);

@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
+from server import link_stremio_account
 from server import open_media_addon
 from server import playback_compatibility
 from server import pocketstremio_server as pocket
@@ -76,6 +77,9 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.stremio_service = stremio_service.StremioServiceBackend("", [])
         self.server.stremio_account = stremio_account.StremioAccountBackend(
             root / "config" / "stremio_account.json"
+        )
+        self.server.stremio_link = link_stremio_account.AccountLinkManager(
+            self.server.stremio_account.config_path
         )
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
@@ -186,6 +190,29 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertFalse(addons["configured"])
         self.assertFalse(addons["authenticated"])
         self.assertEqual(addons["count"], 0)
+
+    def test_account_link_endpoint_never_exposes_retrieval_code_or_auth_key(self):
+        self.server.stremio_link.start = mock.Mock(
+            return_value={
+                "state": "waiting",
+                "link": "https://link.stremio.com/ABCD",
+                "expires_in": 300,
+            }
+        )
+        status, link = self.post_json("/api/account/link", {})
+        self.assertEqual(status, 201)
+        self.assertEqual(link["state"], "waiting")
+        serialized = json.dumps(link)
+        self.assertNotIn("auth", serialized.lower())
+        self.assertNotIn("private-code", serialized)
+
+        self.server.stremio_link.status = mock.Mock(
+            return_value={"state": "connected"}
+        )
+        status, account = self.get_json("/api/account?poll=1")
+        self.assertEqual(status, 200)
+        self.assertEqual(account["link"], {"state": "connected"})
+        self.assertFalse(account["account"]["configured"])
 
     def test_account_addon_is_opaque_and_only_direct_http_streams_are_used(self):
         config_path = self.server.stremio_account.config_path

@@ -28,6 +28,14 @@ That file is ignored by git. It stays on the gaming PC and is never deployed to
 the Miyoo. Existing configuration is not replaced unless the helper is run with
 `--replace`.
 
+The OnionOS client also exposes **Stremio Account** on its home menu. When no
+account is configured, `POST /api/account/link` creates one server-owned pairing
+session and returns only the short approval link. The Miyoo generates its QR
+symbol locally, the user approves it on another device, and A calls
+`GET /api/account?poll=1`. The retrieval code and resulting auth key never enter
+the Miyoo API, process arguments, or app log. A configured account cannot be
+replaced or removed through the remote API.
+
 The implementation follows the current interfaces in the official Stremio Core
 repository:
 
@@ -48,6 +56,11 @@ message. `GET /api/addons?refresh=1` bypasses the five-minute collection cache.
 
 `GET /api/status` reports only bounded account state: configured, checked,
 authenticated, addon count, stream-addon count, and a generic error message.
+
+`GET /api/account` reports bounded account and pairing state. With `?poll=1`, it
+checks an active approval session. `POST /api/account/link` starts a five-minute
+session only when no account configuration exists; otherwise it returns HTTP
+409.
 
 Neither response includes the auth key, manifest transport URL, addon manifest,
 or upstream stream URL. Account stream IDs are opaque. `/api/streams` caches an
@@ -78,6 +91,18 @@ is an approved PocketStremio playback source.
 On 2026-08-14, the linked account returned 15 normalized addons. Five declared a
 stream resource. Public PocketStremio responses contained no auth-key field,
 manifest URL, transport URL, or upstream media URL.
+
+The account was then rebound from the OnionOS Apps context using the new QR
+flow. The QR scanned successfully, approval completed, A refreshed to
+**Connected - 15 addons**, selecting that status refreshed normally, and B
+returned to the PocketStremio home menu. Device logs contained pairing states
+and controller results but no approval URL. No selector, infoPanel, FFplay,
+`/tmp/stay_awake`, or dismiss flag remained after exit.
+
+With the QR-capable PocketStremio selector waiting on its home menu, it measured
+3,452 kB RSS, 9,528 kB virtual size, and 0 kB process swap. The system reported
+5,220 kB free and 69,200 kB available. The encoder is linked into the existing
+selector and creates no additional resident service.
 
 For *Night of the Living Dead* and *Big Buck Bunny*:
 

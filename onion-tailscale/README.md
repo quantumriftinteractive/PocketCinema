@@ -26,6 +26,7 @@ Open **Apps -> Tailscale**. The screen shows:
 
 - Enabled or Disabled daemon state;
 - the assigned Tailscale IPv4 address when connected;
+- a locally generated QR code for the Tailscale admin machines page;
 - Enable or Disable;
 - Automatic enable on boot status and toggle;
 - Connect account when the daemon has no authenticated identity;
@@ -40,15 +41,20 @@ On a new installation:
 
 1. Select **Enable**.
 2. Select **Connect account**.
-3. Open the displayed one-time `https://login.tailscale.com/...` URL on a phone
-   or PC and approve the device.
-4. Select **Refresh** on the Miyoo.
+3. Scan the displayed QR code, or open its one-time
+   `https://login.tailscale.com/...` URL, and approve the device.
+4. Press **A** on the Miyoo to refresh.
 5. The main screen shows the assigned Tailscale IP after approval.
 
 No auth key or account token is stored by the UI. The pending verification URL
 exists only under `/tmp/onion-tailscale/` and is removed after connection or
 Disable. Tailscale persists the device identity in `state/tailscaled.state`. Do
 not share or commit that file.
+
+QR symbols are generated locally by the SDL selector. Login URLs are passed on
+stdin, do not appear in process arguments, and are not sent to a third-party QR
+service. The selector vendors Project Nayuki's compact MIT-licensed C encoder;
+the Tailscale subproject remains independently buildable and deployable.
 
 The equivalent shell operations are:
 

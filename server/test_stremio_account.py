@@ -179,6 +179,33 @@ class StremioAccountBackendTest(unittest.TestCase):
         if os.name != "nt":
             self.assertEqual(target.stat().st_mode & 0o777, 0o600)
 
+    @mock.patch.object(
+        link_stremio_account,
+        "create_link",
+        return_value=("private-code", "https://link.stremio.com/ABCD"),
+    )
+    @mock.patch.object(link_stremio_account, "read_auth_key")
+    def test_link_manager_exposes_only_link_and_writes_key_after_approval(
+        self, read_auth_key, _create_link
+    ):
+        target = Path(self.temp_dir.name) / "link" / "account.json"
+        manager = link_stremio_account.AccountLinkManager(target)
+        waiting = manager.start()
+        self.assertEqual(waiting["state"], "waiting")
+        self.assertEqual(waiting["link"], "https://link.stremio.com/ABCD")
+        self.assertNotIn("private-code", json.dumps(waiting))
+
+        read_auth_key.return_value = ""
+        self.assertEqual(manager.status(poll=True)["state"], "waiting")
+        read_auth_key.return_value = "private-auth-key"
+        self.assertEqual(manager.status(poll=True), {"state": "connected"})
+        self.assertEqual(
+            json.loads(target.read_text(encoding="utf-8")),
+            {"auth_key": "private-auth-key"},
+        )
+        with self.assertRaisesRegex(RuntimeError, "already connected"):
+            manager.start()
+
 
 if __name__ == "__main__":
     unittest.main()

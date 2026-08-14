@@ -7,6 +7,7 @@ LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/app.log"
 SELECTOR="$BASE_DIR/bin/onion-tailscale-selector"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
+ADMIN_URL="https://login.tailscale.com/admin/machines"
 
 mkdir -p "$LOG_DIR"
 
@@ -29,7 +30,14 @@ select_action() {
   bottom="$2"
   menu_file="$3"
   ONION_TAILSCALE_SELECTOR_LOG="$LOG_FILE" \
-    "$SELECTOR" "$title" "$bottom" <"$menu_file" 2>>"$LOG_FILE"
+    "$SELECTOR" --menu-qr "$ADMIN_URL" "$title" "$bottom" \
+    <"$menu_file" 2>>"$LOG_FILE"
+}
+
+show_login_qr() {
+  login_url_value="$1"
+  printf '%s\n' "$login_url_value" | ONION_TAILSCALE_SELECTOR_LOG="$LOG_FILE" \
+    "$SELECTOR" --qr "Connect Tailscale" "Scan, approve, A Refresh, B Back" 2>>"$LOG_FILE"
 }
 
 connect_account() {
@@ -45,12 +53,11 @@ connect_account() {
   fi
 
   while :; do
-    printf 'Refresh\n%s\nBack\n' "$login_result" >/tmp/onion-tailscale-login-menu
-    login_action=$(select_action "Connect account" "Open URL on phone, approve, Refresh" /tmp/onion-tailscale-login-menu)
+    login_action=$(show_login_qr "$login_result")
     login_selector_rc=$?
     [ "$login_selector_rc" -eq 0 ] || break
     case "$login_action" in
-      Refresh)
+      refresh)
         login_status=$("$BASE_DIR/scripts/login.sh" status 2>>"$LOG_FILE")
         if [ "$login_status" = "connected" ]; then
           show_message "Tailscale account connected"
@@ -60,12 +67,6 @@ connect_account() {
         case "$login_status" in
           https://*) login_result="$login_status" ;;
         esac
-        ;;
-      Back)
-        break
-        ;;
-      https://*)
-        show_message "Open the displayed URL on a phone or PC"
         ;;
     esac
   done

@@ -9,6 +9,8 @@
 - browses normalized series seasons and episodes with the SDL selector;
 - launches FFplay in the working OnionOS framebuffer/audio context.
 - offers Search and Continue Watching from a lightweight home menu;
+- links and reports a Stremio account through a local QR screen while keeping
+  the auth key on the gaming PC;
 - selects external subtitles through the server when FFplay advertises the
   `subtitles` filter;
 - resumes saved items with FFplay `-ss` and reports approximate progress.
@@ -23,6 +25,10 @@ not the playback exit control on the confirmed OnionOS FFplay build.
 The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set
 `POCKETSTREMIO_AUTO_FIRST=1` to restore the development auto-select path.
+
+The selector's QR mode uses the vendored Project Nayuki C encoder and SDL 1.2;
+it adds no PNG, SDL_image, font, or online QR-service dependency. Approval links
+arrive through stdin and only the literal `refresh` action is emitted on stdout.
 
 The production UI optionally reads app-local non-secret settings from:
 

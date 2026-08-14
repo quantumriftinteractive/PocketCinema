@@ -24,6 +24,19 @@ Enabled. The first-account Connect account screen is implemented with its
 pending URL restricted to `/tmp`, but was not physically tested because the
 working node was already authenticated and was not logged out or reset.
 
+On August 14, 2026, the home screen was extended with a locally rendered QR code
+for `https://login.tailscale.com/admin/machines`. The user confirmed that the
+screen and QR were right-side-up, the IP remained readable, the code opened the
+admin machines page, D-pad navigation still worked, and B exited. The same SDL
+path renders a full-screen one-time verification URL for a fresh account. That
+specific unauthenticated Tailscale flow remains untested because the working
+node identity was deliberately preserved.
+
+While the QR/status home screen was open, the selector measured 3,392 kB RSS,
+9,168 kB virtual size, and 0 kB process swap. The system reported 6,328 kB free
+and 69,440 kB available. The QR encoder is linked into the existing short-lived
+SDL selector rather than adding a resident process.
+
 ## State Adoption
 
 Deployment first proved that the standalone `start.sh` detected another active
@@ -70,6 +83,7 @@ snapshots, not active video-playback measurements.
 - both PowerShell scripts parsed with the PowerShell AST parser;
 - the ARMv7 SDL selector compiled with `-Wall -Wextra -Werror`;
 - a clean rebuild matched the tracked selector binary;
+- the local QR renderer scanned successfully without logging the target URL;
 - isolated autostart enable/status/disable checks passed;
 - deployment left state and logs untouched;
 - daemon collision refusal, copy-only migration, IP recovery, proxy traffic,

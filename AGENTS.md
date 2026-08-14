@@ -103,6 +103,13 @@ non-HTTP results are rejected. The currently discovered legal ERT News result is
 HLS/H.264 High and is not compatible with the existing opaque progressive-media
 proxy; do not expose its playlist directly or mark Milestone 16 confirmed.
 
+Server-mediated Stremio account binding is physically confirmed. The Miyoo
+receives only an official short approval link, renders it locally as QR, and
+polls after A; the retrieval code and auth key stay on the gaming PC. A linked
+account cannot be replaced or removed through the remote API. Tailscale's home
+screen QR for the admin machines page is also physically confirmed without
+changing the working node identity.
+
 Series browsing is physically confirmed with the local two-season
 `PocketStremio Test Series` fixture. Its generated 30-second H.264/AAC media is
 ignored by git and reproducible through
@@ -200,6 +207,9 @@ overwrite it. Environment variables take precedence over app-local config.
 
 - Keep the selector on SDL 1.2 with its built-in bitmap font. Do not introduce
   SDL_ttf, libpng, or another runtime without measuring memory and compatibility.
+- QR rendering uses the vendored Project Nayuki MIT-licensed C encoder linked
+  into each app's existing selector. Pass one-time approval links through stdin,
+  never process arguments or logs, and do not use an online QR service.
 - The Miyoo framebuffer requires a 180-degree rendering correction.
 - Confirmed keys are Up `273`, Down `274`, A `32`, and B `306`.
 - B/back applies to PocketStremio selector screens. During FFplay playback, the

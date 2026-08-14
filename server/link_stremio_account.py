@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -11,6 +12,7 @@ from pathlib import Path
 
 
 LINK_BASE = "https://link.stremio.com/api/v2"
+DEFAULT_LINK_TTL = 5 * 60
 
 
 def fetch_json(url, timeout=10):
@@ -63,6 +65,57 @@ def write_config(path, auth_key, replace=False):
     finally:
         if os.path.exists(temp_name):
             os.unlink(temp_name)
+
+
+class AccountLinkManager:
+    def __init__(self, config_path, ttl=DEFAULT_LINK_TTL):
+        self.config_path = Path(config_path)
+        self.ttl = max(30, int(ttl))
+        self._code = ""
+        self._link = ""
+        self._started_at = 0
+        self._lock = threading.RLock()
+
+    def _configured(self):
+        return self.config_path.is_file()
+
+    def _clear(self):
+        self._code = ""
+        self._link = ""
+        self._started_at = 0
+
+    def start(self):
+        with self._lock:
+            if self._configured():
+                raise RuntimeError("Stremio account is already connected")
+            code, link = create_link()
+            self._code = code
+            self._link = link
+            self._started_at = time.monotonic()
+            return self.status(poll=False)
+
+    def status(self, poll=False):
+        with self._lock:
+            if self._configured():
+                self._clear()
+                return {"state": "connected"}
+            if not self._code:
+                return {"state": "idle"}
+            elapsed = time.monotonic() - self._started_at
+            if elapsed >= self.ttl:
+                self._clear()
+                return {"state": "expired"}
+            if poll:
+                auth_key = read_auth_key(self._code)
+                if auth_key:
+                    write_config(self.config_path, auth_key)
+                    self._clear()
+                    return {"state": "connected"}
+            return {
+                "state": "waiting",
+                "link": self._link,
+                "expires_in": max(0, int(self.ttl - elapsed)),
+            }
 
 
 def main():

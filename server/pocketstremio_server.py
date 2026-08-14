@@ -14,11 +14,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 try:
+    from server import link_stremio_account
     from server import open_media_addon
     from server import playback_compatibility
     from server import stremio_account
     from server import stremio_service
 except ImportError:
+    import link_stremio_account
     import open_media_addon
     import playback_compatibility
     import stremio_account
@@ -26,7 +28,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.11-account-addon-discovery"
+SERVER_VERSION = "0.12-account-binding"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -582,6 +584,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.handle_account_addons(parsed)
             return
 
+        if parsed.path == "/api/account":
+            self.handle_account_status(parsed)
+            return
+
         if len(parts) == 4 and parts[:2] == ["api", "meta"]:
             self.handle_meta(parts[2], parts[3])
             return
@@ -634,6 +640,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/progress":
             self.handle_progress()
+            return
+        if parsed.path == "/api/account/link":
+            self.handle_account_link()
             return
         self.write_json({"error": "not_found", "path": parsed.path}, status=404)
 
@@ -754,6 +763,40 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         except stremio_account.StremioAccountError as exc:
             self.write_json(
                 {"error": "stremio_account_unavailable", "message": str(exc)},
+                status=502,
+            )
+
+    def handle_account_status(self, parsed):
+        query = urllib.parse.parse_qs(parsed.query)
+        poll = query.get("poll", [""])[0].lower() in {"1", "true", "yes"}
+        try:
+            link = self.server.stremio_link.status(poll=poll)
+            self.write_json(
+                {"account": self.server.stremio_account.status(), "link": link}
+            )
+        except Exception:
+            self.write_json(
+                {
+                    "error": "account_link_unavailable",
+                    "message": "Stremio account linking is unavailable",
+                },
+                status=502,
+            )
+
+    def handle_account_link(self):
+        try:
+            self.write_json(self.server.stremio_link.start(), status=201)
+        except RuntimeError as exc:
+            self.write_json(
+                {"error": "account_already_connected", "message": str(exc)},
+                status=409,
+            )
+        except Exception:
+            self.write_json(
+                {
+                    "error": "account_link_unavailable",
+                    "message": "Could not create a Stremio account link",
+                },
                 status=502,
             )
 
@@ -1406,6 +1449,9 @@ def main():
         service_roots,
     )
     httpd.stremio_account = stremio_account.StremioAccountBackend(
+        args.stremio_account_config
+    )
+    httpd.stremio_link = link_stremio_account.AccountLinkManager(
         args.stremio_account_config
     )
     httpd.stream_addons = load_stream_addons(args.stream_addons)
