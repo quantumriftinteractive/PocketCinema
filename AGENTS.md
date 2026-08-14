@@ -104,6 +104,13 @@ confirmed through the bounded server-side HLS-to-MPEG-TS bridge. Do not expose
 upstream playlists or segment URLs, broaden the bridge beyond unencrypted
 MPEG-TS without tests, or describe the bridge as transcoding.
 
+Milestone 17 bridge hardening has deterministic coverage for sliding media
+sequences, segment deduplication, bounded transient playlist and segment
+retries, sanitized persistent failure, and downstream disconnect cleanup.
+`/api/status` reports only the active bridge count. The 30-minute Apps-context
+playback and final movie and episode physical regressions remain pending; do not
+mark Milestone 17 confirmed without them.
+
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and
 polls after A; the retrieval code and auth key stay on the gaming PC. A linked

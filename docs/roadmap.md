@@ -446,6 +446,8 @@ The first account-backed live session is confirmed for 29 watched seconds. The
 next milestone hardens the bounded MPEG-TS bridge for normal viewing durations
 without adding transcoding or source-specific behavior.
 
+Evidence in progress: [Long-Running Live Playback Resilience](live-playback-resilience.md)
+
 - Run a continuous 30-minute Apps-context playback and sample memory and swap.
 - Confirm playlist refresh, media-sequence rollover, and segment deduplication.
 - Exercise one brief upstream fetch failure and provide a bounded user-facing

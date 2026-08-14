@@ -1,3 +1,4 @@
+import collections
 import json
 import tempfile
 import threading
@@ -95,6 +96,101 @@ class HlsMediaHandler(BaseHTTPRequestHandler):
         pass
 
 
+class RefreshingHlsHandler(BaseHTTPRequestHandler):
+    lock = threading.Lock()
+    playlist_requests = 0
+    successful_playlists = 0
+    segment_requests = collections.Counter()
+    fail_playlist_request = 0
+    playlist_failure_status = 503
+    fail_segment_once = None
+    end_after_generation = 2
+
+    @classmethod
+    def reset(
+        cls,
+        fail_playlist_request=0,
+        playlist_failure_status=503,
+        fail_segment_once=None,
+        end_after_generation=2,
+    ):
+        with cls.lock:
+            cls.playlist_requests = 0
+            cls.successful_playlists = 0
+            cls.segment_requests = collections.Counter()
+            cls.fail_playlist_request = fail_playlist_request
+            cls.playlist_failure_status = playlist_failure_status
+            cls.fail_segment_once = fail_segment_once
+            cls.end_after_generation = end_after_generation
+
+    @staticmethod
+    def segment(sequence):
+        return (b"\x47" + bytes([sequence % 256]) * 187) * 3
+
+    def do_GET(self):
+        if self.path == "/master.m3u8":
+            body = b"""#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=1200000,RESOLUTION=640x360,FRAME-RATE=25,CODECS=\"mp4a.40.2,avc1.64001E\"
+/live.m3u8
+"""
+            self.write_response(200, "application/vnd.apple.mpegurl", body)
+            return
+        if self.path == "/live.m3u8":
+            with self.lock:
+                type(self).playlist_requests += 1
+                request_number = type(self).playlist_requests
+                if type(self).fail_playlist_request in {-1, request_number}:
+                    self.write_response(
+                        type(self).playlist_failure_status,
+                        "text/plain",
+                        b"temporary failure",
+                    )
+                    return
+                type(self).successful_playlists += 1
+                generation = type(self).successful_playlists - 1
+            sequence = 100 + generation
+            lines = [
+                "#EXTM3U",
+                "#EXT-X-TARGETDURATION:1",
+                f"#EXT-X-MEDIA-SEQUENCE:{sequence}",
+            ]
+            for value in range(sequence, sequence + 3):
+                lines.extend(["#EXTINF:1,", f"/segment-{value}.ts"])
+            if (
+                type(self).end_after_generation is not None
+                and generation >= type(self).end_after_generation
+            ):
+                lines.append("#EXT-X-ENDLIST")
+            body = ("\n".join(lines) + "\n").encode("ascii")
+            self.write_response(200, "application/vnd.apple.mpegurl", body)
+            return
+        if self.path.startswith("/segment-") and self.path.endswith(".ts"):
+            try:
+                sequence = int(self.path[len("/segment-") : -len(".ts")])
+            except ValueError:
+                self.send_error(404)
+                return
+            with self.lock:
+                type(self).segment_requests[sequence] += 1
+                request_number = type(self).segment_requests[sequence]
+            if sequence == type(self).fail_segment_once and request_number == 1:
+                self.write_response(503, "text/plain", b"temporary failure")
+                return
+            self.write_response(200, "video/mp2t", self.segment(sequence))
+            return
+        self.send_error(404)
+
+    def write_response(self, status, content_type, body):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        pass
+
+
 class PocketStremioServerTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -127,6 +223,8 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
         self.server.play_sessions = pocket.SessionStore()
+        self.server.hls_bridge_lock = threading.Lock()
+        self.server.active_hls_bridges = 0
         self.server.manifest_cache = {}
         self.server.probe_cache = pocket.ProbeCache(root / "data" / "probe_cache.json")
         self.server.ffprobe_path = ""
@@ -220,6 +318,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(status["version"], pocket.SERVER_VERSION)
         self.assertEqual(status["uptime_seconds"], 30)
         self.assertEqual(status["sessions"]["active"], 0)
+        self.assertEqual(status["live_bridges"]["active"], 0)
         self.assertEqual(
             status["sessions"]["maximum"], self.server.play_sessions.max_items
         )
@@ -854,6 +953,185 @@ segments.ts
                     "https://media.example/live/index.m3u8",
                     lambda value: value.startswith("https://media.example/"),
                 )
+
+    def test_hls_bridge_refreshes_and_deduplicates_overlapping_segments(self):
+        RefreshingHlsHandler.reset()
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(pocket.time, "sleep"):
+                with urllib.request.urlopen(play["url"], timeout=5) as response:
+                    body = response.read()
+            self.assertEqual(len(body), 5 * 564)
+            sequences = [body[offset + 1] for offset in range(0, len(body), 564)]
+            self.assertEqual(sequences, [100, 101, 102, 103, 104])
+            self.assertEqual(
+                dict(RefreshingHlsHandler.segment_requests),
+                {100: 1, 101: 1, 102: 1, 103: 1, 104: 1},
+            )
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_recovers_from_one_playlist_http_failure(self):
+        RefreshingHlsHandler.reset(fail_playlist_request=2)
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(pocket.time, "sleep"):
+                with urllib.request.urlopen(play["url"], timeout=5) as response:
+                    body = response.read()
+            sequences = [body[offset + 1] for offset in range(0, len(body), 564)]
+            self.assertEqual(sequences, [100, 101, 102, 103, 104])
+            self.assertEqual(RefreshingHlsHandler.playlist_requests, 4)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_bounds_persistent_playlist_failure(self):
+        RefreshingHlsHandler.reset(fail_playlist_request=-1)
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(pocket.time, "sleep"):
+                with self.assertRaises(urllib.error.HTTPError) as raised:
+                    urllib.request.urlopen(play["url"], timeout=5)
+            try:
+                self.assertEqual(raised.exception.code, 502)
+                error = json.loads(raised.exception.read())
+            finally:
+                raised.exception.close()
+            self.assertEqual(error["error"], "hls_bridge_failed")
+            self.assertEqual(
+                error["message"], "The live stream is temporarily unavailable"
+            )
+            self.assertNotIn(str(upstream.server_address[1]), json.dumps(error))
+            self.assertEqual(RefreshingHlsHandler.playlist_requests, 3)
+            with self.server.hls_bridge_lock:
+                self.assertEqual(self.server.active_hls_bridges, 0)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_does_not_retry_nontransient_http_failure(self):
+        RefreshingHlsHandler.reset(
+            fail_playlist_request=-1,
+            playlist_failure_status=404,
+        )
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(pocket.time, "sleep"):
+                with self.assertRaises(urllib.error.HTTPError) as raised:
+                    urllib.request.urlopen(play["url"], timeout=5)
+            raised.exception.close()
+            self.assertEqual(raised.exception.code, 502)
+            self.assertEqual(RefreshingHlsHandler.playlist_requests, 1)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_recovers_before_failed_segment_sends_bytes(self):
+        RefreshingHlsHandler.reset(fail_segment_once=103)
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(pocket.time, "sleep"):
+                with urllib.request.urlopen(play["url"], timeout=5) as response:
+                    body = response.read()
+            sequences = [body[offset + 1] for offset in range(0, len(body), 564)]
+            self.assertEqual(sequences, [100, 101, 102, 103, 104])
+            self.assertEqual(RefreshingHlsHandler.segment_requests[103], 2)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_stops_after_downstream_disconnect(self):
+        RefreshingHlsHandler.reset(end_after_generation=None)
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        bridge_started = threading.Event()
+        bridge_stopped = threading.Event()
+        original_bridge = pocket.PocketStremioHandler.stream_hls_transport
+
+        def tracked_bridge(handler, session):
+            bridge_started.set()
+            try:
+                return original_bridge(handler, session)
+            finally:
+                bridge_stopped.set()
+
+        try:
+            play = self.create_refreshing_hls_play(upstream)
+            with mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ), mock.patch.object(
+                pocket.PocketStremioHandler,
+                "stream_hls_transport",
+                tracked_bridge,
+            ):
+                response = urllib.request.urlopen(play["url"], timeout=5)
+                self.assertTrue(bridge_started.wait(1))
+                with self.server.hls_bridge_lock:
+                    self.assertEqual(self.server.active_hls_bridges, 1)
+                self.assertEqual(len(response.read(564)), 564)
+                response.close()
+                self.assertTrue(bridge_stopped.wait(3))
+                with self.server.hls_bridge_lock:
+                    self.assertEqual(self.server.active_hls_bridges, 0)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def create_refreshing_hls_play(self, upstream):
+        stream_id = "refreshing-hls"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Refreshing HLS",
+            "url": f"http://127.0.0.1:{upstream.server_address[1]}/master.m3u8",
+        }
+        self.server.probe_cache.set(
+            self.server.stream_cache[stream_id]["url"],
+            {
+                "status": "candidate",
+                "message": "HLS test",
+                "container": "hls",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+            },
+        )
+        with mock.patch.object(
+            stremio_account, "validate_direct_stream_url", return_value=True
+        ):
+            _, play = self.post_json("/api/play", {"stream_id": stream_id})
+        return play
 
     def test_preflight_classifies_confirmed_and_rejects_unsupported_media(self):
         confirmed_probe = {

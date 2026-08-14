@@ -30,7 +30,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.13-hls-live-tv"
+SERVER_VERSION = "0.14-live-resilience"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -563,6 +563,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             session_count = len(self.server.play_sessions)
             probe_count = len(self.server.probe_cache)
             progress_count = len(self.server.progress_store.list_items())
+            with self.server.hls_bridge_lock:
+                active_hls_bridges = self.server.active_hls_bridges
             self.write_json(
                 {
                     "status": "ok",
@@ -577,6 +579,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "play_sessions": session_count,
                     "media_preflight": bool(self.server.ffprobe_path),
                     "probe_cache": probe_count,
+                    "live_bridges": {"active": active_hls_bridges},
                     "sessions": {
                         "active": session_count,
                         "maximum": self.server.play_sessions.max_items,
@@ -1351,12 +1354,73 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             payload = response.read(hls_relay.MAX_PLAYLIST_BYTES + 1)
         return final_url, payload
 
+    def fetch_hls_playlist_with_retry(self, url, attempts=3):
+        last_error = None
+        for attempt in range(attempts):
+            try:
+                return self.fetch_hls_playlist(url)
+            except urllib.error.HTTPError as exc:
+                retryable = exc.code in {408, 429} or 500 <= exc.code < 600
+                exc.close()
+                if not retryable:
+                    raise
+                last_error = exc
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                last_error = exc
+            if attempt + 1 < attempts:
+                time.sleep(attempt + 1)
+        raise last_error
+
+    def open_hls_segment_with_retry(self, url, attempts=3):
+        headers = {
+            "User-Agent": "PocketStremio/0.13",
+            "Accept-Encoding": "identity",
+        }
+        last_error = None
+        for attempt in range(attempts):
+            response = None
+            try:
+                response = open_media_url(
+                    url,
+                    headers,
+                    MEDIA_TIMEOUT,
+                    validate_public=True,
+                )
+                prefix = response.read(188 * 3)
+                if len(prefix) < 188 * 3 or any(
+                    prefix[offset] != 0x47 for offset in (0, 188, 376)
+                ):
+                    raise hls_relay.HlsRelayError(
+                        "The HLS rendition is not MPEG-TS"
+                    )
+                return response, prefix
+            except urllib.error.HTTPError as exc:
+                retryable = exc.code in {408, 429} or 500 <= exc.code < 600
+                exc.close()
+                if not retryable:
+                    raise
+                last_error = exc
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                last_error = exc
+            except Exception:
+                if response is not None:
+                    response.close()
+                raise
+            if response is not None:
+                response.close()
+            if attempt + 1 < attempts:
+                time.sleep(attempt + 1)
+        raise last_error
+
     def stream_hls_transport(self, session):
         playlist_url = session["url"]
         response_started = False
+        media_playlist = None
+        with self.server.hls_bridge_lock:
+            self.server.active_hls_bridges += 1
         try:
             for _ in range(3):
-                final_url, payload = self.fetch_hls_playlist(playlist_url)
+                final_url, payload = self.fetch_hls_playlist_with_retry(playlist_url)
                 variant_url = hls_relay.select_variant_url(
                     payload,
                     final_url,
@@ -1364,6 +1428,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 )
                 if not variant_url:
                     playlist_url = final_url
+                    media_playlist = (final_url, payload)
                     break
                 playlist_url = variant_url
             else:
@@ -1372,7 +1437,13 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             last_sequence = -1
             expires_at = session["created_at"] + self.server.play_sessions.ttl_seconds
             while time.time() < expires_at:
-                final_url, payload = self.fetch_hls_playlist(playlist_url)
+                if media_playlist:
+                    final_url, payload = media_playlist
+                    media_playlist = None
+                else:
+                    final_url, payload = self.fetch_hls_playlist_with_retry(
+                        playlist_url
+                    )
                 media = hls_relay.parse_media_playlist(
                     payload,
                     final_url,
@@ -1384,23 +1455,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     if item["sequence"] > last_sequence
                 ]
                 for segment in pending:
-                    headers = {
-                        "User-Agent": "PocketStremio/0.13",
-                        "Accept-Encoding": "identity",
-                    }
-                    with open_media_url(
-                        segment["url"],
-                        headers,
-                        MEDIA_TIMEOUT,
-                        validate_public=True,
-                    ) as response:
-                        prefix = response.read(188 * 3)
-                        if len(prefix) < 188 * 3 or any(
-                            prefix[offset] != 0x47 for offset in (0, 188, 376)
-                        ):
-                            raise hls_relay.HlsRelayError(
-                                "The HLS rendition is not MPEG-TS"
-                            )
+                    response, prefix = self.open_hls_segment_with_retry(
+                        segment["url"]
+                    )
+                    with response:
                         if not response_started:
                             self.send_response(200)
                             self.send_header("Content-Type", "video/mp2t")
@@ -1420,16 +1478,27 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 time.sleep(max(1.0, media["target_duration"] / 2.0))
             if not response_started:
                 raise hls_relay.HlsRelayError("The HLS stream has no media segments")
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
             print("HLS playback client disconnected", flush=True)
         except (OSError, urllib.error.HTTPError, hls_relay.HlsRelayError) as exc:
+            if isinstance(exc, hls_relay.HlsRelayError):
+                message = str(exc)
+                diagnostic = message
+            else:
+                message = "The live stream is temporarily unavailable"
+                status = getattr(exc, "code", None)
+                diagnostic = type(exc).__name__
+                if status is not None:
+                    diagnostic += f" status={status}"
             if response_started:
-                print(f"HLS transport stream interrupted: {exc}", flush=True)
+                print(f"HLS transport stream interrupted: {diagnostic}", flush=True)
             else:
                 self.write_json(
-                    {"error": "hls_bridge_failed", "message": str(exc)}, status=502
+                    {"error": "hls_bridge_failed", "message": message}, status=502
                 )
         finally:
+            with self.server.hls_bridge_lock:
+                self.server.active_hls_bridges -= 1
             self.close_connection = True
 
     def handle_subtitle(self, subtitle_id):
@@ -1641,6 +1710,8 @@ def main():
     httpd.stream_cache = {}
     httpd.subtitle_cache = {}
     httpd.play_sessions = SessionStore(args.session_ttl, args.max_sessions)
+    httpd.hls_bridge_lock = threading.Lock()
+    httpd.active_hls_bridges = 0
     httpd.manifest_cache = {}
     httpd.probe_cache = ProbeCache(
         data_dir / "probe_cache.json", args.probe_cache_ttl, args.max_probe_cache
