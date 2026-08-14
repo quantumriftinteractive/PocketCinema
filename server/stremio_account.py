@@ -13,17 +13,6 @@ API_URL = "https://api.strem.io/api/addonCollectionGet"
 DEFAULT_TIMEOUT = 15
 DEFAULT_CACHE_TTL = 5 * 60
 MAX_ADDONS = 128
-DEBRID_MARKERS = (
-    "[rd",
-    "rd+",
-    "rd download",
-    "debrid",
-    "real-debrid",
-    "realdebrid",
-    "torrent",
-)
-
-
 class StremioAccountError(RuntimeError):
     pass
 
@@ -99,13 +88,10 @@ def validate_direct_stream_url(value):
         return False
 
 
-def is_debrid_stream(raw):
+def has_unsupported_stream_shape(raw):
     if not isinstance(raw, dict):
-        return False
-    text = " ".join(
-        str(raw.get(key) or "") for key in ("name", "title", "description")
-    ).lower()
-    return any(marker in text for marker in DEBRID_MARKERS)
+        return True
+    return any(raw.get(key) for key in ("infoHash", "externalUrl", "ytId"))
 
 
 def resource_url(transport_url, resource, item_type, item_id):

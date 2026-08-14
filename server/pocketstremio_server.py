@@ -30,7 +30,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.14-live-resilience"
+SERVER_VERSION = "0.15-account-direct"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -215,7 +215,7 @@ def release_year(value):
 
 
 def safe_addon_text(value, fallback="", maximum=240):
-    text = str(value or "").strip()
+    text = " ".join(str(value or "").split())
     if any(marker in text.lower() for marker in ("http://", "https://", "file://")):
         return fallback
     return text[:maximum] or fallback
@@ -332,6 +332,19 @@ def stream_label(stream, fallback):
     if description:
         return f"{name} - {description[:80]}"
     return name
+
+
+def account_stream_quality_rank(stream):
+    if not str(stream.get("source") or "").startswith("Stremio account:"):
+        return 0, 0
+    text = " ".join(
+        str(stream.get(key) or "") for key in ("name", "label", "description")
+    ).lower()
+    markers = ("360p", "480p", "576p", "dvdrip", "720p", "1080p", "2160p", "4k")
+    for rank, marker in enumerate(markers):
+        if marker in text:
+            return 1, rank
+    return 1, 5
 
 
 def manifest_supports(manifest, resource, item_type):
@@ -1062,7 +1075,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 if not isinstance(raw, dict):
                     rejected = True
                     continue
-                if stremio_account.is_debrid_stream(raw):
+                if stremio_account.has_unsupported_stream_shape(raw):
                     rejected = True
                     continue
                 stream_url = raw.get("url")
@@ -1106,7 +1119,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 failures.append(
                     {
                         "source": source_name,
-                        "message": "Unsupported P2P, debrid, or non-HTTP account stream was ignored",
+                        "message": "Unsupported P2P, external-player, private-address, or non-HTTP account stream was ignored",
                     }
                 )
 
@@ -1215,6 +1228,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     }
                 )
 
+        streams.sort(key=account_stream_quality_rank)
         for stream in streams:
             self.server.stream_cache[stream["id"]] = stream
 

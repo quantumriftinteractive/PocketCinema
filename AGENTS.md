@@ -32,8 +32,8 @@ priority.
   `12470`; never make those ports reachable from the Miyoo, LAN, or tailnet.
 - Do not commit private addon URLs, tokens, Tailscale state, downloaded binaries,
   logs, generated caches, or the local test video. Respect `.gitignore`.
-- Do not add torrent, debrid, transcoding, subtitle, account, progress, poster,
-  or full-UI scope unless the roadmap and user request explicitly call for it.
+- Do not add torrent ingestion, transcoding, subtitle, progress, poster, or
+  full-UI scope unless the roadmap and user request explicitly call for it.
 
 ## Current Working Baseline
 
@@ -98,9 +98,11 @@ The server has a read-only Stremio account addon adapter. Account linking uses
 the official temporary browser approval flow and stores only the auth key in the
 ignored gaming-PC file `server/config/stremio_account.json`. Never print, copy,
 commit, or deploy that file. Account addon transports and stream URLs remain
-server-side. P2P, debrid-labeled, external-player, local/private-address, and
-non-HTTP results are rejected. The legal ERT News account result is physically
-confirmed through the bounded server-side HLS-to-MPEG-TS bridge. Do not expose
+server-side. Direct HTTPS media returned by the user's configured account addons
+is permitted even when debrid-labeled; P2P identifiers, external-player,
+local/private-address, and non-HTTP results are rejected. The legal ERT News
+account result is physically confirmed through the bounded server-side
+HLS-to-MPEG-TS bridge. Do not expose
 upstream playlists or segment URLs, broaden the bridge beyond unencrypted
 MPEG-TS without tests, or describe the bridge as transcoding.
 
@@ -110,6 +112,12 @@ retries, sanitized persistent failure, and downstream disconnect cleanup.
 `/api/status` reports only the active bridge count. The 30-minute Apps-context
 playback and final movie and episode physical regressions remain pending; do not
 mark Milestone 17 confirmed without them.
+
+Milestone 18 direct account playback is physically confirmed for the Torrentio
+RD 360p result for *Alien* (1979): H.264 Main 640x272 video and AAC audio both
+worked. Account display text must remain whitespace-collapsed because embedded
+newlines become separate SDL selector values. A direct account-addon episode is
+still required before confirming Milestone 18.
 
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and

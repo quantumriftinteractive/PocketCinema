@@ -404,7 +404,7 @@ class PocketStremioServerTest(unittest.TestCase):
                     },
                     {"name": "Private host", "url": "http://127.0.0.1/video.mp4"},
                     {
-                        "name": "[RD+] Debrid result",
+                        "name": "[RD+] Debrid\n360p",
                         "url": "https://cdn.example/debrid.mp4",
                     },
                 ]
@@ -421,8 +421,14 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertNotIn(transport_url, addons_json)
 
         _, streams = self.get_json("/api/streams/movie/tt0000001")
-        self.assertEqual(streams["count"], 1)
-        stream = streams["items"][0]
+        self.assertEqual(streams["count"], 2)
+        stream = next(
+            item for item in streams["items"] if item["name"] == "Direct account stream"
+        )
+        debrid = next(
+            item for item in streams["items"] if item["name"] == "[RD+] Debrid 360p"
+        )
+        self.assertTrue(all("\n" not in item["name"] for item in streams["items"]))
         self.assertEqual(stream["name"], "Direct account stream")
         self.assertEqual(stream["description"], "")
         self.assertNotIn("url", stream)
@@ -431,18 +437,35 @@ class PocketStremioServerTest(unittest.TestCase):
         )
         internal = self.server.stream_cache[stream["id"]]
         self.assertEqual(internal["url"], upstream_url)
+        self.assertEqual(
+            self.server.stream_cache[debrid["id"]]["url"],
+            "https://cdn.example/debrid.mp4",
+        )
 
         _, play = self.post_json("/api/play", {"stream_id": stream["id"]})
         public_json = json.dumps({"addons": addons, "streams": streams, "play": play})
         self.assertNotIn("private-auth-key", public_json)
         self.assertNotIn(transport_url, public_json)
         self.assertNotIn(upstream_url, public_json)
+        self.assertNotIn("https://cdn.example/debrid.mp4", public_json)
         self.assertNotIn("do-not-expose.example", public_json)
-        self.assertNotIn("Debrid result", public_json)
 
         _, status = self.get_json("/api/status")
         self.assertTrue(status["stremio_account"]["authenticated"])
         self.assertEqual(status["stremio_account"]["stream_addons"], 1)
+
+    def test_account_streams_put_lower_advertised_quality_first(self):
+        streams = [
+            {"source": "Stremio account: test", "name": "Result 4k"},
+            {"source": "Stremio account: test", "name": "Result 720p"},
+            {"source": "Stremio account: test", "name": "Result 360p"},
+            {"source": "local", "name": "Local fixture"},
+        ]
+        streams.sort(key=pocket.account_stream_quality_rank)
+        self.assertEqual(
+            [stream["name"] for stream in streams],
+            ["Local fixture", "Result 360p", "Result 720p", "Result 4k"],
+        )
 
     def test_live_tv_catalog_is_account_backed_and_opaque(self):
         private_source = {

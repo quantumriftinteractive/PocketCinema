@@ -83,11 +83,17 @@ server rejects:
 - external-player URLs;
 - local files and private literal addresses;
 - URL credentials or fragments;
-- results labeled as torrent, Real-Debrid, RD, or debrid downloads;
+- P2P identifiers and results that do not provide a direct HTTP(S) media URL;
 - media that fails the existing ffprobe compatibility policy.
 
 This is deliberately conservative. Addon discovery does not imply that an addon
 is an approved PocketStremio playback source.
+
+Milestone 18 later extended this boundary with explicit user authorization:
+debrid-labeled results are accepted only when the configured account addon
+returns a direct public HTTP(S) media URL. The gaming-PC server uses that URL
+behind an opaque play session. P2P identifiers and external-player shapes remain
+rejected, and no addon or media token is sent to the Miyoo.
 
 ## Confirmed Live Results
 
@@ -116,6 +122,22 @@ For *Night of the Living Dead* and *Big Buck Bunny*:
 - Account Local Files used a desktop-local transport and remained unusable.
 - The existing allowlisted Local Files, open-media, and deterministic fixture
   sources remained available independently.
+
+Those observations describe the original Milestone 16 policy. Milestone 18
+permits the direct HTTPS entries while continuing to reject the external launch
+result.
+
+## Direct Account Playback
+
+On August 14, 2026, the first Torrentio RD result for *Alien* (1979) was ordered
+ahead of larger renditions using its advertised 360p quality. Server preflight
+confirmed MP4/MOV with H.264 Main 640x272 video and AAC audio. The stream then
+played visibly and audibly from the OnionOS Apps context.
+
+The addon's display name contained a newline between its source and quality.
+That initially appeared as two selector choices even though both lines belonged
+to one opaque stream ID. Account display text is now collapsed to one line so
+the selector shows `[RD+] Torrentio 360p` as one choice.
 
 The Greek TV account addon resolved the public broadcaster ERT News as one
 direct HTTP stream. Its HLS master offers a 640x360, 25 fps H.264 High/AAC

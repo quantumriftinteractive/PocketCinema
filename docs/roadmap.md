@@ -440,7 +440,7 @@ debrid integration, transcoding, or storing account credentials on the Miyoo.
 
 ### 17. Long-Running Live Playback Resilience
 
-**Status: Next**
+**Status: In Progress (deprioritized)**
 
 The first account-backed live session is confirmed for 29 watched seconds. The
 next milestone hardens the bounded MPEG-TS bridge for normal viewing durations
@@ -461,6 +461,34 @@ Acceptance criterion: ERT News plays smoothly with audio for 30 minutes, memory
 remains viable, transient failure behavior is bounded, Menu cleanup is complete,
 and existing movie and episode playback remain unchanged.
 
+### 18. Account Addon Direct HTTPS Playback
+
+**Status: Next**
+
+The linked Torrentio RD and AIOStreams configurations return direct HTTPS media
+objects for normal movies and series. The user explicitly authorized using
+those account-bound results. Tokens and configured addon transports remain on
+the gaming PC behind opaque PocketStremio play sessions.
+
+- Accept a direct public HTTP(S) `url` even when its display text is debrid
+  labeled.
+- Continue rejecting `infoHash`, magnet/P2P-only, external-player, YouTube,
+  private-address, credential-in-URL, fragment, and non-HTTP shapes.
+- Keep addon configuration, tokens, and resolved media URLs off the Miyoo API
+  and out of logs and git.
+- Reuse ffprobe compatibility checks and the existing progressive/HLS proxy
+  paths without adding torrent ingestion or transcoding.
+- Physically validate one movie and one episode from a linked account addon.
+
+Movie evidence: *Alien* (1979) played visibly and audibly from the Torrentio RD
+360p direct HTTPS result. Its preflight measured H.264 Main 640x272 with AAC.
+Episode playback remains pending.
+
+Acceptance criterion: a linked account addon resolves a direct HTTPS movie or
+episode, PocketStremio exposes only an opaque stream ID and play URL, and the
+media starts visibly and audibly on the Miyoo without exposing account or media
+tokens.
+
 ## Deferred Features
 
 These features should begin only after real stream playback and compatibility
@@ -473,7 +501,7 @@ behavior are stable:
 - Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites, history, and settings UI;
-- torrent, debrid, or other source-specific integrations.
+- torrent ingestion and addon results that do not provide direct HTTP media.
 
 Each deferred feature should become a separate milestone with its own device
 acceptance criteria rather than expanding an earlier milestone.

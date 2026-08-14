@@ -145,16 +145,19 @@ class StremioAccountBackendTest(unittest.TestCase):
         ):
             self.assertFalse(stremio_account.validate_direct_stream_url(value), value)
 
-    def test_debrid_stream_markers_are_rejected(self):
+    def test_only_p2p_and_external_stream_shapes_are_rejected(self):
         for value in (
-            {"name": "[RD+] Cached"},
-            {"title": "Real-Debrid stream"},
-            {"description": "Torrent download"},
+            {"infoHash": "0123456789abcdef"},
+            {"externalUrl": "https://external.example/watch"},
+            {"ytId": "video-id"},
         ):
-            self.assertTrue(stremio_account.is_debrid_stream(value), value)
+            self.assertTrue(stremio_account.has_unsupported_stream_shape(value), value)
         self.assertFalse(
-            stremio_account.is_debrid_stream(
-                {"name": "Public domain", "description": "Direct HTTP archive"}
+            stremio_account.has_unsupported_stream_shape(
+                {
+                    "name": "[RD+] Direct HTTPS",
+                    "url": "https://media.example/video.mp4",
+                }
             )
         )
 
