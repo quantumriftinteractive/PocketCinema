@@ -113,11 +113,12 @@ retries, sanitized persistent failure, and downstream disconnect cleanup.
 playback and final movie and episode physical regressions remain pending; do not
 mark Milestone 17 confirmed without them.
 
-Milestone 18 direct account playback is physically confirmed for the Torrentio
-RD 360p result for *Alien* (1979): H.264 Main 640x272 video and AAC audio both
-worked. Account display text must remain whitespace-collapsed because embedded
-newlines become separate SDL selector values. A direct account-addon episode is
-still required before confirming Milestone 18.
+Milestone 18 direct account playback is physically confirmed for Torrentio RD:
+*Alien* (1979) used H.264 Main 640x272 with AAC, and *Grimm* S1E1 used H.264
+High 852x480 with AAC stereo. Both had visible video and audible audio. The
+episode also confirmed pause tracking, Menu exit, and progress saving. Account
+display text must remain whitespace-collapsed because embedded newlines become
+separate SDL selector values.
 
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and

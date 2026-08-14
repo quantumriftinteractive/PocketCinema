@@ -463,7 +463,7 @@ and existing movie and episode playback remain unchanged.
 
 ### 18. Account Addon Direct HTTPS Playback
 
-**Status: Next**
+**Status: Confirmed**
 
 The linked Torrentio RD and AIOStreams configurations return direct HTTPS media
 objects for normal movies and series. The user explicitly authorized using
@@ -482,12 +482,35 @@ the gaming PC behind opaque PocketStremio play sessions.
 
 Movie evidence: *Alien* (1979) played visibly and audibly from the Torrentio RD
 360p direct HTTPS result. Its preflight measured H.264 Main 640x272 with AAC.
-Episode playback remains pending.
+
+Episode evidence: *Grimm* S1E1 played visibly and audibly from a Torrentio RD
+480p result. FFplay measured H.264 High 852x480 with AAC stereo, reached video
+readiness after 36 seconds, recorded 37 valid watched seconds, tracked a pause,
+exited cleanly, and saved progress.
 
 Acceptance criterion: a linked account addon resolves a direct HTTPS movie or
 episode, PocketStremio exposes only an opaque stream ID and play URL, and the
 media starts visibly and audibly on the Miyoo without exposing account or media
 tokens.
+
+### 19. Account Addon Catalog Browsing
+
+**Status: Next**
+
+Search and playback now use linked account addons, but the home screen does not
+yet expose their movie and series catalogs. Add lightweight server-normalized
+catalog browsing without sending addon transports or tokens to the Miyoo.
+
+- List account catalogs by safe addon and catalog labels.
+- Browse bounded movie and series pages through opaque PocketStremio endpoints.
+- Reuse the current media details, season/episode, stream, playback, and back
+  navigation paths.
+- Keep catalog extras, addon transports, tokens, posters, and raw responses on
+  the gaming PC.
+
+Acceptance criterion: a user can open an account addon catalog, select one movie
+or series with the controller, and reach the existing physically confirmed
+account-addon playback flow.
 
 ## Deferred Features
 

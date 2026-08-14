@@ -139,6 +139,12 @@ That initially appeared as two selector choices even though both lines belonged
 to one opaque stream ID. Account display text is now collapsed to one line so
 the selector shows `[RD+] Torrentio 360p` as one choice.
 
+The real series path is also physically confirmed with *Grimm* S1E1. The
+Torrentio RD 480p result opened as H.264 High 852x480 at 23.98 fps with AAC
+48 kHz stereo. FFplay reached video readiness in 36 seconds, played visible
+video and audible audio, tracked nine paused seconds and 37 valid watched
+seconds, exited cleanly, and saved a 37-second Continue Watching position.
+
 The Greek TV account addon resolved the public broadcaster ERT News as one
 direct HTTP stream. Its HLS master offers a 640x360, 25 fps H.264 High/AAC
 rendition at approximately 1.5 Mb/s. PocketStremio now accepts HLS as a candidate
