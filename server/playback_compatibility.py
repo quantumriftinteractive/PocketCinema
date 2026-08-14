@@ -6,6 +6,7 @@ from pathlib import Path
 
 SUPPORTED_CONTAINERS = {
     "avi",
+    "hls",
     "matroska",
     "mov",
     "mp4",
@@ -40,7 +41,7 @@ def probe_media(ffprobe_path, url, timeout=20):
         (
             "format=format_name,duration,bit_rate:"
             "stream=index,codec_type,codec_name,profile,width,height,"
-            "r_frame_rate,sample_rate,channels"
+            "avg_frame_rate,r_frame_rate,sample_rate,channels"
         ),
         "-of",
         "json",
@@ -97,7 +98,15 @@ def classify_probe(data):
     audio_codec = str(audio.get("codec_name") or "").lower()
     width = _positive_int(video.get("width"))
     height = _positive_int(video.get("height"))
-    frame_rate = _frame_rate(video.get("r_frame_rate"))
+    average_frame_rate = _frame_rate(video.get("avg_frame_rate"))
+    reported_frame_rate = _frame_rate(video.get("r_frame_rate"))
+    frame_rate = (
+        average_frame_rate
+        if 0 < average_frame_rate <= 120
+        else reported_frame_rate
+        if 0 < reported_frame_rate <= 120
+        else 0.0
+    )
     bitrate = _positive_int(format_data.get("bit_rate"))
     duration = _positive_int(format_data.get("duration"))
 

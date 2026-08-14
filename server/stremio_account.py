@@ -331,6 +331,47 @@ class StremioAccountBackend:
             and manifest_supports(addon["manifest"], "stream", item_type)
         ]
 
+    def catalog_sources(self, item_type):
+        catalogs = []
+        for source in self.collection():
+            manifest = source["manifest"]
+            if (
+                not source["usable"]
+                or not manifest_supports(manifest, "catalog", item_type)
+                or not manifest_supports(manifest, "stream", item_type)
+            ):
+                continue
+            for raw in manifest.get("catalogs") or []:
+                if not isinstance(raw, dict) or raw.get("type") != item_type:
+                    continue
+                catalog_id = raw.get("id")
+                if not isinstance(catalog_id, str) or not catalog_id.strip():
+                    continue
+                catalogs.append(
+                    {
+                        "source": source,
+                        "id": catalog_id.strip()[:160],
+                        "name": _safe_text(raw.get("name"), source["name"], 160),
+                    }
+                )
+        return catalogs
+
+    def fetch_catalog(self, source, item_type, catalog_id):
+        try:
+            url = resource_url(
+                source["transport_url"], "catalog", item_type, catalog_id
+            )
+            payload = self._fetch_json(url)
+        except Exception as exc:
+            raise StremioAccountError(
+                f"{source['name']} is unavailable"
+            ) from exc
+        if not isinstance(payload, dict) or not isinstance(
+            payload.get("metas", []), list
+        ):
+            raise StremioAccountError(f"{source['name']} returned an invalid response")
+        return payload.get("metas") or []
+
     def fetch_streams(self, source, item_type, item_id):
         try:
             url = resource_url(

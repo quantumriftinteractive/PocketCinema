@@ -14,12 +14,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 try:
+    from server import hls_relay
     from server import link_stremio_account
     from server import open_media_addon
     from server import playback_compatibility
     from server import stremio_account
     from server import stremio_service
 except ImportError:
+    import hls_relay
     import link_stremio_account
     import open_media_addon
     import playback_compatibility
@@ -28,7 +30,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.12-account-binding"
+SERVER_VERSION = "0.13-hls-live-tv"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -38,6 +40,7 @@ DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
 DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
+MAX_LIVE_TV_ITEMS = 128
 COMPATIBILITY_FIXTURES = (
     {
         "filename": "test-video.mp4",
@@ -182,6 +185,25 @@ def nonnegative_int(value):
         return max(0, int(float(value or 0)))
     except (TypeError, ValueError):
         return 0
+
+
+class PublicMediaRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        resolved = urllib.parse.urljoin(req.full_url, newurl)
+        if not stremio_account.validate_direct_stream_url(resolved):
+            raise urllib.error.URLError("Blocked media redirect")
+        return super().redirect_request(req, fp, code, msg, headers, resolved)
+
+
+def open_media_url(url, headers, timeout, validate_public=False):
+    if validate_public and not stremio_account.validate_direct_stream_url(url):
+        raise urllib.error.URLError("Blocked media address")
+    request = urllib.request.Request(url, headers=headers)
+    if validate_public:
+        return urllib.request.build_opener(PublicMediaRedirectHandler()).open(
+            request, timeout=timeout
+        )
+    return urllib.request.urlopen(request, timeout=timeout)
 
 
 def release_year(value):
@@ -381,7 +403,7 @@ class ProbeCache:
 
     @staticmethod
     def key(url):
-        return hashlib.sha256(url.encode()).hexdigest()
+        return hashlib.sha256(("v2\0" + url).encode()).hexdigest()
 
     def _load(self):
         if not self.path.is_file():
@@ -584,6 +606,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.handle_account_addons(parsed)
             return
 
+        if parsed.path == "/api/live-tv":
+            self.handle_live_tv()
+            return
+
         if parsed.path == "/api/account":
             self.handle_account_status(parsed)
             return
@@ -705,6 +731,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "name": stream.get("name", ""),
                 "duration_seconds": duration_seconds,
                 "compatibility": compatibility,
+                "hls": compatibility.get("container") == "hls",
             }
         )
 
@@ -918,6 +945,52 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"error": "meta_failed", "message": str(exc)}, status=502)
             return
         self.write_json(meta)
+
+    def handle_live_tv(self):
+        items = []
+        failures = []
+        seen = set()
+        try:
+            catalogs = self.server.stremio_account.catalog_sources("tv")
+        except stremio_account.StremioAccountError as exc:
+            catalogs = []
+            failures.append({"source": "Stremio account", "message": str(exc)})
+
+        for catalog in catalogs:
+            source = catalog["source"]
+            source_name = safe_addon_text(source["name"], "Account addon", 120)
+            try:
+                metas = self.server.stremio_account.fetch_catalog(
+                    source, "tv", catalog["id"]
+                )
+            except stremio_account.StremioAccountError as exc:
+                failures.append({"source": source_name, "message": str(exc)})
+                continue
+            for raw in metas:
+                if not isinstance(raw, dict):
+                    continue
+                item_id = str(raw.get("id") or "").strip()[:160]
+                if not item_id or item_id in seen:
+                    continue
+                seen.add(item_id)
+                items.append(
+                    {
+                        "id": item_id,
+                        "type": "tv",
+                        "title": safe_addon_text(
+                            raw.get("name"), "Live channel", 160
+                        ),
+                        "source": source_name,
+                    }
+                )
+                if len(items) >= MAX_LIVE_TV_ITEMS:
+                    break
+            if len(items) >= MAX_LIVE_TV_ITEMS:
+                break
+
+        self.write_json(
+            {"count": len(items), "items": items, "failures": failures}
+        )
 
     def handle_streams(self, item_type, item_id):
         streams = []
@@ -1257,8 +1330,107 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 )
                 return
             self.write_file(local_path)
+        elif session.get("hls"):
+            self.stream_hls_transport(session)
         else:
             self.proxy_remote_url(session["url"])
+
+    def fetch_hls_playlist(self, url):
+        headers = {
+            "User-Agent": "PocketStremio/0.13",
+            "Accept-Encoding": "identity",
+        }
+        with open_media_url(
+            url, headers, MEDIA_TIMEOUT, validate_public=True
+        ) as response:
+            final_url = response.geturl()
+            if not stremio_account.validate_direct_stream_url(final_url):
+                raise hls_relay.HlsRelayError(
+                    "The HLS playlist redirected to a blocked address"
+                )
+            payload = response.read(hls_relay.MAX_PLAYLIST_BYTES + 1)
+        return final_url, payload
+
+    def stream_hls_transport(self, session):
+        playlist_url = session["url"]
+        response_started = False
+        try:
+            for _ in range(3):
+                final_url, payload = self.fetch_hls_playlist(playlist_url)
+                variant_url = hls_relay.select_variant_url(
+                    payload,
+                    final_url,
+                    stremio_account.validate_direct_stream_url,
+                )
+                if not variant_url:
+                    playlist_url = final_url
+                    break
+                playlist_url = variant_url
+            else:
+                raise hls_relay.HlsRelayError("The HLS playlist is nested too deeply")
+
+            last_sequence = -1
+            expires_at = session["created_at"] + self.server.play_sessions.ttl_seconds
+            while time.time() < expires_at:
+                final_url, payload = self.fetch_hls_playlist(playlist_url)
+                media = hls_relay.parse_media_playlist(
+                    payload,
+                    final_url,
+                    stremio_account.validate_direct_stream_url,
+                )
+                pending = [
+                    item
+                    for item in media["segments"]
+                    if item["sequence"] > last_sequence
+                ]
+                for segment in pending:
+                    headers = {
+                        "User-Agent": "PocketStremio/0.13",
+                        "Accept-Encoding": "identity",
+                    }
+                    with open_media_url(
+                        segment["url"],
+                        headers,
+                        MEDIA_TIMEOUT,
+                        validate_public=True,
+                    ) as response:
+                        prefix = response.read(188 * 3)
+                        if len(prefix) < 188 * 3 or any(
+                            prefix[offset] != 0x47 for offset in (0, 188, 376)
+                        ):
+                            raise hls_relay.HlsRelayError(
+                                "The HLS rendition is not MPEG-TS"
+                            )
+                        if not response_started:
+                            self.send_response(200)
+                            self.send_header("Content-Type", "video/mp2t")
+                            self.send_header("Cache-Control", "no-store")
+                            self.send_header("Connection", "close")
+                            self.end_headers()
+                            response_started = True
+                        self.wfile.write(prefix)
+                        while True:
+                            chunk = response.read(1024 * 256)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                    last_sequence = segment["sequence"]
+                if media["endlist"]:
+                    break
+                time.sleep(max(1.0, media["target_duration"] / 2.0))
+            if not response_started:
+                raise hls_relay.HlsRelayError("The HLS stream has no media segments")
+        except (BrokenPipeError, ConnectionResetError):
+            print("HLS playback client disconnected", flush=True)
+        except (OSError, urllib.error.HTTPError, hls_relay.HlsRelayError) as exc:
+            if response_started:
+                print(f"HLS transport stream interrupted: {exc}", flush=True)
+            else:
+                self.write_json(
+                    {"error": "hls_bridge_failed", "message": str(exc)}, status=502
+                )
+        finally:
+            self.close_connection = True
 
     def handle_subtitle(self, subtitle_id):
         subtitle = self.server.subtitle_cache.get(subtitle_id)
@@ -1272,10 +1444,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         if self.headers.get("Range"):
             headers["Range"] = self.headers["Range"]
 
-        req = urllib.request.Request(url, headers=headers)
         response_started = False
         try:
-            with urllib.request.urlopen(req, timeout=MEDIA_TIMEOUT) as resp:
+            with open_media_url(url, headers, MEDIA_TIMEOUT) as resp:
                 self.send_response(resp.status)
                 for key in [
                     "Content-Type",

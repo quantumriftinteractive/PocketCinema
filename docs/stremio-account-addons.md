@@ -2,10 +2,9 @@
 
 ## Status
 
-Server-side account linking, addon collection discovery, and conservative stream
-filtering are implemented and confirmed on the gaming PC. Apps-context playback
-through an account addon is not yet confirmed, so Roadmap Milestone 16 remains
-Next.
+Server-side account linking, addon collection discovery, conservative stream
+filtering, Live TV browsing, and account-backed playback are confirmed through
+the OnionOS Apps context. Roadmap Milestone 16 is complete.
 
 ## Supported Account Flow
 
@@ -67,6 +66,10 @@ or upstream stream URL. Account stream IDs are opaque. `/api/streams` caches an
 accepted upstream URL only on the gaming PC, and `/api/play` exposes the normal
 short opaque play-session URL.
 
+`GET /api/live-tv` reads only account addons that declare both `catalog` and
+`stream` support for `tv`. It returns at most 128 normalized channel IDs, titles,
+and source labels. Transport URLs and raw catalog responses remain server-side.
+
 ## Acceptance Policy
 
 Account addon transports must use HTTPS, end in `/manifest.json`, omit URL
@@ -115,19 +118,72 @@ For *Night of the Living Dead* and *Big Buck Bunny*:
   sources remained available independently.
 
 The Greek TV account addon resolved the public broadcaster ERT News as one
-direct HTTP stream. ffprobe identified H.264 High profile at 640x360 with AAC
-stereo, delivered through HLS. The current compatibility layer rejected the
-container. Passing the playlist through the existing byte proxy would expose or
-bypass opaque handling for its child playlists and segments, so it was not sent
-to the Miyoo.
+direct HTTP stream. Its HLS master offers a 640x360, 25 fps H.264 High/AAC
+rendition at approximately 1.5 Mb/s. PocketStremio now accepts HLS as a candidate
+container, prefers sane `avg_frame_rate` data over invalid transport time-base
+rates, and invalidates compatibility results produced by the earlier cache
+schema.
 
-## Remaining Acceptance Work
+## HLS Bridge
 
-Milestone 16 still requires one legal, compatible account-addon result to start
-visibly and audibly from the OnionOS Apps context. None is currently available
-from the linked collection under the accepted progressive-media policy.
+The gaming-PC server owns the entire HLS transport. It:
 
-Supporting ERT News requires a separately designed HLS relay that rewrites and
-proxies every playlist, segment, key, redirect, and byte-range request, followed
-by Miyoo codec, memory, controls, and cleanup measurements. It must not be added
-as an implicit exception to the current opaque playback contract.
+- limits playlists to 1 MiB and 4,096 lines;
+- selects an H.264 rendition no larger than 640x360, 30 fps, and 1.6 Mb/s;
+- validates public HTTP(S) addresses and redirects;
+- rejects encrypted HLS, fragmented-MP4 media playlists, and byte-range segments;
+- polls the selected live media playlist and streams its MPEG-TS segments as one
+  `video/mp2t` response through the opaque `/play/{session}` URL;
+- retains the normal six-hour bounded play-session lifetime.
+
+No master playlist, media playlist, child URI, or segment URL reaches the Miyoo.
+The bridge performs no transcoding or codec conversion.
+
+Directly relaying a rewritten HLS playlist was tested first. The target FFplay
+downloaded valid MPEG-TS segments but repeatedly refreshed the playlist without
+completing input probing. Flattening the master to the selected media playlist
+did not change that behavior. Desktop FFmpeg opened both forms immediately.
+Serving the same segments as a continuous MPEG-TS response avoided the old
+device demuxer's HLS behavior and retained the existing FFplay launch path.
+
+## Confirmed Device Playback
+
+Confirmed from the OnionOS Apps context on August 14, 2026:
+
+- `Apps -> PocketStremio -> Live TV -> ERT News -> [TEST] ERT News` completed;
+- the loading panel remained visible through preflight and FFplay launch;
+- FFplay reached SDL video readiness in 4 seconds;
+- it detected MPEG-TS with H.264 High 640x360 at 25 fps and AAC 48 kHz stereo;
+- video was physically reported smooth and audio was reported perfect;
+- Menu exited after 29 valid watched seconds and B returned through both Live TV
+  and the PocketStremio home screen;
+- no FFplay, selector, pause monitor, info panel, `/tmp/stay_awake`, dismiss flag,
+  or playback temporary file remained after exit;
+- live playback did not create a Continue Watching progress update.
+
+Measured during playback:
+
+```text
+ffplay RSS:          28,440 kB
+ffplay VmSwap:            0 kB
+tailscaled RSS:      37,208 kB
+tailscaled VmSwap:    1,540 kB
+MemAvailable:        31,688 kB
+system swap used:     2,856 kB
+```
+
+The device clock was also found 1,601 seconds slow even though Onion's automatic
+internet-time setting and `/tmp/ntp_synced` marker were active. Onion accepted a
+stale HTTP time API response; direct Google NTP corrected the system and hardware
+clocks. Playback still stalled with the corrected clock until the MPEG-TS bridge
+was deployed, confirming that clock drift was not the HLS playback blocker. No
+OnionOS core file was modified.
+
+## Candidate Channel Audit
+
+A server-side structural audit covered all current account TV catalogs without
+exposing their URLs. Of 46 Greek TV entries, 26 supplied a compatible H.264
+rendition, an unencrypted MPEG-TS media playlist, and valid TS sync bytes. Thirteen
+returned upstream HTTP errors and seven were unsupported or unreachable. The USA
+TV catalog was unavailable. These 25 additional bridge-eligible channels remain
+candidates until each is physically tested; only ERT News is confirmed.

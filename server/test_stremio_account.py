@@ -169,6 +169,41 @@ class StremioAccountBackendTest(unittest.TestCase):
             "https://addon.example/private-config/stream/series/tt123%3A1%3A2.json",
         )
 
+    def test_tv_catalog_sources_require_matching_stream_capability(self):
+        tv_addon = descriptor(name="Greek TV")
+        tv_addon["manifest"].update(
+            {
+                "types": ["tv"],
+                "resources": ["catalog", "stream"],
+                "catalogs": [{"type": "tv", "id": "GreekTV", "name": "Greek TV"}],
+            }
+        )
+        catalog_only = descriptor(name="Catalog only")
+        catalog_only["manifest"].update(
+            {
+                "types": ["tv"],
+                "resources": ["catalog"],
+                "catalogs": [{"type": "tv", "id": "NoStreams"}],
+            }
+        )
+        self.backend._post_json = mock.Mock(
+            return_value={"result": {"addons": [tv_addon, catalog_only]}}
+        )
+        sources = self.backend.catalog_sources("tv")
+        self.assertEqual(len(sources), 1)
+        self.assertEqual(sources[0]["id"], "GreekTV")
+        self.backend._fetch_json = mock.Mock(
+            return_value={"metas": [{"id": "grtv_ERTNews_gr", "name": "ERT News"}]}
+        )
+        metas = self.backend.fetch_catalog(
+            sources[0]["source"], "tv", sources[0]["id"]
+        )
+        self.assertEqual(metas[0]["name"], "ERT News")
+        self.assertEqual(
+            self.backend._fetch_json.call_args.args[0],
+            "https://addon.example/config/catalog/tv/GreekTV.json",
+        )
+
     def test_link_config_writer_does_not_require_account_password(self):
         target = Path(self.temp_dir.name) / "linked" / "stremio_account.json"
         link_stremio_account.write_config(target, "linked-auth-key")

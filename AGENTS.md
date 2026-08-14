@@ -99,9 +99,10 @@ the official temporary browser approval flow and stores only the auth key in the
 ignored gaming-PC file `server/config/stremio_account.json`. Never print, copy,
 commit, or deploy that file. Account addon transports and stream URLs remain
 server-side. P2P, debrid-labeled, external-player, local/private-address, and
-non-HTTP results are rejected. The currently discovered legal ERT News result is
-HLS/H.264 High and is not compatible with the existing opaque progressive-media
-proxy; do not expose its playlist directly or mark Milestone 16 confirmed.
+non-HTTP results are rejected. The legal ERT News account result is physically
+confirmed through the bounded server-side HLS-to-MPEG-TS bridge. Do not expose
+upstream playlists or segment URLs, broaden the bridge beyond unencrypted
+MPEG-TS without tests, or describe the bridge as transcoding.
 
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and
@@ -137,6 +138,13 @@ addon maps that exact episode to a public-domain Internet Archive H.264/AAC
 320x240 derivative. Apps-context playback, audio initialization, Menu exit,
 44-second progress saving, and cleanup are confirmed. Real episode metadata must
 continue to be derived generically from parent series metadata.
+
+Account-backed Live TV is physically confirmed with ERT News. The Apps-context
+flow reached video readiness in four seconds, played smooth 640x360 H.264 High
+video with AAC stereo audio, and exited with Menu after 29 valid watched
+seconds. During playback FFplay used 28,440 kB RSS with no process swap;
+MemAvailable was 31,688 kB. Direct rewritten-HLS playback stalls on the target
+FFplay, so preserve the server-side continuous MPEG-TS handoff.
 
 ## Repository Layout
 
@@ -228,6 +236,9 @@ overwrite it. Environment variables take precedence over app-local config.
 - Keep private upstream URLs server-side. `/api/streams` returns opaque stream
   IDs and `/api/play` creates a PocketStremio play URL.
 - Continue forwarding HTTP Range semantics required by FFplay.
+- Keep HLS playlists and child URLs server-side. The device-facing HLS path must
+  remain a bounded unencrypted MPEG-TS bridge unless a replacement is physically
+  measured.
 - Keep Stremio-specific and source-specific logic on the gaming PC.
 - Prefer the Python standard library until a dependency removes demonstrated
   complexity and has a clear deployment story.

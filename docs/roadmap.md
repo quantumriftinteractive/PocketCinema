@@ -396,25 +396,22 @@ making port `11470` remotely reachable.
 Not part of this milestone: Stremio account authentication or library sync,
 torrents, debrid, transcoding, external subtitle rendering, or a larger UI.
 
-## Next Milestone
-
 ### 16. Stremio Account Addon Discovery
 
-**Status: Next**
+**Status: Confirmed**
 
-The server-side implementation is complete and linked on the current gaming PC.
-It discovered 15 addons without exposing credentials or transport URLs, and
-live probes confirmed that Torrentio RD and AIOStreams results are rejected.
-The only clearly legal direct account result found, ERT News, is HLS with H.264
-High profile and cannot use the current opaque progressive-media proxy. Device
-acceptance therefore remains pending rather than weakening the transport or
-compatibility boundary.
+The linked gaming-PC account exposes 15 normalized addons without credentials or
+transport URLs. Torrentio RD and AIOStreams results remain rejected. The Greek TV
+addon supplies ERT News through HLS; PocketStremio selects its compatible
+640x360 H.264/AAC rendition and converts only the transport from HLS segments to
+a continuous opaque MPEG-TS response. No transcoding or raw upstream URL reaches
+the Miyoo.
 
 Server-mediated account binding is also physically confirmed from the OnionOS
 Apps context: QR scan, browser approval, A refresh, 15-addon status, and B return
 all passed without placing an auth key or approval URL in Miyoo logs. Milestone
-status remains Next because its account-backed media playback criterion is still
-blocked by the available HLS result, not by account onboarding.
+16's account-backed Live TV browsing, playback, audio, smoothness, Menu exit,
+resource use, and cleanup are now also physically confirmed.
 
 Evidence: [Stremio Account Addon Discovery](stremio-account-addons.md)
 
@@ -438,6 +435,29 @@ auth token, private addon URL, or raw stream URL to the Miyoo.
 
 Not part of this milestone: library or watch-history sync, torrent playback,
 debrid integration, transcoding, or storing account credentials on the Miyoo.
+
+## Next Milestone
+
+### 17. Long-Running Live Playback Resilience
+
+**Status: Next**
+
+The first account-backed live session is confirmed for 29 watched seconds. The
+next milestone hardens the bounded MPEG-TS bridge for normal viewing durations
+without adding transcoding or source-specific behavior.
+
+- Run a continuous 30-minute Apps-context playback and sample memory and swap.
+- Confirm playlist refresh, media-sequence rollover, and segment deduplication.
+- Exercise one brief upstream fetch failure and provide a bounded user-facing
+  failure instead of an indefinite black screen.
+- Confirm Menu exit promptly closes the server bridge and leaves no handler or
+  device process behind.
+- Recheck the progressive movie and episode regression paths after bridge
+  hardening.
+
+Acceptance criterion: ERT News plays smoothly with audio for 30 minutes, memory
+remains viable, transient failure behavior is bounded, Menu cleanup is complete,
+and existing movie and episode playback remain unchanged.
 
 ## Deferred Features
 
@@ -464,6 +484,9 @@ acceptance criteria rather than expanding an earlier milestone.
   unmatched or newly added files may not appear until a normal service restart.
 - Direct streams may use codecs, headers, redirects, or seek behavior that the
   current FFplay proxy path does not support.
+- The HLS bridge currently supports only unencrypted MPEG-TS renditions. It
+  rejects encrypted and fragmented-MP4 playlists and remains physically measured
+  only for a 29-second ERT News session.
 - Stream and play-session state remains in memory. Play sessions expire after
   six hours and are bounded to 128 entries; normalized probe results persist for
   seven days in an ignored cache file.

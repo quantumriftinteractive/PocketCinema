@@ -69,7 +69,8 @@ cleanup() {
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
     /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
-    /tmp/pocketstremio-addons.json \
+    /tmp/pocketstremio-addons.json /tmp/pocketstremio-live-tv.json \
+    /tmp/pocketstremio-live-tv.tsv \
     "$HTTP_ERROR_FILE"
 }
 
@@ -390,12 +391,15 @@ home_flow() {
       action="Search"
       log "auto-selected home action=Search"
     else
-      printf 'Search\nContinue Watching\nStremio Account\nExit\n' >/tmp/pocketstremio-home.tsv
+      printf 'Search\nLive TV\nContinue Watching\nStremio Account\nExit\n' >/tmp/pocketstremio-home.tsv
       action=$(select_from_file "PocketStremio" /tmp/pocketstremio-home.tsv)
     fi
     case "$action" in
       Search)
         search_flow
+        ;;
+      "Live TV")
+        live_tv_flow
         ;;
       "Continue Watching")
         continue_watching_flow
@@ -408,6 +412,39 @@ home_flow() {
         ;;
     esac
     [ "$AUTO_FIRST" = "1" ] && return 0
+  done
+}
+
+live_tv_flow() {
+  start_loading "PocketStremio" "Loading live channels..."
+  api_get "/api/live-tv" 45 >/tmp/pocketstremio-live-tv.json
+  live_tv_rc=$?
+  stop_loading
+  if [ "$live_tv_rc" -ne 0 ]; then
+    message "PocketStremio" "Live TV unavailable"
+    return 1
+  fi
+  live_tv_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-live-tv.json)
+  if [ "$live_tv_count" = "0" ]; then
+    live_tv_error=$("$JQ" -r '.failures[0].message // "No live channels available"' /tmp/pocketstremio-live-tv.json)
+    message "PocketStremio" "$live_tv_error"
+    return 0
+  fi
+
+  "$JQ" -r '.items[] | "\(.title) [\(.source)]\t\(.id)\t\(.title)"' /tmp/pocketstremio-live-tv.json >/tmp/pocketstremio-live-tv.tsv
+  while :; do
+    selected=$(select_from_file "Live TV" /tmp/pocketstremio-live-tv.tsv)
+    [ -z "$selected" ] && return 0
+    line=$(grep -F "$selected	" /tmp/pocketstremio-live-tv.tsv | head -n 1)
+    if [ -z "$line" ]; then
+      log "live TV selection did not match selected=$selected"
+      message "PocketStremio" "Selection failed"
+      return 1
+    fi
+    id=$(printf '%s' "$line" | cut -f2)
+    title=$(printf '%s' "$line" | cut -f3)
+    log "selected live channel id=$id title=$title"
+    streams_flow "tv" "$id" "$title" "" 0
   done
 }
 
@@ -833,6 +870,11 @@ streams_flow() {
   stop_loading
   if ! play_url "$play_url_value" "$resume_seconds" "$subtitle_file"; then
     message "PocketStremio" "Playback failed"
+  fi
+
+  if [ "$type" = "tv" ]; then
+    log "live playback ended without progress update"
+    return 0
   fi
 
   new_position=$((resume_seconds + PLAYBACK_ELAPSED))

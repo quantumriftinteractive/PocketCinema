@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
+from server import hls_relay
 from server import link_stremio_account
 from server import open_media_addon
 from server import playback_compatibility
@@ -44,6 +45,48 @@ class RedirectingMediaHandler(BaseHTTPRequestHandler):
             self.send_response(200)
         self.send_header("Content-Type", "video/mp4")
         self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        pass
+
+
+class HlsMediaHandler(BaseHTTPRequestHandler):
+    segment = (b"\x47" + (b"\x00" * 187)) * 3
+
+    def do_GET(self):
+        if self.path == "/master.m3u8":
+            body = b"""#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",DEFAULT=YES,URI=\"/audio.m3u8\"
+#EXT-X-STREAM-INF:BANDWIDTH=1494000,RESOLUTION=640x360,FRAME-RATE=25,CODECS=\"mp4a.40.2,avc1.64001E\",AUDIO=\"audio\"
+/video360.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=5068000,RESOLUTION=1280x720,FRAME-RATE=25,CODECS=\"mp4a.40.2,avc1.64001F\",AUDIO=\"audio\"
+/video720.m3u8
+"""
+            content_type = "application/vnd.apple.mpegurl"
+        elif self.path == "/video360.m3u8":
+            body = b"""#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXTINF:6,
+/segment.ts
+#EXT-X-ENDLIST
+"""
+            content_type = "application/vnd.apple.mpegurl"
+        elif self.path == "/audio.m3u8":
+            body = b"#EXTM3U\n#EXTINF:6,\n/audio.aac\n"
+            content_type = "application/vnd.apple.mpegurl"
+        elif self.path in {"/segment.ts", "/audio.aac", "/key.bin", "/init.mp4"}:
+            body = self.segment
+            content_type = "video/mp2t"
+        else:
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -301,6 +344,27 @@ class PocketStremioServerTest(unittest.TestCase):
         _, status = self.get_json("/api/status")
         self.assertTrue(status["stremio_account"]["authenticated"])
         self.assertEqual(status["stremio_account"]["stream_addons"], 1)
+
+    def test_live_tv_catalog_is_account_backed_and_opaque(self):
+        private_source = {
+            "name": "Greek TV",
+            "transport_url": "https://private-addon.example/manifest.json",
+        }
+        self.server.stremio_account.catalog_sources = mock.Mock(
+            return_value=[
+                {"source": private_source, "id": "GreekTV", "name": "Greek TV"}
+            ]
+        )
+        self.server.stremio_account.fetch_catalog = mock.Mock(
+            return_value=[
+                {"id": "grtv_ERTNews_gr", "type": "tv", "name": "ERT News"}
+            ]
+        )
+        _, listing = self.get_json("/api/live-tv")
+        self.assertEqual(listing["count"], 1)
+        self.assertEqual(listing["items"][0]["title"], "ERT News")
+        self.assertEqual(listing["items"][0]["type"], "tv")
+        self.assertNotIn("private-addon", json.dumps(listing))
 
     def test_status_reports_bounded_stremio_service_diagnostics(self):
         backend = stremio_service.StremioServiceBackend(
@@ -716,6 +780,80 @@ class PocketStremioServerTest(unittest.TestCase):
             upstream.shutdown()
             upstream.server_close()
             upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_selects_compatible_variant_and_streams_mpegts(self):
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), HlsMediaHandler)
+        upstream_thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+        upstream_thread.start()
+        upstream_url = f"http://127.0.0.1:{upstream.server_address[1]}/master.m3u8"
+        self.server.ffprobe_path = "test-ffprobe"
+        self.server.stream_cache["hls-test"] = {
+            "id": "hls-test",
+            "name": "HLS test",
+            "url": upstream_url,
+        }
+        probe_data = {
+            "format": {"format_name": "hls", "bit_rate": "1494000"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "h264",
+                    "profile": "High",
+                    "width": 640,
+                    "height": 360,
+                    "avg_frame_rate": "25/1",
+                    "r_frame_rate": "90000/1",
+                },
+                {"codec_type": "audio", "codec_name": "aac", "channels": 2},
+            ],
+        }
+        try:
+            with mock.patch.object(
+                playback_compatibility, "probe_media", return_value=probe_data
+            ), mock.patch.object(
+                stremio_account, "validate_direct_stream_url", return_value=True
+            ):
+                _, play = self.post_json("/api/play", {"stream_id": "hls-test"})
+                self.assertEqual(play["compatibility"]["status"], "candidate")
+                self.assertEqual(play["compatibility"]["frame_rate"], 25.0)
+                with urllib.request.urlopen(play["url"], timeout=5) as response:
+                    self.assertEqual(response.headers["Content-Type"], "video/mp2t")
+                    media = response.read()
+                self.assertEqual(media, HlsMediaHandler.segment)
+                public_json = json.dumps(play)
+                self.assertNotIn(upstream_url, public_json)
+        finally:
+            upstream.shutdown()
+            upstream.server_close()
+            upstream_thread.join(timeout=5)
+
+    def test_hls_bridge_rejects_encrypted_and_fragmented_playlists(self):
+        encrypted = b"""#EXTM3U
+#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\"
+#EXTINF:6,
+segment.ts
+"""
+        fragmented = b"""#EXTM3U
+#EXT-X-MAP:URI=\"init.mp4\"
+#EXTINF:6,
+segment.m4s
+"""
+        byte_range = b"""#EXTM3U
+#EXT-X-BYTERANGE:564@0
+#EXTINF:6,
+segments.ts
+"""
+        for payload, message in (
+            (encrypted, "Encrypted HLS"),
+            (fragmented, "Fragmented MP4"),
+            (byte_range, "Byte-range HLS"),
+        ):
+            with self.assertRaisesRegex(hls_relay.HlsRelayError, message):
+                hls_relay.parse_media_playlist(
+                    payload,
+                    "https://media.example/live/index.m3u8",
+                    lambda value: value.startswith("https://media.example/"),
+                )
 
     def test_preflight_classifies_confirmed_and_rejects_unsupported_media(self):
         confirmed_probe = {
