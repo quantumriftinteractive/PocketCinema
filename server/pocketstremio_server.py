@@ -4,6 +4,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import re
 import secrets
 import subprocess
 import threading
@@ -33,7 +34,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.16-bounded-transcode"
+SERVER_VERSION = "0.16.1-subtitle-sync"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -349,6 +350,26 @@ def account_stream_quality_rank(stream):
         if marker in text:
             return 1, rank
     return 1, 5
+
+
+def subtitle_match_rank(raw, stream):
+    subtitle_text = safe_addon_text(
+        raw.get("title") or raw.get("name"), "", 300
+    ).lower()
+    stream_text = str(stream.get("subtitle_match_text") or "").lower()
+    subtitle_tokens = set(re.findall(r"[a-z0-9]+", subtitle_text))
+    stream_tokens = set(re.findall(r"[a-z0-9]+", stream_text))
+    overlap = len(subtitle_tokens & stream_tokens)
+    resolution_tokens = {"360p", "480p", "576p", "720p", "1080p", "2160p", "4k"}
+    subtitle_resolutions = subtitle_tokens & resolution_tokens
+    stream_resolutions = stream_tokens & resolution_tokens
+    resolution_score = 0
+    if subtitle_resolutions and stream_resolutions:
+        resolution_score = 4 if subtitle_resolutions & stream_resolutions else -4
+    video_hash = str(stream.get("video_hash") or "").lower()
+    hash_score = 100 if video_hash and str(raw.get("moviehash") or "").lower() == video_hash else 0
+    trusted_score = 2 if raw.get("from_trusted") is True else 0
+    return -(hash_score + resolution_score + overlap + trusted_score)
 
 
 def manifest_supports(manifest, resource, item_type):
@@ -1166,6 +1187,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "url": stream_url,
                         "video_hash": behavior_hints.get("videoHash") or "",
                         "video_size": behavior_hints.get("videoSize") or 0,
+                        "video_filename": safe_addon_text(
+                            behavior_hints.get("filename"), "", 240
+                        ),
+                        "subtitle_match_text": safe_addon_text(
+                            raw.get("title") or behavior_hints.get("filename"),
+                            "",
+                            300,
+                        ),
                         "duration_seconds": nonnegative_int(raw.get("durationSeconds")),
                     }
                 )
@@ -1284,6 +1313,17 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         streams.sort(key=account_stream_quality_rank)
         for stream in streams:
+            probe_target = stream.get("local_path") or stream.get("url")
+            cached_compatibility = (
+                self.server.probe_cache.get(probe_target) if probe_target else None
+            )
+            if cached_compatibility:
+                stream["compatibility"] = cached_compatibility
+                if cached_compatibility.get("status") == "unsupported":
+                    stream["playable"] = False
+            stream["playback_mode"] = transcoding.playback_mode(
+                stream.get("compatibility") or {}
+            )
             self.server.stream_cache[stream["id"]] = stream
 
         public_items = [
@@ -1297,6 +1337,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "source",
                     "video_hash",
                     "video_size",
+                    "video_filename",
+                    "subtitle_match_text",
                 }
             }
             for stream in streams
@@ -1380,13 +1422,26 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         except stremio_account.StremioAccountError:
             account_sources = []
         seen_account_urls = {subtitle["url"] for subtitle in subtitles}
+        seen_account_names = set()
         for source in account_sources:
+            subtitle_extra = {
+                "videoHash": stream.get("video_hash") or "",
+                "videoSize": stream.get("video_size") or 0,
+                "filename": stream.get("video_filename") or "",
+            }
             try:
                 raw_subtitles = self.server.stremio_account.fetch_subtitles(
-                    source, item_type, item_id
+                    source, item_type, item_id, subtitle_extra
                 )
             except stremio_account.StremioAccountError:
                 continue
+            raw_subtitles.sort(
+                key=lambda raw: (
+                    subtitle_match_rank(raw, stream)
+                    if isinstance(raw, dict)
+                    else 999
+                )
+            )
             for raw in raw_subtitles:
                 if not isinstance(raw, dict):
                     continue
@@ -1394,12 +1449,18 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 if lang.lower() not in {"en", "eng", "english"}:
                     continue
                 subtitle_url = raw.get("url")
+                subtitle_name = safe_addon_text(
+                    raw.get("title") or raw.get("name"), "English"
+                )
+                normalized_name = subtitle_name.casefold()
                 if (
                     not stremio_account.validate_direct_stream_url(subtitle_url)
                     or subtitle_url in seen_account_urls
+                    or normalized_name in seen_account_names
                 ):
                     continue
                 seen_account_urls.add(subtitle_url)
+                seen_account_names.add(normalized_name)
                 subtitle_id = (
                     f"u{source['key']}-sub-"
                     f"{hashlib.sha1(subtitle_url.encode()).hexdigest()[:10]}"
@@ -1407,9 +1468,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 subtitles.append(
                     {
                         "id": subtitle_id,
-                        "name": safe_addon_text(
-                            raw.get("title") or raw.get("name"), "English"
-                        ),
+                        "name": subtitle_name,
                         "lang": "eng",
                         "source": f"Stremio account: {source['name']}",
                         "url": subtitle_url,

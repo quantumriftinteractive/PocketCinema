@@ -521,6 +521,24 @@ tested 720p and 1080p sources exceed reliable direct-play behavior. Add one
 bounded gaming-PC FFmpeg path for English subtitle burn-in and conditional
 downscaling while keeping the Miyoo client and account credentials unchanged.
 
+The first deployed build rendered subtitles but exposed a reproducible resume
+timestamp defect and unsupported seek behavior on its continuous MPEG-TS
+output. The timestamp correction and rate-limited conversion are implemented;
+a focused Apps-context regression confirmed pause tracking and cleanup but the
+generic first subtitle still mismatched the selected release. Subtitle results
+now use available stream hash/size/filename hints, trusted-source and release
+matching, and label deduplication. The second manually selected GGWP subtitle
+was physically confirmed synchronized for *Invincible* S1E4, and two resumed
+runs confirmed correct progress accumulation. Stream browsing labels retained
+ffprobe results as `DIRECT`, `CONVERT`, or `CHECK`, and hides cached unsupported
+results without probing every candidate before showing the list.
+
+The current MPEG-TS path burns one subtitle into the video and therefore cannot
+switch it inside FFplay. Both endpoints advertise the capabilities needed for a
+bounded Matroska experiment with multiple embedded text tracks; Apps-context
+startup, controller cycling, synchronization, and memory remain unconfirmed.
+Keep burn-in as the fallback until that experiment passes.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English
@@ -528,15 +546,52 @@ subtitles, one stuttering 720p episode becomes smooth at a bounded output
 profile, audio remains synchronized, resource use is measured, and Menu exit
 cleans up every server and device process without exposing upstream tokens.
 
+### 21. Device Settings and Playback Preferences
+
+**Status: Planned**
+
+- Show concise PocketStremio server reachability on the main screen.
+- Edit the server host and port from an app-local Settings screen while keeping
+  `/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf` authoritative.
+- Store ordered audio-language and subtitle-language preferences with an
+  explicit fallback choice; never infer language solely from a filename.
+- Apply preferences to server-normalized tracks and subtitle results without
+  exposing addon transports or media URLs.
+- Add an explicit Remove action for individual Continue Watching entries.
+- Keep compatibility modes visible and allow a bounded preference between
+  direct, converted, and uninspected candidates.
+
+Acceptance criterion: controller-only settings persist across app restarts, a
+Spanish-first source can prefer an available English audio track or clearly
+report that none exists, subtitle priorities are deterministic, and a Continue
+Watching item can be removed without marking unrelated media complete.
+
+### 22. Offline Downloads
+
+**Status: Planned**
+
+Treat downloading as a separate storage lifecycle rather than another Play
+action bolted onto FFplay:
+
+- download only a server-authorized opaque stream or bounded converted output;
+- check free SD-card space before starting and keep partial files app-local;
+- expose progress, cancellation, retry/resume where the source supports Range,
+  playback, and deletion;
+- preserve tokens and addon URLs on the gaming PC;
+- never make PocketStremio responsible for torrent or P2P ingestion.
+
+Acceptance criterion: one compatible legal test video can be downloaded,
+played offline after networking is disabled, and deleted from the app without
+leaving a partial file or modifying OnionOS directories.
+
 ## Deferred Features
 
 These features should begin only after real stream playback and compatibility
 behavior are stable:
 
-- server-side transcoding or remuxing;
 - audio-track selection;
-- external subtitle rendering through server-side remuxing/burn-in or another
-  measured compatible player;
+- arbitrary seeking within a live converted response until session-restart or
+  seekable-output behavior is designed and measured;
 - Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites, history, and settings UI;

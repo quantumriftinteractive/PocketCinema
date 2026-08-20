@@ -197,6 +197,22 @@ class StremioAccountBackendTest(unittest.TestCase):
             "https://addon.example/config/subtitles/series/tt123%3A1%3A2.json",
         )
 
+        self.backend.fetch_subtitles(
+            sources[0],
+            "series",
+            "tt123:1:2",
+            {
+                "videoHash": "abc123",
+                "videoSize": 123456,
+                "filename": "Episode 1.mkv",
+            },
+        )
+        self.assertEqual(
+            self.backend._fetch_json.call_args.args[0],
+            "https://addon.example/config/subtitles/series/tt123%3A1%3A2/"
+            "videoHash=abc123&videoSize=123456&filename=Episode+1.mkv.json",
+        )
+
     def test_tv_catalog_sources_require_matching_stream_capability(self):
         tv_addon = descriptor(name="Greek TV")
         tv_addon["manifest"].update(

@@ -3,8 +3,10 @@
 ## Status
 
 Implemented on the gaming PC and deployed to the Miyoo client. Automated and
-desktop-side account-stream checks pass. Apps-context playback confirmation is
-still pending.
+desktop-side account-stream checks pass. Apps-context subtitle rendering,
+resume clock correction, pause accounting, and one synchronized episode track
+are physically confirmed. Multi-track switching and the remaining milestone
+acceptance tests are still pending.
 
 ## Device Evidence
 
@@ -50,6 +52,11 @@ when ffprobe reports video above 640x360, above 30 fps, or a 10-bit profile.
 Compatible media still uses the existing byte-range direct-play path when no
 subtitle is selected.
 
+The stream selector uses retained ffprobe evidence without inspecting every
+candidate up front. Known-compatible entries display `DIRECT`, entries which
+require bounded downscaling display `CONVERT`, and uninspected candidates
+display `CHECK`. A cached unsupported result is no longer selectable.
+
 The public API accepts only the selected opaque stream and subtitle IDs.
 `/api/play` creates an inner opaque source session and gives only that
 PocketStremio URL to FFmpeg. It then returns a separate opaque MPEG-TS play
@@ -79,6 +86,70 @@ receives a bounded `transcode_busy` response. FFmpeg is terminated on client
 disconnect, temporary subtitles are deleted in `finally`, stderr retention is
 bounded to 32 KiB, and URL-bearing FFmpeg diagnostics are omitted from logs.
 
+## Subtitle Clock Correction
+
+Physical use proved that the initial subtitle build did not remain synchronized
+with resumed playback. A deterministic desktop reproduction established the
+cause: input `-ss` reset video filter timestamps to zero, so a playback resumed
+at 10 seconds rendered the subtitle cue for 0 seconds instead of the cue for 10
+seconds.
+
+The corrected filter temporarily offsets video PTS by the server-applied resume
+position before subtitle rendering, then resets output PTS for FFplay. FFmpeg
+also reads the source at media rate with `-re`. This prevents file conversion
+from racing far ahead of a paused device and accumulating avoidable converted
+data in player and socket buffers.
+
+The continuous MPEG-TS response is not seekable. FFplay D-pad seeks therefore
+cannot be treated as synchronized or included in progress accounting on a
+converted session. Correct arbitrary seek support requires the client to stop
+the current conversion and create a new play session at a known timestamp; it
+must not be approximated by changing subtitle offsets independently.
+
+A subsequent Apps-context regression resumed *Invincible* S1E4 at 32 seconds,
+selected the known 720p Torrentio result, rendered English subtitles, measured
+a 31-second A-button pause, and exited cleanly with Menu. The selected subtitle
+was visibly still out of sync. Inspection showed that the stream was a 720p WEB
+x264 season-pack encode while the previous first subtitle was an untrusted
+`ION10` WEBRip result. The stream supplied a filename but no OpenSubtitles video
+hash or size, so a guaranteed hash match was unavailable.
+
+PocketStremio now sends the standard server-side filename hint to account
+subtitle addons, ranks results by an available hash, release-token and
+resolution similarity, and trusted-source indication, and removes duplicate
+display names. For this episode, the list changed from 20 ambiguous rows with
+`ION10` first to six distinct rows with the trusted 720p AMZN WEB-DL/NTb result
+first. The first ranked result was still noticeably mismatched. The second
+manual choice, `invincible.2021.s01e04.1080p.web.h264-ggwp`, was physically
+confirmed synchronized. Ranking substantially reduces the search space, but it
+cannot guarantee a match when the media result supplies no hash or size.
+
+The same run exposed a shell-variable collision in converted resume progress:
+FFplay correctly received a zero seek because FFmpeg had already applied the
+32-second offset, but that zero replaced the saved offset before progress was
+calculated. The player seek variable is now separate; a resumed 32-second item
+with 80 valid playback seconds will save 112 seconds rather than 80.
+
+Two subsequent Apps-context runs confirmed the correction. Fourteen valid
+seconds advanced progress from 80 to 94 seconds, and the synchronized GGWP run
+advanced it from 94 to 130 seconds after 36 valid seconds. Both runs exited
+cleanly with Menu.
+
+## In-Player Subtitle Switching Feasibility
+
+Burned-in subtitles cannot be changed by FFplay because the text is already
+part of each video frame. A measured candidate for instant switching is to
+multiplex several text subtitle tracks into the converted Matroska response.
+The deployed OnionOS FFplay advertises SubRip, ASS/SSA, WebVTT, and DVB subtitle
+decoders and documents `t` as its subtitle-channel cycle key. The gaming-PC
+FFmpeg advertises the Matroska muxer and compatible text subtitle encoders.
+
+This is capability evidence, not an Apps-context playback confirmation. A
+deterministic two-track Matroska stream must first prove startup, audio/video
+synchronization, controller mapping for `t`, pause/resume behavior, cleanup,
+and bounded memory. The working single-subtitle MPEG-TS burn-in path remains the
+fallback until that experiment passes.
+
 ## Confirmed Desktop Results
 
 The server test suite contains 47 passing tests. Dedicated conversion tests
@@ -102,12 +173,36 @@ Closing the smoke-test client returned the active conversion count to zero and
 left zero temporary subtitle files. The account subtitle response contained 20
 English choices and no HTTP URL.
 
+The first full Apps-context converted run sampled 30 intervals and measured:
+
+```text
+gaming-PC FFmpeg RSS:  14,044-101,624 kB
+Miyoo FFplay RSS:       6,824-26,948 kB
+Miyoo FFplay swap:      0 kB
+tailscaled RSS:        29,836-37,572 kB
+tailscaled swap:       up to 556 kB
+minimum MemFree:        2,016 kB
+minimum MemAvailable:  37,876 kB
+minimum SwapFree:     129,096 kB
+```
+
+The device reached video readiness in 10 seconds, measured 31 paused seconds
+and 80 valid unpaused seconds, and left no FFplay process after Menu exit.
+
 ## Pending Device Confirmation
 
-- visible burned-in English text;
+- an account-addon movie has a synchronized English subtitle match;
+- a deterministic Matroska response can carry switchable subtitle tracks on
+  the deployed FFplay build;
 - smooth playback of the previously stuttering 720p *Invincible* episode;
 - audible synchronized audio and Menu-button cleanup;
-- gaming-PC and Miyoo resource measurements during converted playback.
+- controller mapping for FFplay's subtitle-channel cycle command.
+
+## Protocol References
+
+- [Stremio subtitle request parameters](https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineSubtitlesHandler.md)
+- [Stremio stream behavior hints](https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/stream.md)
+- [FFplay options and interactive commands](https://ffmpeg.org/ffplay.html)
 
 ## Acceptance Criteria
 

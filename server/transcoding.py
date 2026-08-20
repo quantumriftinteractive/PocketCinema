@@ -27,6 +27,17 @@ def needs_downscale(compatibility):
     )
 
 
+def playback_mode(compatibility):
+    status = str(compatibility.get("status") or "candidate")
+    if status == "unsupported":
+        return "blocked"
+    if needs_downscale(compatibility):
+        return "convert"
+    if status == "confirmed":
+        return "direct"
+    return "check"
+
+
 def subtitle_suffix(payload):
     return ".vtt" if payload.lstrip().startswith(b"WEBVTT") else ".srt"
 
@@ -46,7 +57,7 @@ def build_command(
     ]
     if start_seconds > 0:
         command.extend(["-ss", str(int(start_seconds))])
-    command.extend(["-i", input_url])
+    command.extend(["-re", "-i", input_url])
 
     filters = [
         "scale=640:360:force_original_aspect_ratio=decrease",
@@ -54,7 +65,11 @@ def build_command(
         "fps=30",
     ]
     if subtitle_filename:
+        if start_seconds > 0:
+            filters.append(f"setpts=PTS+{int(start_seconds)}/TB")
         filters.append(f"subtitles={subtitle_filename}")
+        if start_seconds > 0:
+            filters.append("setpts=PTS-STARTPTS")
     command.extend(
         [
             "-map",

@@ -94,7 +94,7 @@ def has_unsupported_stream_shape(raw):
     return any(raw.get(key) for key in ("infoHash", "externalUrl", "ytId"))
 
 
-def resource_url(transport_url, resource, item_type, item_id):
+def resource_url(transport_url, resource, item_type, item_id, extra=None):
     parsed = urllib.parse.urlparse(transport_url)
     base_path = parsed.path[: -len("/manifest.json")]
     path = (
@@ -105,8 +105,16 @@ def resource_url(transport_url, resource, item_type, item_id):
         + urllib.parse.quote(item_type, safe="")
         + "/"
         + urllib.parse.quote(item_id, safe="")
-        + ".json"
     )
+    if extra:
+        values = {
+            str(key): str(value)
+            for key, value in extra.items()
+            if value not in (None, "", 0)
+        }
+        if values:
+            path += "/" + urllib.parse.urlencode(values)
+    path += ".json"
     return urllib.parse.urlunparse(
         (parsed.scheme, parsed.netloc, path, "", "", "")
     )
@@ -382,10 +390,14 @@ class StremioAccountBackend:
             raise StremioAccountError(f"{source['name']} returned an invalid response")
         return payload.get("streams") or []
 
-    def fetch_subtitles(self, source, item_type, item_id):
+    def fetch_subtitles(self, source, item_type, item_id, extra=None):
         try:
             url = resource_url(
-                source["transport_url"], "subtitles", item_type, item_id
+                source["transport_url"],
+                "subtitles",
+                item_type,
+                item_id,
+                extra,
             )
             payload = self._fetch_json(url)
         except Exception as exc:

@@ -126,6 +126,13 @@ conditional 640x360 downscaling. Feed FFmpeg through an opaque loopback relay so
 account media tokens never appear in Miyoo APIs, logs, or FFmpeg process
 arguments. A 720p *Invincible* episode is physically watchable but drops frames
 and stutters substantially; do not classify 720p as direct-play compatible.
+The converted MPEG-TS path physically rendered English subtitles, and the
+manually selected GGWP subtitle for *Invincible* S1E4 was confirmed
+synchronized. Resume progress advanced from 80 to 94 and then 94 to 130 seconds
+by the measured valid playback intervals. Burned-in subtitles cannot switch in
+FFplay. Multi-track Matroska is a capability-checked but physically unconfirmed
+candidate; preserve the working burn-in fallback until its Apps-context test
+passes.
 
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and

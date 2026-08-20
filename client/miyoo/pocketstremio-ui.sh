@@ -230,7 +230,7 @@ run_ffplay() (
 
 play_url() {
   url="$1"
-  resume_seconds="${2:-0}"
+  player_seek_seconds="${2:-0}"
   subtitle_file="${3:-}"
   PLAYBACK_RC=1
   PLAYBACK_ELAPSED=0
@@ -243,13 +243,13 @@ play_url() {
   pause_result=/tmp/pocketstremio-paused-seconds
   PAUSE_MONITOR_PID=""
   rm -f "$ffplay_log" "$pause_result"
-  log "ffplay launch url=$url resume_seconds=$resume_seconds subtitles=${subtitle_file:-none}"
+  log "ffplay launch url=$url resume_seconds=$player_seek_seconds subtitles=${subtitle_file:-none}"
   touch /tmp/stay_awake
   cd "$SYS_DIR" || return 1
   playback_started=$(date +%s)
   video_filter="hflip,vflip"
   [ -n "$subtitle_file" ] && video_filter="subtitles=$subtitle_file,hflip,vflip"
-  run_ffplay "$video_filter" "$url" "$resume_seconds" >"$ffplay_log" 2>&1 &
+  run_ffplay "$video_filter" "$url" "$player_seek_seconds" >"$ffplay_log" 2>&1 &
   ffplay_pid=$!
   while kill -0 "$ffplay_pid" 2>/dev/null; do
     if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
@@ -804,7 +804,7 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.compatibility.status == "confirmed" then "[OK] " else "[TEST] " end)\(.value.name)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
+  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT] " else "[CHECK] " end)\(.value.name)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
     log "no playable streams message=$stream_error"

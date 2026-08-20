@@ -842,12 +842,46 @@ class PocketStremioServerTest(unittest.TestCase):
                 {"width": 640, "height": 360, "frame_rate": 30}
             )
         )
+        self.assertEqual(
+            transcoding.playback_mode({"status": "confirmed"}), "direct"
+        )
+        self.assertEqual(
+            transcoding.playback_mode(
+                {"status": "candidate", "width": 1280, "height": 720}
+            ),
+            "convert",
+        )
+        self.assertEqual(
+            transcoding.playback_mode({"status": "candidate"}), "check"
+        )
+        self.assertEqual(
+            transcoding.playback_mode({"status": "unsupported"}), "blocked"
+        )
+        stream = {
+            "subtitle_match_text": "Show S01E04 720p WEB x264 season pack",
+            "video_hash": "",
+        }
+        trusted_720p = {
+            "title": "Show.S01E04.720p.WEB-DL.H264-NTb",
+            "from_trusted": True,
+        }
+        untrusted_1080p = {
+            "title": "Show.S01E04.1080p.WEBRip.x264-ION10",
+            "from_trusted": False,
+        }
+        self.assertLess(
+            pocket.subtitle_match_rank(trusted_720p, stream),
+            pocket.subtitle_match_rank(untrusted_1080p, stream),
+        )
         command = transcoding.build_command(
             "ffmpeg", "http://server/play/opaque", "subtitle.vtt", 20
         )
         serialized = " ".join(command)
+        self.assertIn("-re", command)
         self.assertIn("scale=640:360", serialized)
         self.assertIn("subtitles=subtitle.vtt", serialized)
+        self.assertIn("setpts=PTS+20/TB", serialized)
+        self.assertIn("setpts=PTS-STARTPTS", serialized)
         self.assertIn("libx264", command)
         self.assertIn("mpegts", command)
         self.assertNotIn("https://upstream.example", serialized)
