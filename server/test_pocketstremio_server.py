@@ -821,15 +821,21 @@ class PocketStremioServerTest(unittest.TestCase):
                 pass
 
         with mock.patch.object(
-            pocket.subprocess, "Popen", return_value=FakeProcess()
+            pocket.subprocess, "Popen", side_effect=lambda *args, **kwargs: FakeProcess()
         ) as popen:
             with urllib.request.urlopen(play["url"], timeout=5) as response:
                 self.assertEqual(response.headers["Content-Type"], "video/mp2t")
                 self.assertEqual(response.read(), transport)
 
+            with urllib.request.urlopen(
+                play["url"] + "?start_seconds=34", timeout=5
+            ) as response:
+                self.assertEqual(response.headers["Content-Type"], "video/mp2t")
+                self.assertEqual(response.read(), transport)
+
         command = popen.call_args.args[0]
         self.assertIn("-ss", command)
-        self.assertIn("12", command)
+        self.assertIn("34", command)
         self.assertTrue(any("/play/" in value for value in command))
         self.assertNotIn(upstream_url, command)
         self.assertFalse(any("token=private" in value for value in command))

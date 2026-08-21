@@ -730,7 +730,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
 
         if len(parts) == 2 and parts[0] == "play":
-            self.handle_play_session(parts[1])
+            self.handle_play_session(parts[1], parsed)
             return
 
         if len(parts) == 2 and parts[0] == "subtitle":
@@ -1579,7 +1579,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         ]
         self.write_json({"count": len(public_items), "items": public_items})
 
-    def handle_play_session(self, session_id):
+    def handle_play_session(self, session_id, parsed=None):
         session, expired = self.server.play_sessions.get(session_id)
         if not session:
             if expired:
@@ -1590,6 +1590,18 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             else:
                 self.write_json({"error": "session_not_found"}, status=404)
             return
+        if parsed is not None and session.get("transcode"):
+            requested_start = urllib.parse.parse_qs(parsed.query).get(
+                "start_seconds", [None]
+            )[0]
+            if requested_start is not None:
+                try:
+                    requested_start = max(0, min(int(requested_start), 24 * 60 * 60))
+                except (TypeError, ValueError):
+                    requested_start = None
+                if requested_start is not None:
+                    session = dict(session)
+                    session["start_seconds"] = requested_start
         if session.get("transcode"):
             self.stream_transcode(session)
         elif session.get("local_path"):
@@ -1636,7 +1648,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         return path
 
     def stream_transcode(self, session):
-        if not self.server.transcode_job_lock.acquire(blocking=False):
+        # A converted seek/aspect restart closes the previous HTTP response
+        # immediately, but its FFmpeg cleanup runs in the request thread. Wait
+        # briefly for that single bounded job to release before rejecting a
+        # legitimate replacement request.
+        if not self.server.transcode_job_lock.acquire(timeout=12):
             self.write_json(
                 {
                     "error": "transcode_busy",

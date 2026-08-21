@@ -190,6 +190,18 @@ experimental cleanup result; startup failures remain rejected. The wrapper
 remains experimental and disabled after the test; the normal MPEG-TS burn-in
 path remains unchanged.
 
+Latest visual-isolation checkpoint: production MPEG-TS burn-in passed without
+the artifact, while the candidate displayed it even with no subtitle selected.
+The deployed candidate matched the local rebuild byte-for-byte (SHA-256
+`9bb083c6e7da7353faac79993a7ab3454c6be80833db6417e6ee4acac3849fbe`). Clearing
+the candidate SDL surface after `SDL_SetVideoMode` removed stale top-area
+PocketStremio pixels but not the bottom artifact. The remaining variables are
+candidate SDL/runtime selection, display geometry, and FFmpeg/SDL presentation;
+the issue is not yet attributed to libass. The candidate currently uses an
+app-local SDL library while Onion FFplay uses Miyoo's system SDL. Milestone 20
+remains open; the next experiment will force Miyoo SDL and cross off differences
+one at a time.
+
 ## Confirmed Desktop Results
 
 The server test suite contains 48 passing tests. Dedicated conversion tests

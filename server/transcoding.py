@@ -66,7 +66,6 @@ def build_command(
 
     filters = [
         "scale=640:360:force_original_aspect_ratio=decrease",
-        "pad=640:360:(ow-iw)/2:(oh-ih)/2:black",
         "fps=30",
     ]
     if subtitle_filename:
@@ -145,7 +144,6 @@ def build_matroska_command(
 
     filters = [
         "scale=640:360:force_original_aspect_ratio=decrease",
-        "pad=640:360:(ow-iw)/2:(oh-ih)/2:black",
         "fps=30",
     ]
     command.extend(["-map", "0:v:0", "-map", "0:a:0?"])

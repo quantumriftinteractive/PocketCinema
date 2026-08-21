@@ -17,6 +17,7 @@ KBINPUT="$SYS_DIR/bin/kbinput"
 SHELLECT="$SYS_DIR/script/shellect.sh"
 SDL_SELECTOR="$BASE_DIR/bin/pocketstremio-selector"
 PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
+PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
@@ -32,6 +33,8 @@ FIELD_TEST_SUBTITLE_FILE=""
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
 PAUSE_MONITOR_PID=""
+PLAYBACK_CONTROL_PID=""
+PLAYBACK_CONTROL_FILE=/tmp/pocketstremio-playback-control
 READY_ERROR=""
 CONFIG_ERROR=""
 
@@ -79,6 +82,8 @@ cleanup() {
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
     "$FIELD_TEST_SUBTITLE_FILE" \
     /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
+    "$PLAYBACK_CONTROL_FILE" \
+    /tmp/pocketstremio-aspect-request \
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
     /tmp/pocketstremio-addons.json /tmp/pocketstremio-live-tv.json \
     /tmp/pocketstremio-live-tv.tsv \
@@ -224,6 +229,7 @@ run_ffplay() (
   video_filter="$1"
   url="$2"
   resume_seconds="$3"
+  aspect_mode="${4:-0}"
   playback_preload="$PADSP"
   if [ "$FIELD_TEST" = "1" ]; then
     export LD_LIBRARY_PATH="$FIELD_TEST_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -232,6 +238,7 @@ run_ffplay() (
     export FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
     export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
     export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_LIB_DIR/fonts/DejaVuSans.ttf"
+    export POCKETSTREMIO_ASPECT_MODE="$aspect_mode"
     if [ -n "$FIELD_TEST_SUBTITLE_FILE" ]; then
       export POCKETSTREMIO_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
     else
@@ -259,6 +266,9 @@ play_url() {
   url="$1"
   player_seek_seconds="${2:-0}"
   subtitle_file="${3:-}"
+  restart_seek_enabled="${4:-0}"
+  subtitle_id="${5:-}"
+  absolute_start_seconds="${6:-$player_seek_seconds}"
   PLAYBACK_RC=1
   PLAYBACK_ELAPSED=0
   PLAYBACK_STARTUP=0
@@ -269,33 +279,85 @@ play_url() {
   ffplay_log=/tmp/pocketstremio-ffplay.log
   pause_result=/tmp/pocketstremio-paused-seconds
   PAUSE_MONITOR_PID=""
-  rm -f "$ffplay_log" "$pause_result"
+  PLAYBACK_CONTROL_PID=""
+  rm -f "$ffplay_log" "$pause_result" "$PLAYBACK_CONTROL_FILE"
   log "ffplay launch url=$url resume_seconds=$player_seek_seconds subtitles=${subtitle_file:-none}"
   touch /tmp/stay_awake
   cd "$SYS_DIR" || return 1
   playback_started=$(date +%s)
   video_filter="hflip,vflip"
   [ -n "$subtitle_file" ] && video_filter="subtitles=$subtitle_file,hflip,vflip"
-  run_ffplay "$video_filter" "$url" "$player_seek_seconds" >"$ffplay_log" 2>&1 &
-  ffplay_pid=$!
-  while kill -0 "$ffplay_pid" 2>/dev/null; do
-    if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
-      playback_visible_started=$(date +%s)
-      PLAYBACK_STARTUP=$((playback_visible_started - playback_started))
-      log "ffplay video ready startup_seconds=$PLAYBACK_STARTUP"
-      if [ -x "$PAUSE_MONITOR" ]; then
-        "$PAUSE_MONITOR" "$pause_result" >>"$LOG_FILE" 2>&1 &
-        PAUSE_MONITOR_PID=$!
-        log "pause monitor start pid=$PAUSE_MONITOR_PID"
-      else
-        log "pause monitor unavailable"
+  seek_target="$absolute_start_seconds"
+  current_url="$url"
+  first_ready=1
+  while :; do
+    rm -f "$PLAYBACK_CONTROL_FILE"
+    run_ffplay "$video_filter" "$current_url" 0 "$aspect_mode" >"$ffplay_log" 2>&1 &
+    ffplay_pid=$!
+    while kill -0 "$ffplay_pid" 2>/dev/null; do
+      if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
+        if [ "$first_ready" = "1" ]; then
+          playback_visible_started=$(date +%s)
+          PLAYBACK_STARTUP=$((playback_visible_started - playback_started))
+          log "ffplay video ready startup_seconds=$PLAYBACK_STARTUP"
+          if [ -x "$PAUSE_MONITOR" ]; then
+            "$PAUSE_MONITOR" "$pause_result" >>"$LOG_FILE" 2>&1 &
+            PAUSE_MONITOR_PID=$!
+            log "pause monitor start pid=$PAUSE_MONITOR_PID"
+          else
+            log "pause monitor unavailable"
+          fi
+          if [ "$restart_seek_enabled" = "1" ] \
+            || [ "$restart_seek_enabled" = "true" ] \
+            && [ -x "$PLAYBACK_CONTROL" ]; then
+            "$PLAYBACK_CONTROL" "$PLAYBACK_CONTROL_FILE" "$BASE_DIR/logs/playback-input.log" >>"$LOG_FILE" 2>&1 &
+            PLAYBACK_CONTROL_PID=$!
+            log "playback control start pid=$PLAYBACK_CONTROL_PID"
+          fi
+          first_ready=0
+        fi
+        break
       fi
-      break
+      sleep 1
+    done
+    restart_requested=0
+    while kill -0 "$ffplay_pid" 2>/dev/null; do
+      if [ "$restart_seek_enabled" = "1" ] || [ "$restart_seek_enabled" = "true" ]; then
+        seek_delta=$(cat "$PLAYBACK_CONTROL_FILE" 2>/dev/null)
+        rm -f "$PLAYBACK_CONTROL_FILE"
+        case "$seek_delta" in
+          aspect)
+            touch /tmp/pocketstremio-aspect-request
+            log "aspect request sent to candidate"
+            ;;
+          -600|-60|-10|10|60|600)
+            seek_target=$((seek_target + seek_delta))
+            [ "$seek_target" -lt 0 ] && seek_target=0
+            current_url="$url?start_seconds=$seek_target"
+            if [ "$FIELD_TEST" = "1" ] && [ -n "$subtitle_id" ]; then
+              curl_request -fsS --max-time 60 -o "$subtitle_file" \
+                "$SERVER_BASE/subtitle/$subtitle_id?format=matroska&offset_seconds=$seek_target" \
+                2>>"$HTTP_ERROR_FILE" || true
+            fi
+            log "converted seek restart delta=$seek_delta target=$seek_target"
+            restart_requested=1
+            kill "$ffplay_pid" 2>/dev/null || true
+            break
+            ;;
+        esac
+      fi
+      sleep 1
+    done
+    wait "$ffplay_pid"
+    PLAYBACK_RC=$?
+    if [ "$restart_requested" = "1" ]; then
+      # The server tears down the previous bounded FFmpeg job asynchronously.
+      # Give its single-job lock time to release before reopening the session.
+      sleep 3
+      continue
     fi
-    sleep 1
+    break
   done
-  wait "$ffplay_pid"
-  PLAYBACK_RC=$?
   if [ -n "$PAUSE_MONITOR_PID" ]; then
     if kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
       kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
@@ -310,6 +372,11 @@ play_url() {
         *) PAUSE_TRACKING_VALID=1 ;;
       esac
     fi
+  fi
+  if [ -n "$PLAYBACK_CONTROL_PID" ]; then
+    kill "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
+    wait "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
+    PLAYBACK_CONTROL_PID=""
   fi
   cat "$ffplay_log" >>"$LOG_FILE"
   if grep -q 'Input #0' "$ffplay_log" \
@@ -933,7 +1000,8 @@ streams_flow() {
   start_loading "PocketStremio" "Starting video..."
   sleep 1
   stop_loading
-  if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE"; then
+  if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE" \
+    "$FIELD_TEST" "$subtitle_id" "$resume_seconds"; then
     message "PocketStremio" "Playback failed"
   fi
 

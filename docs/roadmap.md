@@ -577,6 +577,14 @@ froze the nonseekable converted response, and the candidate did not respond to
 the aspect-ratio control; both limitations remain documented and excluded from
 the wrapper acceptance criteria.
 
+Latest visual-isolation checkpoint: production burn-in passed without the
+artifact, while the candidate displayed it even with no subtitle selected. The
+deployed candidate matched the local rebuild byte-for-byte. Clearing its SDL
+surface removed stale top-of-screen PocketStremio pixels but not the bottom
+artifact. The remaining investigation is ordered around candidate SDL versus
+Miyoo SDL, display geometry, and other candidate build/runtime differences.
+Milestone 20 remains Next and is not Confirmed.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English

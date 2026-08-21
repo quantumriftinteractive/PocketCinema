@@ -1,0 +1,57 @@
+--- a/ffplay.c
++++ b/ffplay.c
+@@
+ static int is_full_screen;
++/* 0 follows the stream DAR, 3 uses aspect-preserving fullscreen zoom. */
++static int display_aspect_mode;
+
+static void check_aspect_request(VideoState *is)
+{
+    if (access("/tmp/pocketstremio-aspect-request", F_OK) == 0) {
+        unlink("/tmp/pocketstremio-aspect-request");
+        display_aspect_mode = display_aspect_mode == 3 ? 0 : 3;
+        is->force_refresh = 1;
+    }
+}
+@@
+ #include <stdint.h>
++#include <stdlib.h>
++#include <unistd.h>
+@@
+     VideoState *is;
+     char dummy_videodriver[] = "SDL_VIDEODRIVER=dummy";
++    const char *aspect_mode = getenv("POCKETSTREMIO_ASPECT_MODE");
++
++    if (aspect_mode != NULL)
++        display_aspect_mode = atoi(aspect_mode) == 3 ? 3 : 0;
+@@
+     if (aspect_ratio <= 0.0)
+         aspect_ratio = 1.0;
+     aspect_ratio *= (float)pic_width / (float)pic_height;
++    if (display_aspect_mode == 3) {
++        if (aspect_ratio > (float)scr_width / (float)scr_height) {
++            height = scr_height;
++            width = ((int)rint(height * aspect_ratio)) & ~1;
++        } else {
++            width = scr_width;
++            height = ((int)rint(width / aspect_ratio)) & ~1;
++        }
++    } else {
++        height = scr_height;
++        width = ((int)rint(height * aspect_ratio)) & ~1;
++        if (width > scr_width) {
++            width = scr_width;
++            height = ((int)rint(width / aspect_ratio)) & ~1;
++        }
++    }
+@@
+             case SDLK_f:
+                 toggle_full_screen(cur_stream);
+                 cur_stream->force_refresh = 1;
+                 break;
++            case SDLK_RETURN:
++                display_aspect_mode = display_aspect_mode == 3 ? 0 : 3;
++                cur_stream->force_refresh = 1;
++                break;
+
+In refresh_loop_wait_event(), call check_aspect_request(is) before event polling.
