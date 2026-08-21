@@ -1,0 +1,10 @@
+--- a/libavfilter/vf_subtitles.c
++++ b/libavfilter/vf_subtitles.c
+@@
+-    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, getenv("POCKETSTREMIO_DEFAULT_FONT"), NULL, 1,
++                  getenv("POCKETSTREMIO_FONTCONFIG_FILE"), 1);
+@@
+-    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, getenv("POCKETSTREMIO_DEFAULT_FONT"), NULL, 1,
++                  getenv("POCKETSTREMIO_FONTCONFIG_FILE"), 1);

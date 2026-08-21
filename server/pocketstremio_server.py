@@ -78,6 +78,16 @@ COMPATIBILITY_FIXTURES = (
             "message": "Server preflight must inspect the audio codec",
         },
     },
+    {
+        "filename": "subtitle-switch-fixture.mkv",
+        "name": "Subtitle switching test - two embedded tracks",
+        "description": "H.264/AAC Matroska | 640x360 | two English SubRip tracks",
+        "duration_seconds": 20,
+        "compatibility": {
+            "status": "candidate",
+            "message": "Capability test: embedded subtitle tracks are not physically confirmed",
+        },
+    },
 )
 SERIES_PLAYBACK_FIXTURE = {
     "filename": "series-av-sync.mp4",

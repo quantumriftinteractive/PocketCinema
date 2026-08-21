@@ -889,17 +889,24 @@ class PocketStremioServerTest(unittest.TestCase):
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"
         opus_path = self.server.media_dir / "compat-h264-opus.mkv"
+        subtitle_path = self.server.media_dir / "subtitle-switch-fixture.mkv"
         vp8_path.write_bytes(bytes(range(128)) * 4)
         opus_path.write_bytes(bytes(range(128)) * 4)
+        subtitle_path.write_bytes(bytes(range(128)) * 4)
 
         _, streams = self.get_json("/api/streams/movie/tt1254207")
         fixtures = {item["id"]: item for item in streams["items"]}
-        self.assertEqual(streams["count"], 3)
+        self.assertEqual(streams["count"], 4)
         self.assertEqual(
             fixtures["fixture-compat-vp8-vorbis"]["compatibility"]["status"],
             "confirmed",
         )
         self.assertNotIn("url", fixtures["fixture-compat-vp8-vorbis"])
+        self.assertEqual(
+            fixtures["fixture-subtitle-switch-fixture"]["compatibility"]["status"],
+            "candidate",
+        )
+        self.assertNotIn("url", fixtures["fixture-subtitle-switch-fixture"])
 
         request = urllib.request.Request(
             f"{self.base}/media/compatibility/{vp8_path.name}",

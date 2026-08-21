@@ -534,10 +534,14 @@ ffprobe results as `DIRECT`, `CONVERT`, or `CHECK`, and hides cached unsupported
 results without probing every candidate before showing the list.
 
 The current MPEG-TS path burns one subtitle into the video and therefore cannot
-switch it inside FFplay. Both endpoints advertise the capabilities needed for a
-bounded Matroska experiment with multiple embedded text tracks; Apps-context
-startup, controller cycling, synchronization, and memory remain unconfirmed.
-Keep burn-in as the fallback until that experiment passes.
+switch it inside FFplay. The deterministic Matroska experiment passes startup
+and embedded-track detection. An isolated, app-local FFplay 2.4.14 rebuild with
+libass, fontconfig, and a bundled font was physically confirmed to render
+upright, bottom-positioned subtitles and switch visibly from red Track One to
+blue Track Two with R1, then disable subtitles. R2 did not trigger this
+candidate, so the controller mapping differs from the earlier original-FFplay
+observation. Keep burn-in as the production fallback; the experiment is not
+integrated into the normal client path.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 

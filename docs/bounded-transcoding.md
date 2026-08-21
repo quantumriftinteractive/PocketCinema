@@ -144,11 +144,22 @@ The deployed OnionOS FFplay advertises SubRip, ASS/SSA, WebVTT, and DVB subtitle
 decoders and documents `t` as its subtitle-channel cycle key. The gaming-PC
 FFmpeg advertises the Matroska muxer and compatible text subtitle encoders.
 
-This is capability evidence, not an Apps-context playback confirmation. A
-deterministic two-track Matroska stream must first prove startup, audio/video
-synchronization, controller mapping for `t`, pause/resume behavior, cleanup,
-and bounded memory. The working single-subtitle MPEG-TS burn-in path remains the
-fallback until that experiment passes.
+This is capability evidence, not a replacement for the production path. The
+deterministic `subtitle-switch-fixture.mkv` is available through the existing
+optional compatibility-fixture path when generated locally. It carries two
+visibly distinct English SubRip tracks. The working single-subtitle MPEG-TS
+burn-in path remains the production fallback.
+
+The first Apps-context Matroska test detected both embedded SubRip tracks, but
+the original Onion build rendered neither. An app-local FFplay 2.4.14 rebuild
+enabled the `subtitles` and `ass` filters with an app-local fontconfig file and
+font. The track-aware candidate was then physically confirmed: subtitles were
+upright and bottom-positioned, and R1 changed the visible fixture from red
+Track One to blue Track Two and then to no subtitle. R2 did not trigger this
+candidate on the device, despite earlier control evidence for the original
+Onion build. This proves the isolated rendering and switching experiment, not
+production integration; the burn-in fallback and production client remain
+unchanged.
 
 ## Confirmed Desktop Results
 

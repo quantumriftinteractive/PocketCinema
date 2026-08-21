@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory = $true)]
-  [string]$DeviceHost
+  [string]$DeviceHost,
+  [switch]$EnableButtonDiagnostic
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,7 +25,8 @@ $directories = @(
   "$Destination/client",
   "$Destination/bin",
   "$Destination/config",
-  "$Destination/logs"
+  "$Destination/logs",
+  "$Destination/experiments"
 ) -join " "
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "mkdir -p $directories"))
 
@@ -35,7 +37,9 @@ $files = @(
   @{ Local = "client/miyoo/pocketstremio-ui.sh"; Remote = "client/pocketstremio-ui.sh" },
   @{ Local = "client/miyoo/bin/pocketstremio-selector"; Remote = "bin/pocketstremio-selector" },
   @{ Local = "client/miyoo/bin/pocketstremio-pause-monitor"; Remote = "bin/pocketstremio-pause-monitor" },
-  @{ Local = "client/miyoo/pocketstremio.conf.example"; Remote = "config/pocketstremio.conf.example" }
+  @{ Local = "client/miyoo/pocketstremio.conf.example"; Remote = "config/pocketstremio.conf.example" },
+  @{ Local = "experiments/button-diagnostic.sh"; Remote = "experiments/button-diagnostic.sh" },
+  @{ Local = "client/miyoo/bin/pocketstremio-button-diagnostic"; Remote = "bin/pocketstremio-button-diagnostic" }
 )
 foreach ($file in $files) {
   $localPath = Join-Path $root $file.Local
@@ -47,8 +51,14 @@ $modeTargets = @(
   "$Destination/playback-poc.sh",
   "$Destination/client/pocketstremio-ui.sh",
   "$Destination/bin/pocketstremio-selector",
-  "$Destination/bin/pocketstremio-pause-monitor"
+  "$Destination/bin/pocketstremio-pause-monitor",
+  "$Destination/bin/pocketstremio-button-diagnostic",
+  "$Destination/experiments/button-diagnostic.sh"
 ) -join " "
 $verify = "chmod +x $modeTargets && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
+if ($EnableButtonDiagnostic) {
+  Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch $Destination/config/button-diagnostic.mode"))
+  Write-Output "Button diagnostic mode enabled for the next PocketStremio Apps launch"
+}
 Write-Output "PocketStremio deployed without modifying its live config or networking-provider state"
