@@ -161,9 +161,29 @@ Onion build. This proves the isolated rendering and switching experiment, not
 production integration; the burn-in fallback and production client remain
 unchanged.
 
+An opt-in account field test then packaged the selected external SRT as a
+small Matroska subtitle file because the candidate device build exposes the
+Matroska demuxer but not the standalone SubRip demuxer. The subtitle rendered
+on the Miyoo, confirming the wrapper path. The candidate audio failure was
+fixed app-locally by keeping the candidate libraries first while explicitly
+preloading Onion's SDL library; a subsequent device run restored audio and
+kept video close to fluid. The server now rewrites SRT/WebVTT cue timestamps
+before packaging, so a nonzero resume offset is applied to the subtitle
+timeline itself. The Spider-Man field run is not timing evidence: its selected
+subtitle could not be proven to match the stream release, although the
+subtitle rendered and moved relative to the earlier run. A deterministic
+fixture test is still required before declaring synchronization confirmed.
+
+The candidate can report a nonzero FFplay exit after Menu disconnects the
+converted stream even though input and video reached readiness. The explicit
+field-test client path now treats that post-readiness disconnect as an
+experimental cleanup result; startup failures remain rejected. The wrapper
+remains experimental and disabled after the test; the normal MPEG-TS burn-in
+path remains unchanged.
+
 ## Confirmed Desktop Results
 
-The server test suite contains 47 passing tests. Dedicated conversion tests
+The server test suite contains 48 passing tests. Dedicated conversion tests
 confirm opaque FFmpeg input, seek forwarding, MPEG-TS output, single-job state,
 and temporary-file cleanup. Account subtitle tests confirm normalized source
 discovery without public addon transports or subtitle URLs.

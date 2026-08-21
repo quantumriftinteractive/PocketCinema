@@ -19,6 +19,16 @@ SDL_SELECTOR="$BASE_DIR/bin/pocketstremio-selector"
 PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
+FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
+if [ -f "$BASE_DIR/config/ffplay-field-test.mode" ]; then
+  FIELD_TEST=1
+  rm -f "$BASE_DIR/config/ffplay-field-test.mode"
+fi
+if [ "$FIELD_TEST" = "1" ]; then
+  FFPLAY="$BASE_DIR/experiments/ffplay/bin/ffplay"
+fi
+FIELD_TEST_LIB_DIR="$BASE_DIR/experiments/ffplay/lib"
+FIELD_TEST_SUBTITLE_FILE=""
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
 PAUSE_MONITOR_PID=""
@@ -67,6 +77,7 @@ cleanup() {
     wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
   fi
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
+    "$FIELD_TEST_SUBTITLE_FILE" \
     /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
     /tmp/pocketstremio-addons.json /tmp/pocketstremio-live-tv.json \
@@ -164,8 +175,9 @@ api_post_play() {
     --arg id "$id" \
     --arg stream_id "$stream_id" \
     --arg subtitle_id "$subtitle_id" \
+    --argjson field_test "$([ "$FIELD_TEST" = "1" ] && printf 1 || printf 0)" \
     --argjson resume_seconds "$resume_seconds" \
-    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,resume_seconds:$resume_seconds}')
+    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,field_test:($field_test == 1),resume_seconds:$resume_seconds}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -211,6 +223,20 @@ run_ffplay() (
   video_filter="$1"
   url="$2"
   resume_seconds="$3"
+  playback_preload="$PADSP"
+  if [ "$FIELD_TEST" = "1" ]; then
+    export LD_LIBRARY_PATH="$FIELD_TEST_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    playback_preload="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0"
+    export FONTCONFIG_PATH="$FIELD_TEST_LIB_DIR"
+    export FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
+    export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
+    export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_LIB_DIR/fonts/DejaVuSans.ttf"
+    if [ -n "$FIELD_TEST_SUBTITLE_FILE" ]; then
+      export POCKETSTREMIO_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
+    else
+      unset POCKETSTREMIO_SUBTITLE_FILE
+    fi
+  fi
   if [ -n "$PROXY" ]; then
     unset ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
@@ -218,12 +244,12 @@ run_ffplay() (
     http_proxy="$PROXY" \
     HTTPS_PROXY="$PROXY" \
     https_proxy="$PROXY" \
-    LD_PRELOAD="$PADSP" \
+    LD_PRELOAD="$playback_preload" \
     "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   else
     unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
-    LD_PRELOAD="$PADSP" \
+    LD_PRELOAD="$playback_preload" \
     "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   fi
 )
@@ -289,6 +315,14 @@ play_url() {
     && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
     && ! grep -Eq 'HTTP error|Input/output error|partial file' "$ffplay_log"; then
     PLAYBACK_VALID=1
+  fi
+  if [ "$FIELD_TEST" = "1" ] \
+    && grep -q '^Input #0' "$ffplay_log" \
+    && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
+    && [ "$PLAYBACK_RC" -ne 0 ] 2>/dev/null; then
+    log "field-test accepted intentional disconnect after video readiness"
+    PLAYBACK_VALID=1
+    PLAYBACK_RC=0
   fi
   rm -f "$ffplay_log"
   if [ "$PLAYBACK_VALID" -ne 1 ] && [ "$PLAYBACK_RC" -eq 0 ]; then
@@ -862,11 +896,29 @@ streams_flow() {
   [ "$server_seek_applied" = "true" ] && ffplay_resume_seconds=0
   log "playback conversion=$transcoded subtitle_id=${subtitle_id:-none} server_seek=$server_seek_applied"
 
+  FIELD_TEST_SUBTITLE_FILE=""
+  if [ "$FIELD_TEST" = "1" ] && [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
+    FIELD_TEST_SUBTITLE_FILE="$BASE_DIR/experiments/ffplay/.field-test-subtitle-$$.mkv"
+    if ! curl_request -fsS --max-time 60 -o "$FIELD_TEST_SUBTITLE_FILE" \
+      "$SERVER_BASE/subtitle/$subtitle_id?format=matroska&offset_seconds=$resume_seconds" 2>>"$HTTP_ERROR_FILE"; then
+      log "field-test subtitle download failed"
+      rm -f "$FIELD_TEST_SUBTITLE_FILE"
+      FIELD_TEST_SUBTITLE_FILE=""
+    elif [ ! -r "$FIELD_TEST_SUBTITLE_FILE" ] || [ ! -s "$FIELD_TEST_SUBTITLE_FILE" ]; then
+      log "field-test subtitle handoff invalid path=$FIELD_TEST_SUBTITLE_FILE"
+      rm -f "$FIELD_TEST_SUBTITLE_FILE"
+      FIELD_TEST_SUBTITLE_FILE=""
+    else
+      field_test_subtitle_bytes=$(wc -c <"$FIELD_TEST_SUBTITLE_FILE" 2>/dev/null | tr -d ' ')
+      log "field-test subtitle handoff ready bytes=$field_test_subtitle_bytes"
+    fi
+  fi
+
   log "playback url received"
   start_loading "PocketStremio" "Starting video..."
   sleep 1
   stop_loading
-  if ! play_url "$play_url_value" "$ffplay_resume_seconds" ""; then
+  if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE"; then
     message "PocketStremio" "Playback failed"
   fi
 

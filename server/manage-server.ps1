@@ -8,7 +8,8 @@ param(
   [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
   [string]$FFprobePath = "",
-  [string]$FFmpegPath = ""
+  [string]$FFmpegPath = "",
+  [switch]$EnableFieldTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,6 +100,9 @@ function Start-ManagedServer {
     "--stremio-service-url", $StremioServiceUrl,
     "--open-media-addon-port", $OpenMediaAddonPort
   )
+  if ($EnableFieldTest) {
+    $arguments += "--enable-field-test"
+  }
   if ($StremioLocalMediaRoot) {
     $arguments += @("--stremio-local-media-root", $StremioLocalMediaRoot)
   }

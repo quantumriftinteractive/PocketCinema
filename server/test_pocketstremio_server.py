@@ -885,6 +885,99 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertIn("libx264", command)
         self.assertIn("mpegts", command)
         self.assertNotIn("https://upstream.example", serialized)
+        matroska = transcoding.build_matroska_command(
+            "ffmpeg", "http://server/play/opaque", ["one.srt", "two.srt"], 20
+        )
+        matroska_serialized = " ".join(matroska)
+        self.assertIn("matroska", matroska)
+        self.assertIn("-map 1:0", matroska_serialized)
+        self.assertIn("-map 2:0", matroska_serialized)
+        self.assertIn("one.srt", matroska)
+        self.assertIn("two.srt", matroska)
+        self.assertNotIn("https://upstream.example", matroska_serialized)
+        shifted = transcoding.shift_subtitle_payload(
+            b"1\n00:05:35,000 --> 00:05:40,000\nhello\n\n",
+            335,
+        )
+        self.assertIn(b"00:00:00,000 --> 00:00:05,000", shifted)
+        subtitle_package = transcoding.build_subtitle_matroska_command(
+            "ffmpeg", "subtitle.srt", "srt"
+        )
+        self.assertIn("matroska", subtitle_package)
+
+    def test_opt_in_field_test_embeds_subtitles_and_keeps_urls_opaque(self):
+        stream_id = "field-test-stream"
+        upstream_url = "https://cdn.example/field-test.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Field test",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "confirmed",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 640,
+                "height": 360,
+            },
+        )
+        for subtitle_id in ("field-one", "field-two"):
+            self.server.subtitle_cache[subtitle_id] = {
+                "id": subtitle_id,
+                "lang": "eng",
+                "item_type": "movie",
+                "item_id": "tt0000001",
+                "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+            }
+        self.server.field_test_enabled = True
+        self.server.ffmpeg_path = "test-ffmpeg"
+        _, play = self.post_json(
+            "/api/play",
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "stream_id": stream_id,
+                "subtitle_id": "field-one",
+                "field_test": True,
+            },
+        )
+        self.assertTrue(play["transcoded"])
+        self.assertNotIn(upstream_url, json.dumps(play))
+
+        transport = b"\x1a\x45\xdf\xa3" + b"matroska-field-test"
+
+        class FakeProcess:
+            def __init__(self):
+                self.stdout = io.BytesIO(transport)
+                self.stderr = io.BytesIO()
+
+            def poll(self):
+                return 0
+
+            def wait(self, timeout=None):
+                del timeout
+                return 0
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        with mock.patch.object(
+            pocket.subprocess, "Popen", return_value=FakeProcess()
+        ) as popen:
+            with urllib.request.urlopen(play["url"], timeout=5) as response:
+                self.assertEqual(response.headers["Content-Type"], "video/x-matroska")
+                self.assertEqual(response.read(), transport)
+        command = popen.call_args.args[0]
+        self.assertIn("matroska", command)
+        self.assertNotIn(upstream_url, command)
+        self.assertEqual(self.server.active_transcodes, 0)
+        self.assertEqual(list(self.server.transcode_dir.iterdir()), [])
 
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"

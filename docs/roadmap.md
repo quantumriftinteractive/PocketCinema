@@ -543,6 +543,17 @@ candidate, so the controller mapping differs from the earlier original-FFplay
 observation. Keep burn-in as the production fallback; the experiment is not
 integrated into the normal client path.
 
+The opt-in account field test now packages the selected external subtitle as a
+small Matroska file because the candidate device build lacks the standalone
+SubRip demuxer. Matroska subtitle rendering and restored candidate audio were
+physically confirmed. Server-side SRT/WebVTT cue rewriting now applies a
+nonzero resume offset before packaging. The recent Spider-Man run is not
+subtitle-sync evidence because the selected subtitle could not be proven to
+match the stream release; deterministic fixture validation remains pending.
+The candidate's post-readiness disconnect is handled as experimental cleanup
+in the field-test client only. The wrapper remains disabled outside explicit
+tests; normal production playback and burn-in behavior are unchanged.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English
