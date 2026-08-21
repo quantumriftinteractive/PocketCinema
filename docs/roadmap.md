@@ -563,6 +563,12 @@ shifted Matroska rendering path. Exact first-frame visual timing is not
 machine-observable in FFplay logs, so account subtitle synchronization and the
 full Milestone 20 acceptance remain open.
 
+A known-good account release match is now recorded for *Spider-Man: No Way
+Home*: `Torrentio RD - 720P BluRay x265 HEVC PSA` with
+`Spider-Man.No.Way.Home.2021.1080p.BluRay.x265-YAWNTiC_eng`. The pair was
+physically synchronized through the production converted burn-in path and is
+the controlled candidate for the remaining experimental wrapper comparison.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English

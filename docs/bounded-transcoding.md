@@ -213,6 +213,12 @@ Closing the smoke-test client returned the active conversion count to zero and
 left zero temporary subtitle files. The account subtitle response contained 20
 English choices and no HTTP URL.
 
+An Apps-context run later established a known-good release match for
+*Spider-Man: No Way Home*: the selected stream was `Torrentio RD - 720P
+BluRay x265 HEVC PSA`, and the synchronized subtitle was
+`Spider-Man.No.Way.Home.2021.1080p.BluRay.x265-YAWNTiC_eng`. This pair is now
+the controlled account comparison for the experimental Matroska wrapper.
+
 The first full Apps-context converted run sampled 30 intervals and measured:
 
 ```text
