@@ -604,6 +604,11 @@ candidate requested 640x360 and Miyoo SDL returned 640x400, leaving the bottom
 framebuffer area outside the surface. This display-surface fix is physically
 confirmed; candidate subtitle/audio acceptance remains separate.
 
+A final short field run with the known-good Spider-Man stream/subtitle pair
+confirmed smooth candidate playback, no bottom artifact, and clean full-frame
+Menu exit. This confirms the app-local display-surface fix, but not the full
+Milestone 20 duration, synchronization, and resource acceptance criteria.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English

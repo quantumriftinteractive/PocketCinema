@@ -212,6 +212,12 @@ This is the first candidate display fix physically confirmed; fullscreen
 stretching is not required. The diagnostic geometry build also preserves even
 destination alignment and logs the SDL/overlay geometry for future regressions.
 
+A final short Apps-context run using the known-good Spider-Man release/subtitle
+pair confirmed the surface fix with Matroska subtitles: playback was smooth,
+the bottom artifact was absent, and Menu exit no longer exposed a partly
+rendered PocketStremio title. The run was intentionally brief and is display
+cleanup evidence, not long-duration playback acceptance.
+
 The first SDL comparison then hid only the app-local candidate SDL library so
 the same candidate binary fell back to Miyoo's system SDL. The bottom artifact
 remained in a no-subtitle run, so the bundled SDL library is not the cause.
