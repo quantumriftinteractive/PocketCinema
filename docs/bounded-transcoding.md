@@ -219,6 +219,14 @@ BluRay x265 HEVC PSA`, and the synchronized subtitle was
 `Spider-Man.No.Way.Home.2021.1080p.BluRay.x265-YAWNTiC_eng`. This pair is now
 the controlled account comparison for the experimental Matroska wrapper.
 
+That controlled wrapper run then used the same stream and subtitle through the
+app-local candidate FFplay. The device log confirmed Matroska subtitle handoff,
+video readiness, audio, subtitle rendering, and clean Menu exit with
+`valid=1`; 63 watched seconds were saved. D-pad seeking made playback freeze,
+as expected for the nonseekable converted response. The candidate also did not
+respond to the normal aspect-ratio control, so those controls remain outside
+the wrapper acceptance scope.
+
 The first full Apps-context converted run sampled 30 intervals and measured:
 
 ```text

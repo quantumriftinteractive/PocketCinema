@@ -550,7 +550,8 @@ physically confirmed. Server-side SRT/WebVTT cue rewriting now applies a
 nonzero resume offset before packaging. The recent Spider-Man run is not
 subtitle-sync evidence because the selected subtitle could not be proven to
 match the stream release; deterministic shifted-Matroska fixture rendering is
-now confirmed, but account subtitle synchronization remains pending.
+now confirmed, but the account candidate-wrapper comparison was still pending
+at that stage.
 The candidate's post-readiness disconnect is handled as experimental cleanup
 in the field-test client only. The wrapper remains disabled outside explicit
 tests; normal production playback and burn-in behavior are unchanged.
@@ -560,14 +561,21 @@ cue timestamps 0--4 and 6--10 after an 8-second simulated resume shift.
 Apps-context logs confirmed libass, the bundled font, audio, video readiness,
 subtitle-filter initialization, and clean completion. This confirms the
 shifted Matroska rendering path. Exact first-frame visual timing is not
-machine-observable in FFplay logs, so account subtitle synchronization and the
-full Milestone 20 acceptance remain open.
+machine-observable in FFplay logs, so the full Milestone 20 acceptance remains
+open despite the later controlled account-wrapper run below.
 
 A known-good account release match is now recorded for *Spider-Man: No Way
 Home*: `Torrentio RD - 720P BluRay x265 HEVC PSA` with
 `Spider-Man.No.Way.Home.2021.1080p.BluRay.x265-YAWNTiC_eng`. The pair was
 physically synchronized through the production converted burn-in path and is
 the controlled candidate for the remaining experimental wrapper comparison.
+
+The controlled candidate run is now physically confirmed for video, audio,
+subtitle rendering, and clean Menu exit: the Matroska handoff ran for 63 valid
+watched seconds and saved progress without a playback error. D-pad seeking
+froze the nonseekable converted response, and the candidate did not respond to
+the aspect-ratio control; both limitations remain documented and excluded from
+the wrapper acceptance criteria.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
