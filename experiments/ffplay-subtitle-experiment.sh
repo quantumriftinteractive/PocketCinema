@@ -61,12 +61,12 @@ if ! "$SYS_DIR/bin/curl" -fsS --max-time 60 -o "$FIXTURE_FILE" "$URL" >> "$LOG_F
 fi
 cat > "$SHIFTED_SRT_FILE" <<'EOF'
 1
-00:00:08,000 --> 00:00:12,000
-RESUME CUE - SHOULD APPEAR IMMEDIATELY AT SEEK 8
+00:00:00,000 --> 00:00:04,000
+SHIFTED CUE - SHOULD APPEAR IMMEDIATELY AFTER SEEK 8
 
 2
-00:00:14,000 --> 00:00:18,000
-RESUME CUE - SECOND KNOWN TIMESTAMP
+00:00:06,000 --> 00:00:10,000
+SHIFTED CUE - SECOND KNOWN TIMESTAMP
 EOF
 trap 'rm -f /tmp/stay_awake /tmp/dismiss_info_panel /tmp/pocketstremio-subtitle-fixture.mkv "$SHIFTED_SRT_FILE"' EXIT
 export LD_LIBRARY_PATH="$LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -76,7 +76,7 @@ export POCKETSTREMIO_FONTCONFIG_FILE="$LIB_DIR/fonts.conf"
 export POCKETSTREMIO_DEFAULT_FONT="$LIB_DIR/fonts/DejaVuSans.ttf"
 export POCKETSTREMIO_SUBTITLE_FILE="$SHIFTED_SRT_FILE"
 
-printf '%s\n' "Starting deterministic subtitle timing test: seek=8 cue=8..12" >> "$LOG_FILE"
+printf '%s\n' "Starting deterministic subtitle timing test: source-cue=8..12 shifted-to=0..4 seek=8" >> "$LOG_FILE"
 if [ -f "$PADSP" ]; then
   LD_PRELOAD="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0" "$FFPLAY" -hide_banner -stats -autoexit -ss 8 -sn \
     -vf "subtitles=$SHIFTED_SRT_FILE,hflip,vflip" -i "$FIXTURE_FILE" >> "$LOG_FILE" 2>&1
