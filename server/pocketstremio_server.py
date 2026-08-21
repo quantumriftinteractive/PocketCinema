@@ -384,6 +384,11 @@ def stream_release_label(stream):
     return safe_addon_text(stream.get("description"), "", 120)
 
 
+def stream_source_label(stream):
+    source = safe_addon_text(stream.get("source"), "Stream", 80)
+    return re.sub(r"^Stremio account:\s*", "", source)
+
+
 def account_stream_quality_rank(stream):
     if not str(stream.get("source") or "").startswith("Stremio account:"):
         return 0, 0
@@ -1403,6 +1408,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 stream.get("compatibility") or {}
             )
             stream["release_label"] = stream_release_label(stream)
+            stream["source_label"] = stream_source_label(stream)
             self.server.stream_cache[stream["id"]] = stream
 
         public_items = [

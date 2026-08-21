@@ -82,6 +82,7 @@ cleanup() {
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
     /tmp/pocketstremio-addons.json /tmp/pocketstremio-live-tv.json \
     /tmp/pocketstremio-live-tv.tsv \
+    /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
 }
 
@@ -838,7 +839,7 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT] " else "[CHECK] " end)\(.value.name)\(if (.value.release_label // "") != "" then " | \(.value.release_label)" else "" end)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
+  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT] " else "[CHECK] " end)\(.value.source_label // .value.name)\(if (.value.release_label // "") != "" then " | \(.value.release_label)" else "" end)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
     log "no playable streams message=$stream_error"
@@ -863,6 +864,20 @@ streams_flow() {
     fi
     stream_id=$(printf '%s' "$line" | cut -f2)
     log "selected stream_id=$stream_id name=$selected"
+
+    "$JQ" -r --arg id "$stream_id" '.items[] | select(.id == $id) |
+      ("Source: " + (.source_label // .name)),
+      ("Release: " + ((.release_label // "not provided") | .[0:42])),
+      ("Media: " + ((.compatibility.width // "?")|tostring) + "x" + ((.compatibility.height // "?")|tostring) + " " + (.compatibility.video_codec // "?") + "/" + (.compatibility.audio_codec // "?")),
+      ("Mode: " + ((.playback_mode // "check") | ascii_upcase)),
+      "Use this stream"' /tmp/pocketstremio-streams.json |
+      while IFS= read -r detail; do printf '%s\t%s\n' "$detail" "$detail"; done >/tmp/pocketstremio-stream-details.tsv
+    while :; do
+      detail_choice=$(select_from_file "Stream Details" /tmp/pocketstremio-stream-details.tsv)
+      [ "$detail_choice" = "Use this stream" ] && break
+      [ -z "$detail_choice" ] && break
+    done
+    [ "$detail_choice" = "Use this stream" ] || continue
 
     subtitle_id=$(select_subtitle "$type" "$id" "$stream_id")
     [ "$subtitle_id" = "back" ] && continue
