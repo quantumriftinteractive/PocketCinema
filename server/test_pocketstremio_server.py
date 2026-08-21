@@ -414,6 +414,9 @@ class PocketStremioServerTest(unittest.TestCase):
                     {
                         "name": "[RD+] Debrid\n360p",
                         "url": "https://cdn.example/debrid.mp4",
+                        "behaviorHints": {
+                            "filename": "Show.S01E04.720p.WEB-DL.H264-NTb.mkv"
+                        },
                     },
                 ]
             }
@@ -439,6 +442,9 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertTrue(all("\n" not in item["name"] for item in streams["items"]))
         self.assertEqual(stream["name"], "Direct account stream")
         self.assertEqual(stream["description"], "")
+        self.assertEqual(
+            debrid["release_label"], "Show.S01E04.720p.WEB-DL.H264-NTb.mkv"
+        )
         self.assertNotIn("url", stream)
         self.assertTrue(
             any("non-HTTP" in failure["message"] for failure in streams["failures"])

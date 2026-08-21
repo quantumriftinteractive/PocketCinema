@@ -349,6 +349,15 @@ def stream_label(stream, fallback):
     return name
 
 
+def stream_release_label(stream):
+    """Return safe release identity hints for the device selector."""
+    filename = str(stream.get("video_filename") or "")
+    if filename:
+        filename = re.split(r"[\\/]", filename)[-1]
+        return safe_addon_text(filename, "", 120)
+    return safe_addon_text(stream.get("description"), "", 120)
+
+
 def account_stream_quality_rank(stream):
     if not str(stream.get("source") or "").startswith("Stremio account:"):
         return 0, 0
@@ -1224,6 +1233,12 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                             300,
                         ),
                         "duration_seconds": nonnegative_int(raw.get("durationSeconds")),
+                        "release_label": stream_release_label(
+                            {
+                                "video_filename": behavior_hints.get("filename"),
+                                "description": raw.get("description"),
+                            }
+                        ),
                     }
                 )
             if rejected:
@@ -1336,6 +1351,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "video_hash": behavior_hints.get("videoHash") or "",
                         "video_size": behavior_hints.get("videoSize") or 0,
                         "duration_seconds": nonnegative_int(raw.get("durationSeconds")),
+                        "video_filename": safe_addon_text(
+                            behavior_hints.get("filename"), "", 240
+                        ),
+                        "release_label": stream_release_label(
+                            {
+                                "video_filename": behavior_hints.get("filename"),
+                                "description": raw.get("description"),
+                            }
+                        ),
                     }
                 )
 
@@ -1352,6 +1376,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             stream["playback_mode"] = transcoding.playback_mode(
                 stream.get("compatibility") or {}
             )
+            stream["release_label"] = stream_release_label(stream)
             self.server.stream_cache[stream["id"]] = stream
 
         public_items = [
