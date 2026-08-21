@@ -54,7 +54,7 @@ fi
 
 URL="$SERVER_BASE/media/compatibility/subtitle-switch-fixture.mkv"
 FIXTURE_FILE=/tmp/pocketstremio-subtitle-fixture.mkv
-SHIFTED_SRT_FILE=/tmp/pocketstremio-subtitle-offset.srt
+SHIFTED_SRT_FILE="$BASE_DIR/experiments/ffplay/.subtitle-offset-$$.srt"
 if ! "$SYS_DIR/bin/curl" -fsS --max-time 60 -o "$FIXTURE_FILE" "$URL" >> "$LOG_FILE" 2>&1; then
   printf '%s\n' "Fixture download failed" >> "$LOG_FILE"
   exit 1
@@ -68,7 +68,7 @@ RESUME CUE - SHOULD APPEAR IMMEDIATELY AT SEEK 8
 00:00:14,000 --> 00:00:18,000
 RESUME CUE - SECOND KNOWN TIMESTAMP
 EOF
-trap 'rm -f /tmp/stay_awake /tmp/dismiss_info_panel /tmp/pocketstremio-subtitle-fixture.mkv /tmp/pocketstremio-subtitle-offset.srt' EXIT
+trap 'rm -f /tmp/stay_awake /tmp/dismiss_info_panel /tmp/pocketstremio-subtitle-fixture.mkv "$SHIFTED_SRT_FILE"' EXIT
 export LD_LIBRARY_PATH="$LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export FONTCONFIG_PATH="$LIB_DIR"
 export FONTCONFIG_FILE="$LIB_DIR/fonts.conf"
