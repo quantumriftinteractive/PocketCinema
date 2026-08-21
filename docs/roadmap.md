@@ -585,6 +585,12 @@ artifact. The remaining investigation is ordered around candidate SDL versus
 Miyoo SDL, display geometry, and other candidate build/runtime differences.
 Milestone 20 remains Next and is not Confirmed.
 
+The first runtime comparison also forced the candidate to use Miyoo's system
+SDL instead of its bundled SDL library; the bottom artifact remained with no
+subtitle selected. SDL library selection is therefore crossed off as the
+primary cause. The next comparison is candidate display geometry/framebuffer
+presentation.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English

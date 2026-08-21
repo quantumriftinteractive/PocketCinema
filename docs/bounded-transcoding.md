@@ -202,6 +202,11 @@ app-local SDL library while Onion FFplay uses Miyoo's system SDL. Milestone 20
 remains open; the next experiment will force Miyoo SDL and cross off differences
 one at a time.
 
+The first SDL comparison then hid only the app-local candidate SDL library so
+the same candidate binary fell back to Miyoo's system SDL. The bottom artifact
+remained in a no-subtitle run, so the bundled SDL library is not the cause.
+The app-local SDL was restored and the normal server mode re-established.
+
 ## Confirmed Desktop Results
 
 The server test suite contains 48 passing tests. Dedicated conversion tests
