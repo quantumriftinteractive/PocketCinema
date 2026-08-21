@@ -354,7 +354,33 @@ def stream_release_label(stream):
     filename = str(stream.get("video_filename") or "")
     if filename:
         filename = re.split(r"[\\/]", filename)[-1]
-        return safe_addon_text(filename, "", 120)
+        stem = Path(filename).stem
+        tokens = []
+        for pattern in (
+            r"S\d{1,2}E\d{1,2}",
+            r"(?:2160|1080|720|576|480|360)p",
+            r"WEB[- ]?DL",
+            r"WEBRip",
+            r"BluRay",
+            r"HDTV",
+            r"AMZN",
+            r"NF",
+            r"HMAX",
+            r"(?:x|h)26[45]",
+            r"HEVC",
+            r"(?:AAC|EAC3|DDP?)",
+        ):
+            match = re.search(pattern, stem, re.IGNORECASE)
+            if match:
+                value = match.group(0).replace("-", "-").upper()
+                if value not in tokens:
+                    tokens.append(value)
+        group = re.search(r"-([A-Za-z0-9][A-Za-z0-9]{1,11})$", stem)
+        if group:
+            tokens.append(group.group(1))
+        if tokens:
+            return " ".join(tokens)[:55]
+        return safe_addon_text(stem, "", 55)
     return safe_addon_text(stream.get("description"), "", 120)
 
 

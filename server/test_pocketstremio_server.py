@@ -443,7 +443,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(stream["name"], "Direct account stream")
         self.assertEqual(stream["description"], "")
         self.assertEqual(
-            debrid["release_label"], "Show.S01E04.720p.WEB-DL.H264-NTb.mkv"
+            debrid["release_label"], "S01E04 720P WEB-DL H264 NTb"
         )
         self.assertNotIn("url", stream)
         self.assertTrue(
