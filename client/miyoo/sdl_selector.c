@@ -106,6 +106,30 @@ static void draw_text(SDL_Surface *screen, const char *text, int x, int y, int s
     }
 }
 
+static int has_line_break(const char *text) {
+    return text && strstr(text, "\\n") != NULL;
+}
+
+static void draw_item(SDL_Surface *screen, const char *text, int x, int y,
+                      int scale, Uint32 color, int max_chars, int max_lines) {
+    int line = 0;
+    int column = 0;
+    int n = 0;
+    for (const char *p = text; *p && line < max_lines && n < max_chars * max_lines; p++, n++) {
+        if (*p == '\\' && p[1] == 'n') {
+            line++;
+            column = 0;
+            p++;
+            continue;
+        }
+        if (column < max_chars) {
+            draw_char(screen, *p, x + column * 6 * scale,
+                      y + line * 18, scale, color);
+            column++;
+        }
+    }
+}
+
 static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom, char **items, int count, int selected) {
     Uint32 bg = SDL_MapRGB(screen->format, 12, 14, 18);
     Uint32 row = SDL_MapRGB(screen->format, 30, 84, 116);
@@ -116,7 +140,16 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
 
     draw_text(screen, title ? title : "POCKETSTREMIO", 20, 18, 3, white, 32);
 
-    int visible = 8;
+    int multiline = 0;
+    for (int i = 0; i < count; i++) {
+        if (has_line_break(items[i])) {
+            multiline = 1;
+            break;
+        }
+    }
+    int visible = multiline ? 4 : 8;
+    int row_height = multiline ? 80 : 40;
+    int row_box_height = multiline ? 72 : 34;
     int start = selected - visible / 2;
     if (start < 0) start = 0;
     if (start > count - visible) start = count - visible;
@@ -124,12 +157,13 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
 
     for (int i = 0; i < visible && start + i < count; i++) {
         int idx = start + i;
-        int y = 78 + i * 40;
+        int y = 78 + i * row_height;
         if (idx == selected) {
-            rect(screen, 14, y - 8, 612, 34, row);
+            rect(screen, 14, y - 8, 612, row_box_height, row);
             draw_text(screen, ">", 24, y, 2, accent, 1);
         }
-        draw_text(screen, items[idx], 52, y, 2, idx == selected ? white : muted, 45);
+        draw_item(screen, items[idx], 52, y, 2, idx == selected ? white : muted,
+                  45, multiline ? 3 : 1);
     }
 
     draw_text(screen, bottom ? bottom : "UP/DOWN MOVE  A SELECT  B BACK", 20, 440, 2, muted, 48);

@@ -839,7 +839,7 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT] " else "[CHECK] " end)\(.value.source_label // .value.name)\(if (.value.release_label // "") != "" then " | \(.value.release_label)" else "" end)\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
+  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT]" else "[CHECK]" end) \(.value.source_label // .value.name)\\n\(.value.release_label // "release metadata unavailable")\\n\((.value.compatibility.width // "?")|tostring)x\((.value.compatibility.height // "?")|tostring) \(.value.compatibility.video_codec // "?")/\(.value.compatibility.audio_codec // "?")\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
     log "no playable streams message=$stream_error"
