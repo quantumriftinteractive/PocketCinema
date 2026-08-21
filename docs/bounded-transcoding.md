@@ -207,6 +207,12 @@ the same candidate binary fell back to Miyoo's system SDL. The bottom artifact
 remained in a no-subtitle run, so the bundled SDL library is not the cause.
 The app-local SDL was restored and the normal server mode re-established.
 
+An app-local copy of Onion's `ffplay_16_9` then removed the artifact, but it
+visibly stretched the picture vertically. This confirms the artifact is tied
+to the candidate's aspect-preserving letterbox presentation, while stretching
+is unacceptable for films that contain intentional letterboxing. The Onion
+16:9 comparison binary was removed and the candidate restored.
+
 ## Confirmed Desktop Results
 
 The server test suite contains 48 passing tests. Dedicated conversion tests

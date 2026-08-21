@@ -591,6 +591,11 @@ subtitle selected. SDL library selection is therefore crossed off as the
 primary cause. The next comparison is candidate display geometry/framebuffer
 presentation.
 
+An app-local copy of Onion's `ffplay_16_9` removed the artifact but visibly
+stretched the video vertically. This confirms display geometry as the cause;
+stretching is not an acceptable solution for films with intentional letterbox
+content. The original candidate was restored after the comparison.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English
