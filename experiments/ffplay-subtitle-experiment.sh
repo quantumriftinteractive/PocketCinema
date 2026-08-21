@@ -54,7 +54,7 @@ fi
 
 URL="$SERVER_BASE/media/compatibility/subtitle-switch-fixture.mkv"
 FIXTURE_FILE=/tmp/pocketstremio-subtitle-fixture.mkv
-SHIFTED_SRT_FILE="$BASE_DIR/experiments/ffplay/subtitle-offset-fixture.srt"
+SHIFTED_SUBTITLE_FILE="$BASE_DIR/experiments/ffplay/subtitle-offset-fixture.mkv"
 if ! "$SYS_DIR/bin/curl" -fsS --max-time 60 -o "$FIXTURE_FILE" "$URL" >> "$LOG_FILE" 2>&1; then
   printf '%s\n' "Fixture download failed" >> "$LOG_FILE"
   exit 1
@@ -65,13 +65,13 @@ export FONTCONFIG_PATH="$LIB_DIR"
 export FONTCONFIG_FILE="$LIB_DIR/fonts.conf"
 export POCKETSTREMIO_FONTCONFIG_FILE="$LIB_DIR/fonts.conf"
 export POCKETSTREMIO_DEFAULT_FONT="$LIB_DIR/fonts/DejaVuSans.ttf"
-export POCKETSTREMIO_SUBTITLE_FILE="$SHIFTED_SRT_FILE"
+export POCKETSTREMIO_SUBTITLE_FILE="$SHIFTED_SUBTITLE_FILE"
 
 printf '%s\n' "Starting deterministic subtitle timing test: source-cue=8..12 shifted-to=0..4 seek=8" >> "$LOG_FILE"
 if [ -f "$PADSP" ]; then
   LD_PRELOAD="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0" "$FFPLAY" -hide_banner -stats -autoexit -ss 8 -sn \
-    -vf "subtitles=$SHIFTED_SRT_FILE,hflip,vflip" -i "$FIXTURE_FILE" >> "$LOG_FILE" 2>&1
+    -vf "subtitles=$SHIFTED_SUBTITLE_FILE,hflip,vflip" -i "$FIXTURE_FILE" >> "$LOG_FILE" 2>&1
 else
   "$FFPLAY" -hide_banner -stats -autoexit -ss 8 -sn \
-    -vf "subtitles=$SHIFTED_SRT_FILE,hflip,vflip" -i "$FIXTURE_FILE" >> "$LOG_FILE" 2>&1
+    -vf "subtitles=$SHIFTED_SUBTITLE_FILE,hflip,vflip" -i "$FIXTURE_FILE" >> "$LOG_FILE" 2>&1
 fi
