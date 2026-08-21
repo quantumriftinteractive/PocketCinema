@@ -174,6 +174,15 @@ subtitle could not be proven to match the stream release, although the
 subtitle rendered and moved relative to the earlier run. A deterministic
 fixture test is still required before declaring synchronization confirmed.
 
+The deterministic Apps-context follow-up used a subtitle-only Matroska package
+whose cues were 0--4 and 6--10 seconds after applying an 8-second resume
+shift. The candidate successfully initialized libass, loaded the bundled
+DejaVuSans font, opened audio, reached video readiness, rendered subtitles,
+and exited cleanly. FFprobe verified the package cue timestamps. This confirms
+the shifted Matroska rendering path; exact first-frame visual timing is not
+machine-observable in the FFplay log, and account subtitle/release matching
+remains unresolved.
+
 The candidate can report a nonzero FFplay exit after Menu disconnects the
 converted stream even though input and video reached readiness. The explicit
 field-test client path now treats that post-readiness disconnect as an

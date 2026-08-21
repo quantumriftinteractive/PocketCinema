@@ -549,10 +549,19 @@ SubRip demuxer. Matroska subtitle rendering and restored candidate audio were
 physically confirmed. Server-side SRT/WebVTT cue rewriting now applies a
 nonzero resume offset before packaging. The recent Spider-Man run is not
 subtitle-sync evidence because the selected subtitle could not be proven to
-match the stream release; deterministic fixture validation remains pending.
+match the stream release; deterministic shifted-Matroska fixture rendering is
+now confirmed, but account subtitle synchronization remains pending.
 The candidate's post-readiness disconnect is handled as experimental cleanup
 in the field-test client only. The wrapper remains disabled outside explicit
 tests; normal production playback and burn-in behavior are unchanged.
+
+The deterministic follow-up then used a subtitle-only Matroska package with
+cue timestamps 0--4 and 6--10 after an 8-second simulated resume shift.
+Apps-context logs confirmed libass, the bundled font, audio, video readiness,
+subtitle-filter initialization, and clean completion. This confirms the
+shifted Matroska rendering path. Exact first-frame visual timing is not
+machine-observable in FFplay logs, so account subtitle synchronization and the
+full Milestone 20 acceptance remain open.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
