@@ -312,13 +312,13 @@ play_url() {
     fi
   fi
   cat "$ffplay_log" >>"$LOG_FILE"
-  if grep -q '^Input #0' "$ffplay_log" \
+  if grep -q 'Input #0' "$ffplay_log" \
     && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
     && ! grep -Eq 'HTTP error|Input/output error|partial file' "$ffplay_log"; then
     PLAYBACK_VALID=1
   fi
   if [ "$FIELD_TEST" = "1" ] \
-    && grep -q '^Input #0' "$ffplay_log" \
+    && grep -q 'Input #0' "$ffplay_log" \
     && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
     && [ "$PLAYBACK_RC" -ne 0 ] 2>/dev/null; then
     log "field-test accepted intentional disconnect after video readiness"
