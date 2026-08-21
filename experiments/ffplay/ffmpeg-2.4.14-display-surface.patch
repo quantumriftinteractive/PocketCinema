@@ -1,0 +1,30 @@
+--- a/ffplay.c
++++ b/ffplay.c
+@@
+     width = ((int)rint(height * aspect_ratio)) & ~1;
+     if (width > scr_width) {
+-        width = scr_width;
++        width = scr_width & ~1;
+         height = ((int)rint(width / aspect_ratio)) & ~1;
+     }
+@@
+-    rect->x = scr_xleft + x;
+-    rect->y = scr_ytop  + y;
+-    rect->w = FFMAX(width,  1);
+-    rect->h = FFMAX(height, 1);
++    rect->x = (scr_xleft + x) & ~1;
++    rect->y = (scr_ytop + y) & ~1;
++    rect->w = FFMAX(width & ~1, 2);
++    rect->h = FFMAX(height & ~1, 2);
+@@
+     if (!screen) {
+         av_log(NULL, AV_LOG_FATAL, "SDL: could not set video mode - exiting\n");
+         do_exit(is);
+     }
++    SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
++    SDL_Flip(screen);
+@@
+     if (vp->bmp) {
+@@
+         if (rect.x != is->last_display_rect.x || rect.y != is->last_display_rect.y || rect.w != is->last_display_rect.w || rect.h != is->last_display_rect.h || is->force_refresh) {
++            fprintf(stderr, "DISPLAY src=%dx%d dst=%d,%d %dx%d screen=%dx%d pitch=%d flags=0x%x bpp=%d overlay_pitch=%d,%d,%d format=0x%x\\n", vp->width, vp->height, rect.x, rect.y, rect.w, rect.h, screen->w, screen->h, screen->pitch, screen->flags, screen->format ? screen->format->BitsPerPixel : 0, vp->bmp->pitches[0], vp->bmp->pitches[1], vp->bmp->pitches[2], vp->bmp->format);

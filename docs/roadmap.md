@@ -596,6 +596,14 @@ stretched the video vertically. This confirms display geometry as the cause;
 stretching is not an acceptable solution for films with intentional letterbox
 content. The original candidate was restored after the comparison.
 
+The decisive candidate test then forced the SDL surface to 640x480 using
+app-local FFplay `-x 640 -y 480`, while preserving the approximately 640x360
+video rectangle. This removed the bottom artifact, prevented the partial
+PocketStremio title during exit, and produced smooth playback. The prior
+candidate requested 640x360 and Miyoo SDL returned 640x400, leaving the bottom
+framebuffer area outside the surface. This display-surface fix is physically
+confirmed; candidate subtitle/audio acceptance remains separate.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English

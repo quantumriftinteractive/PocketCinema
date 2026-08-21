@@ -231,7 +231,9 @@ run_ffplay() (
   resume_seconds="$3"
   aspect_mode="${4:-0}"
   playback_preload="$PADSP"
+  screen_args=""
   if [ "$FIELD_TEST" = "1" ]; then
+    screen_args="-x 640 -y 480"
     export LD_LIBRARY_PATH="$FIELD_TEST_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     playback_preload="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0"
     export FONTCONFIG_PATH="$FIELD_TEST_LIB_DIR"
@@ -253,12 +255,12 @@ run_ffplay() (
     HTTPS_PROXY="$PROXY" \
     https_proxy="$PROXY" \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    "$FFPLAY" $screen_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   else
     unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    "$FFPLAY" $screen_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   fi
 )
 

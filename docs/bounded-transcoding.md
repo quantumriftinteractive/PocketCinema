@@ -202,6 +202,16 @@ app-local SDL library while Onion FFplay uses Miyoo's system SDL. Milestone 20
 remains open; the next experiment will force Miyoo SDL and cross off differences
 one at a time.
 
+The decisive display-surface test forced only the candidate FFplay SDL surface
+to 640x480 with `-x 640 -y 480`; the aspect-correct video remained centered at
+approximately 640x360. The prior candidate requested 640x360 and Miyoo SDL
+reported a 640x400 surface, leaving the bottom framebuffer area outside the
+surface. With the full surface, the bottom artifact disappeared, the partial
+PocketStremio title no longer appeared during exit, and playback was smooth.
+This is the first candidate display fix physically confirmed; fullscreen
+stretching is not required. The diagnostic geometry build also preserves even
+destination alignment and logs the SDL/overlay geometry for future regressions.
+
 The first SDL comparison then hid only the app-local candidate SDL library so
 the same candidate binary fell back to Miyoo's system SDL. The bottom artifact
 remained in a no-subtitle run, so the bundled SDL library is not the cause.
