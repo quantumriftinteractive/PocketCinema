@@ -547,6 +547,9 @@ correctly on the Miyoo. Subtitle results now show strong release/hash matches
 first, with an explicit controller option to show the remaining English
 choices. This is focused subtitle evidence only; the Milestone 20 acceptance
 criteria remain pending.
+Inspected but non-confirmed media is now routed through the bounded conversion
+path rather than direct FFplay; E-AC-3 is accepted only as a server-side
+conversion input and is emitted to the Miyoo as AAC.
 
 The current MPEG-TS path burns one subtitle into the video and therefore cannot
 switch it inside FFplay. The deterministic Matroska experiment passes startup

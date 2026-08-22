@@ -1073,6 +1073,17 @@ class PocketStremioServerTest(unittest.TestCase):
                 {"width": 640, "height": 360, "video_profile": "High 10"}
             )
         )
+        self.assertTrue(
+            transcoding.needs_downscale(
+                {
+                    "container": "matroska",
+                    "video_codec": "hevc",
+                    "audio_codec": "eac3",
+                    "width": 640,
+                    "height": 360,
+                }
+            )
+        )
         self.assertFalse(
             transcoding.needs_downscale(
                 {"width": 640, "height": 360, "frame_rate": 30}
@@ -1089,6 +1100,27 @@ class PocketStremioServerTest(unittest.TestCase):
         )
         self.assertEqual(
             transcoding.playback_mode({"status": "candidate"}), "check"
+        )
+        eac3_probe = {
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "hevc",
+                    "width": 1920,
+                    "height": 1080,
+                    "avg_frame_rate": "24/1",
+                },
+                {
+                    "codec_type": "audio",
+                    "codec_name": "eac3",
+                    "channels": 6,
+                },
+            ],
+            "format": {"format_name": "matroska", "duration": "120"},
+        }
+        self.assertEqual(
+            playback_compatibility.classify_probe(eac3_probe)["status"],
+            "candidate",
         )
         self.assertEqual(
             transcoding.playback_mode({"status": "unsupported"}), "blocked"
@@ -1820,6 +1852,7 @@ segments.ts
 
     def test_preflight_is_cached_and_returned_with_play_session(self):
         self.server.ffprobe_path = "test-ffprobe"
+        self.server.ffmpeg_path = "test-ffmpeg"
         self.server.stream_cache["candidate"] = {
             "id": "candidate",
             "name": "Candidate test",

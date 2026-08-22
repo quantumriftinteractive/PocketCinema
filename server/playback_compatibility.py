@@ -15,7 +15,9 @@ SUPPORTED_CONTAINERS = {
     "webm",
 }
 SUPPORTED_VIDEO_CODECS = {"h264", "hevc", "mpeg4", "vp8", "vp9"}
-SUPPORTED_AUDIO_CODECS = {"aac", "ac3", "mp3", "vorbis"}
+# These are bounded PSS input codecs, not a claim that every one can be sent
+# directly to Miyoo FFplay.  Candidate profiles are converted to AAC first.
+SUPPORTED_AUDIO_CODECS = {"aac", "ac3", "eac3", "mp3", "vorbis"}
 
 
 class ProbeError(RuntimeError):

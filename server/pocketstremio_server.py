@@ -502,7 +502,8 @@ class ProbeCache:
 
     @staticmethod
     def key(url):
-        return hashlib.sha256(("v2\0" + url).encode()).hexdigest()
+        # A codec-policy change must not retain stale "unsupported" results.
+        return hashlib.sha256(("v3\0" + url).encode()).hexdigest()
 
     def _load(self):
         if not self.path.is_file():

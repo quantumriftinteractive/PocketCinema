@@ -45,11 +45,17 @@ def needs_downscale(compatibility):
     height = int(compatibility.get("height") or 0)
     frame_rate = float(compatibility.get("frame_rate") or 0)
     profile = str(compatibility.get("video_profile") or "").lower()
+    video_codec = str(compatibility.get("video_codec") or "").lower()
+    audio_codec = str(compatibility.get("audio_codec") or "").lower()
+    # These codecs are acceptable bounded PSS inputs but not direct Miyoo
+    # profiles.  HLS remains on its independently confirmed MPEG-TS bridge.
+    codec_conversion = video_codec in {"hevc", "vp9", "mpeg4"} or audio_codec == "eac3"
     return (
         width > MAX_WIDTH
         or height > MAX_HEIGHT
         or frame_rate > MAX_FRAME_RATE
         or "10" in profile
+        or codec_conversion
     )
 
 
