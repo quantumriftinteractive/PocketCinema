@@ -326,6 +326,13 @@ SRT before burn-in or Matroska packaging; image-based subtitles are not OCR'd.
 This is focused subtitle-rendering evidence, not duration, synchronization,
 audio, cleanup, or resource acceptance evidence.
 
+The 1920x800 HEVC/E-AC-3 account source exposed an additional bounded-output
+limit: the unchanged aspect-preserving converter requests 640x267, and libx264
+cannot encode that odd 4:2:0 height. The Miyoo physically displayed the new
+specific preflight message, and the source was absent after reopening the
+stream list. This is filtering/error-handling evidence only; the production
+converter geometry was not changed.
+
 ## Pending Device Confirmation
 
 - sustained playback with the known-good Spider-Man release/subtitle pair,

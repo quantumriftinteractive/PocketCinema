@@ -553,8 +553,10 @@ conversion input and is emitted to the Miyoo as AAC.
 The unchanged aspect-preserving production converter can yield an odd 4:2:0
 height for some ultra-wide sources (for example 1920x800 becomes 640x267),
 which libx264 cannot encode. Such geometry is now rejected at preflight and
-cached as unsupported rather than failing after FFplay starts; changing the
-production MPEG-TS filter remains out of scope for this slice.
+cached as unsupported rather than failing after FFplay starts. The 1920x800
+HEVC/E-AC-3 field source physically displayed that specific message on the
+Miyoo and was absent after reopening the stream list. Changing the production
+MPEG-TS filter remains out of scope for this slice.
 
 The current MPEG-TS path burns one subtitle into the video and therefore cannot
 switch it inside FFplay. The deterministic Matroska experiment passes startup
