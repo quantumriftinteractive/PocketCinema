@@ -290,6 +290,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.probe_cache = pocket.ProbeCache(root / "data" / "probe_cache.json")
         self.server.ffprobe_path = ""
         self.server.ffmpeg_path = ""
+        self.server.subtitle_burn_in_available = True
         self.server.transcode_dir = root / "data" / "transcode"
         self.server.transcode_dir.mkdir(parents=True)
         self.server.transcode_job_lock = threading.Lock()
@@ -394,6 +395,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertFalse(status["stremio_service"]["configured"])
         self.assertFalse(status["stremio_account"]["configured"])
         self.assertFalse(status["discovery"]["enabled"])
+        self.assertTrue(status["transcodes"]["subtitle_burn_in"])
 
     def test_unconfigured_account_addon_endpoint_is_empty(self):
         _, addons = self.get_json("/api/addons")
@@ -950,6 +952,64 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(payload["error"], "subtitle_download_failed")
         self.assertEqual(self.server.active_transcodes, 0)
 
+    def test_subtitle_play_is_rejected_without_burn_in_support(self):
+        stream_id = "subtitle-capability-stream"
+        upstream_url = "https://cdn.example/video.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Subtitle capability",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "confirmed",
+                "message": "test",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 640,
+                "height": 360,
+            },
+        )
+        self.server.subtitle_cache["english-test"] = {
+            "id": "english-test",
+            "lang": "eng",
+            "item_type": "movie",
+            "item_id": "tt0000001",
+            "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+        }
+        self.server.ffmpeg_path = "test-ffmpeg"
+        self.server.subtitle_burn_in_available = False
+
+        status, body = self.post_json_error(
+            "/api/play",
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "stream_id": stream_id,
+                "subtitle_id": "english-test",
+            },
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(body["error"], "subtitle_burn_in_unavailable")
+        self.assertIn("cannot burn subtitles", body["message"])
+
+    def test_external_subtitles_are_hidden_without_burn_in_support(self):
+        self.server.subtitle_burn_in_available = False
+        self.server.stream_addons = [
+            {
+                "name": "Test subtitles",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+        with mock.patch.object(pocket, "fetch_json") as fetch:
+            _, subtitles = self.get_json("/api/subtitles/movie/tt0078748")
+        fetch.assert_not_called()
+        self.assertEqual(subtitles["count"], 0)
+        self.assertEqual(subtitles["items"], [])
+        self.assertIn("cannot burn", subtitles["unavailable_reason"])
+
     def test_transcode_reports_missing_output_stage(self):
         stream_id = "empty-transcode-stream"
         upstream_url = "https://cdn.example/video.mp4?token=private"
@@ -1307,8 +1367,45 @@ class PocketStremioServerTest(unittest.TestCase):
 
         with mock.patch.object(pocket, "fetch_json", side_effect=fake_fetch):
             _, streams = self.get_json("/api/streams/movie/tt0000001")
-        self.assertFalse(streams["items"][0]["playable"])
+        self.assertEqual(streams["count"], 0)
+        self.assertEqual(streams["items"], [])
         self.assertEqual(streams["failures"][0]["message"], "AV1 is unsupported")
+
+    def test_cached_conversion_stream_is_hidden_without_ffmpeg(self):
+        stream_id = "conversion-without-ffmpeg"
+        stream_url = "https://media.example/too-large.mp4"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Unused",
+            "url": stream_url,
+        }
+        self.server.stream_addons = [
+            {"name": "Test source", "manifest_url": "https://addon.example/manifest.json"}
+        ]
+        self.server.probe_cache.set(
+            stream_url,
+            {
+                "status": "candidate",
+                "message": "requires conversion",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 1280,
+                "height": 720,
+            },
+        )
+        self.server.ffmpeg_path = ""
+
+        def fake_fetch(url, timeout=pocket.DEFAULT_TIMEOUT):
+            del timeout
+            if url.endswith("manifest.json"):
+                return {"resources": ["stream"], "types": ["movie"]}
+            return {"streams": [{"name": "Large", "url": stream_url}]}
+
+        with mock.patch.object(pocket, "fetch_json", side_effect=fake_fetch):
+            _, streams = self.get_json("/api/streams/movie/tt0000001")
+        self.assertEqual(streams["count"], 0)
+        self.assertEqual(streams["items"], [])
 
     def test_play_proxy_preserves_range_across_redirect(self):
         upstream = ThreadingHTTPServer(("127.0.0.1", 0), RedirectingMediaHandler)

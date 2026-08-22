@@ -684,6 +684,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "transcodes": {
                         "active": active_transcodes,
                         "available": bool(self.server.ffmpeg_path),
+                        "subtitle_burn_in": bool(
+                            getattr(self.server, "subtitle_burn_in_available", False)
+                        ),
                         "maximum": 1,
                     },
                     "sessions": {
@@ -867,6 +870,17 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "message": "Subtitle and downscaling service is unavailable",
                 },
                 status=503,
+            )
+            return
+        if subtitle and not field_test and not getattr(
+            self.server, "subtitle_burn_in_available", False
+        ):
+            self.write_json(
+                {
+                    "error": "subtitle_burn_in_unavailable",
+                    "message": "This PSS cannot burn subtitles with its FFmpeg build",
+                },
+                status=409,
             )
             return
 
@@ -1419,6 +1433,16 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             stream["playback_mode"] = transcoding.playback_mode(
                 stream.get("compatibility") or {}
             )
+            # A cached probe is authoritative for the source's actual
+            # container and tracks.  Do not offer a stream that PSS already
+            # knows cannot be decoded, or one that requires conversion when
+            # this PSS has no FFmpeg conversion service.  Unprobed candidates
+            # remain visible as CHECK rather than blocking the stream list on
+            # probes for every addon result.
+            if stream["playback_mode"] == "blocked":
+                stream["playable"] = False
+            elif stream["playback_mode"] == "convert" and not self.server.ffmpeg_path:
+                stream["playable"] = False
             stream["release_label"] = stream_release_label(stream)
             stream["source_label"] = stream_source_label(stream)
             self.server.stream_cache[stream["id"]] = stream
@@ -1439,6 +1463,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 }
             }
             for stream in streams
+            if stream.get("playable")
         ]
         self.write_json({"count": len(public_items), "items": public_items, "failures": failures})
 
@@ -1446,6 +1471,21 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
         stream = self.server.stream_cache.get(query.get("stream_id", [""])[0], {})
         subtitles = []
+
+        # External subtitles require FFmpeg's libass-backed subtitles filter
+        # in the normal MPEG-TS path.  A PSS without it cannot render any of
+        # these choices, so omit them instead of leading the Miyoo to a later
+        # playback rejection.  The selected "No subtitles" path remains
+        # available in the client.
+        if not getattr(self.server, "subtitle_burn_in_available", False):
+            self.write_json(
+                {
+                    "count": 0,
+                    "items": [],
+                    "unavailable_reason": "This PSS cannot burn external subtitles with its FFmpeg build",
+                }
+            )
+            return
 
         if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
             fixture = self.server.fixture_dir / "test-subtitle.srt"
@@ -2320,6 +2360,9 @@ def main():
     )
     httpd.ffprobe_path = playback_compatibility.resolve_ffprobe(args.ffprobe)
     httpd.ffmpeg_path = transcoding.resolve_ffmpeg(args.ffmpeg)
+    httpd.subtitle_burn_in_available = transcoding.supports_subtitle_burn_in(
+        httpd.ffmpeg_path
+    )
     httpd.field_test_enabled = args.enable_field_test
     httpd.transcode_dir = data_dir / "transcode"
     httpd.transcode_dir.mkdir(parents=True, exist_ok=True)
@@ -2383,6 +2426,11 @@ def main():
     )
     print(f"Media preflight: {httpd.ffprobe_path or 'disabled'}", flush=True)
     print(f"Bounded conversion: {httpd.ffmpeg_path or 'disabled'}", flush=True)
+    print(
+        "Subtitle burn-in: "
+        + ("available" if httpd.subtitle_burn_in_available else "unavailable"),
+        flush=True,
+    )
     print(
         f"Play sessions: ttl={httpd.play_sessions.ttl_seconds}s "
         f"max={httpd.play_sessions.max_items}",

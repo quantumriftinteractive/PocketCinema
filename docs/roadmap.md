@@ -533,6 +533,11 @@ was physically confirmed synchronized for *Invincible* S1E4, and two resumed
 runs confirmed correct progress accumulation. Stream browsing labels retained
 ffprobe results as `DIRECT`, `CONVERT`, or `CHECK`, and hides cached unsupported
 results without probing every candidate before showing the list.
+PSS also hides cached media that its actual container, video codec, or audio
+codec preflight has rejected; it hides cached conversion-only streams if that
+PSS has no FFmpeg conversion service, and omits external subtitle choices when
+its FFmpeg build lacks subtitle burn-in support. Unprobed sources remain marked
+`CHECK` so opening a stream list never probes every addon result.
 
 The current MPEG-TS path burns one subtitle into the video and therefore cannot
 switch it inside FFplay. The deterministic Matroska experiment passes startup

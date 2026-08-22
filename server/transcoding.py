@@ -1,5 +1,6 @@
 import shutil
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -17,6 +18,25 @@ def resolve_ffmpeg(configured=""):
         path = Path(configured).expanduser()
         return str(path.resolve()) if path.is_file() else ""
     return shutil.which("ffmpeg") or ""
+
+
+def supports_subtitle_burn_in(ffmpeg_path):
+    if not ffmpeg_path:
+        return False
+    try:
+        result = subprocess.run(
+            [ffmpeg_path, "-hide_banner", "-filters"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0 and bool(
+        re.search(rb"(?:^|\n).{0,8}\bsubtitles\b", result.stdout)
+    )
 
 
 def needs_downscale(compatibility):
