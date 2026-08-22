@@ -636,9 +636,13 @@ Milestone 20 duration, synchronization, and resource acceptance criteria.
 
 A later no-subtitle candidate run used the same 640x480 surface and logged a
 640x264 source with SAR 195:197 rendered as a centered 640x266 rectangle at
-`0,106` in that surface. The user confirmed that it looked aspect-correct. This
-settles the presentation-stretch concern for the candidate surface only; it
-does not change the production MPEG-TS fallback or complete Milestone 20.
+`0,106` in that surface. A subsequent display-only one-shot candidate run
+played a 640x268, square-pixel 160:67 (about 2.39:1) MPEG-TS stream and the
+user confirmed correct proportions. Normal FFplay still visibly stretched that
+same correctly encoded stream, isolating the defect to normal-player surface
+presentation. The initially reported candidate A/V concern was a quiet,
+non-English source track rather than a synchronization failure. This does not
+change the production MPEG-TS fallback or complete Milestone 20.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 

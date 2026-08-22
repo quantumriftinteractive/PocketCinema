@@ -15,6 +15,9 @@ SERVER_ENV_OVERRIDE=0
 PROXY="${POCKETSTREMIO_PROXY:-}"
 AUTO_FIRST="${POCKETSTREMIO_AUTO_FIRST:-}"
 DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-}"
+AUDIO_GAIN="${POCKETSTREMIO_AUDIO_GAIN:-}"
+AUDIO_GAIN_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_AUDIO_GAIN:-}" ] && AUDIO_GAIN_ENV_OVERRIDE=1
 CURL="$SYS_DIR/bin/curl"
 JQ="$SYS_DIR/bin/jq"
 KBINPUT="$SYS_DIR/bin/kbinput"
@@ -25,12 +28,22 @@ PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
 DISCOVERY_CLIENT="$BASE_DIR/bin/pocketstremio-discovery"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
+APP_LOCAL_PLAYER="${POCKETSTREMIO_APP_LOCAL_PLAYER:-1}"
 FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
 if [ -f "$BASE_DIR/config/ffplay-field-test.mode" ]; then
   FIELD_TEST=1
   rm -f "$BASE_DIR/config/ffplay-field-test.mode"
 fi
-if [ "$FIELD_TEST" = "1" ]; then
+DISPLAY_SURFACE_TEST="${POCKETSTREMIO_DISPLAY_SURFACE_TEST:-0}"
+if [ -f "$BASE_DIR/config/ffplay-display-surface-test.mode" ]; then
+  DISPLAY_SURFACE_TEST=1
+  rm -f "$BASE_DIR/config/ffplay-display-surface-test.mode"
+fi
+CANDIDATE_PLAYER=0
+# The app-local player owns a fixed 640x480 SDL surface.  This prevents the
+# normal Onion FFplay path from stretching correctly encoded letterboxed video.
+if [ "$APP_LOCAL_PLAYER" = "1" ] || [ "$FIELD_TEST" = "1" ] || [ "$DISPLAY_SURFACE_TEST" = "1" ]; then
+  CANDIDATE_PLAYER=1
   FFPLAY="$BASE_DIR/experiments/ffplay/bin/ffplay"
 fi
 FIELD_TEST_LIB_DIR="$BASE_DIR/experiments/ffplay/lib"
@@ -48,6 +61,8 @@ SERVER_MONITOR_PID=""
 SERVER_STATUS_FILE=/tmp/pocketstremio-server-status
 SERVER_STATUS_JSON=/tmp/pocketstremio-server-status.json
 PLAYBACK_ERROR="Playback failed"
+FAILED_STREAM_IDS=""
+STREAM_RETRY_SUBTITLE_ID=""
 
 mkdir -p "$LOG_DIR"
 rm -f "$PREVIOUS_LOG_FILE.tmp"
@@ -67,6 +82,7 @@ load_config() {
       PROXY) [ -n "$PROXY" ] || PROXY="$config_value" ;;
       DEFAULT_QUERY) [ -n "$DEFAULT_QUERY" ] || DEFAULT_QUERY="$config_value" ;;
       AUTO_FIRST) [ -n "$AUTO_FIRST" ] || AUTO_FIRST="$config_value" ;;
+      AUDIO_GAIN) [ -n "$AUDIO_GAIN" ] || AUDIO_GAIN="$config_value" ;;
       *) CONFIG_ERROR="Unknown setting: $config_key" ;;
     esac
   done <"$CONFIG_FILE"
@@ -75,6 +91,7 @@ load_config() {
 load_config
 AUTO_FIRST="${AUTO_FIRST:-0}"
 DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
+AUDIO_GAIN="${AUDIO_GAIN:-2.0}"
 case "$SERVER_BASE" in
   http://*|https://*) ;;
   '') SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="No PocketStremio server configured" ;;
@@ -87,6 +104,14 @@ esac
 case "$AUTO_FIRST" in
   0|1) ;;
   *) CONFIG_ERROR="AUTO_FIRST must be 0 or 1" ;;
+esac
+case "$AUDIO_GAIN" in
+  1|1.0|1.25|1.5|1.75|2|2.0) ;;
+  *) CONFIG_ERROR="AUDIO_GAIN must be 1, 1.25, 1.5, 1.75, or 2" ;;
+esac
+case "$APP_LOCAL_PLAYER" in
+  0|1) ;;
+  *) CONFIG_ERROR="POCKETSTREMIO_APP_LOCAL_PLAYER must be 0 or 1" ;;
 esac
 
 cleanup() {
@@ -294,7 +319,7 @@ classify_playback_error() {
   elif grep -Eqi 'HTTP error 502 Conversion (could not start|produced no media)' "$failure_log"; then
     printf '%s\n' "PSS conversion could not start"
   elif grep -Eqi 'HTTP error 5[0-9][0-9]|Server returned 5[0-9][0-9]' "$failure_log"; then
-    printf '%s\n' "PSS or the stream provider returned an error"
+    printf '%s\n' "Stream provider or PSS failed; choose another stream"
   elif grep -Eqi 'Connection refused|Connection timed out|Network is unreachable|No route to host|Could not resolve|Temporary failure in name resolution' "$failure_log"; then
     printf '%s\n' "Could not reach the media stream"
   elif grep -Eqi 'Input/output error|partial file|Connection reset|End of file' "$failure_log"; then
@@ -325,8 +350,12 @@ run_ffplay() (
   aspect_mode="${4:-0}"
   playback_preload="$PADSP"
   screen_args=""
-  if [ "$FIELD_TEST" = "1" ]; then
+  audio_args="-af volume=$AUDIO_GAIN"
+  if [ "$CANDIDATE_PLAYER" = "1" ]; then
     screen_args="-x 640 -y 480"
+    # The deployed app-local candidate does not yet include FFmpeg's volume
+    # filter.  Keep this empty until its rebuilt binary is deployed.
+    audio_args=""
     export LD_LIBRARY_PATH="$FIELD_TEST_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     playback_preload="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0"
     export FONTCONFIG_PATH="$FIELD_TEST_LIB_DIR"
@@ -348,12 +377,12 @@ run_ffplay() (
     HTTPS_PROXY="$PROXY" \
     https_proxy="$PROXY" \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" $screen_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   else
     unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" $screen_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   fi
 )
 
@@ -395,6 +424,7 @@ play_url() {
         if [ "$first_ready" = "1" ]; then
           playback_visible_started=$(date +%s)
           PLAYBACK_STARTUP=$((playback_visible_started - playback_started))
+          stop_loading
           log "ffplay video ready startup_seconds=$PLAYBACK_STARTUP"
           if [ -x "$PAUSE_MONITOR" ]; then
             "$PAUSE_MONITOR" "$pause_result" >>"$LOG_FILE" 2>&1 &
@@ -454,6 +484,7 @@ play_url() {
     fi
     break
   done
+  stop_loading
   if [ -n "$PAUSE_MONITOR_PID" ]; then
     if kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
       kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
@@ -685,6 +716,55 @@ save_server_base() {
   chmod 644 "$CONFIG_FILE"
 }
 
+save_audio_gain() {
+  new_audio_gain="$1"
+  config_temp="$CONFIG_FILE.tmp"
+  mkdir -p "$BASE_DIR/config"
+  if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.bak" || return 1
+  fi
+  awk -v audio_gain="$new_audio_gain" '
+    BEGIN { replaced = 0 }
+    /^AUDIO_GAIN=/ {
+      if (!replaced) {
+        print "AUDIO_GAIN=" audio_gain
+        replaced = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!replaced) print "AUDIO_GAIN=" audio_gain
+    }
+  ' "$CONFIG_FILE" 2>/dev/null >"$config_temp" || {
+    printf 'AUDIO_GAIN=%s\n' "$new_audio_gain" >"$config_temp" || return 1
+  }
+  mv "$config_temp" "$CONFIG_FILE" || return 1
+  chmod 644 "$CONFIG_FILE"
+}
+
+audio_gain_flow() {
+  printf '100%% (normal)\t1\n125%%\t1.25\n150%%\t1.5\n175%%\t1.75\n200%% (louder)\t2\nBack\tback\n' \
+    >/tmp/pocketstremio-audio-gain.tsv
+  selected_gain=$(select_from_file "Audio gain (current ${AUDIO_GAIN}x)" /tmp/pocketstremio-audio-gain.tsv)
+  [ -n "$selected_gain" ] || return 0
+  tab=$(printf '\t')
+  gain_line=$(grep -F "$selected_gain$tab" /tmp/pocketstremio-audio-gain.tsv | head -n 1)
+  new_audio_gain=$(printf '%s' "$gain_line" | cut -f2)
+  [ "$new_audio_gain" = "back" ] && return 0
+  if ! save_audio_gain "$new_audio_gain"; then
+    message "PocketStremio Settings" "Could not save audio gain"
+    return 1
+  fi
+  if [ "$AUDIO_GAIN_ENV_OVERRIDE" -eq 1 ]; then
+    message "PocketStremio Settings" "Saved. Environment override remains active."
+    return 0
+  fi
+  AUDIO_GAIN="$new_audio_gain"
+  log "saved audio gain=$AUDIO_GAIN"
+  message "PocketStremio Settings" "Audio gain set to ${AUDIO_GAIN}x for the next video"
+}
+
 activate_server_base() {
   new_server_base="$1"
   server_description="$2"
@@ -800,11 +880,12 @@ enter_server_manually() {
 
 settings_flow() {
   while :; do
-    printf 'Scan for PSS\nEnter Manually\nBack\n' >/tmp/pocketstremio-settings.tsv
+    printf 'Scan for PSS\nEnter Manually\nAudio gain\nBack\n' >/tmp/pocketstremio-settings.tsv
     settings_action=$(select_from_file "Settings" /tmp/pocketstremio-settings.tsv)
     case "$settings_action" in
       "Scan for PSS") scan_for_pss ;;
       "Enter Manually") enter_server_manually ;;
+      "Audio gain") audio_gain_flow ;;
       *) return 0 ;;
     esac
   done
@@ -1229,6 +1310,11 @@ media_flow() {
   year="$4"
   saved_position="${5:-0}"
   display_title="${6:-$title}"
+  # Keep a failed provider/session out of this title's current picker.  The
+  # server also caches deterministic incompatibilities; this handles transient
+  # provider failures without forcing the user back through Continue Watching.
+  FAILED_STREAM_IDS=""
+  STREAM_RETRY_SUBTITLE_ID=""
 
   api_get "/api/meta/$type/$id" >/tmp/pocketstremio-meta.json || {
     message "PocketStremio" "Details unavailable"
@@ -1260,8 +1346,14 @@ media_flow() {
     else
       play_position=0
     fi
-    streams_flow "$type" "$id" "$title" "$year" "$play_position"
-    flow_rc=$?
+    retry_subtitle_id=""
+    while :; do
+      streams_flow "$type" "$id" "$title" "$year" "$play_position" "$retry_subtitle_id"
+      flow_rc=$?
+      [ "$flow_rc" -eq 11 ] || break
+      retry_subtitle_id="$STREAM_RETRY_SUBTITLE_ID"
+      log "retrying stream picker after playback failure subtitle_id=${retry_subtitle_id:-none}"
+    done
     [ "$flow_rc" -eq 10 ] || return "$flow_rc"
   done
 }
@@ -1272,9 +1364,10 @@ streams_flow() {
   title="$3"
   year="$4"
   resume_seconds="${5:-0}"
-  log "resolve streams type=$type id=$id"
-  start_loading "PocketStremio" "Finding streams..."
-  api_get "/api/streams/$type/$id" >/tmp/pocketstremio-streams.json
+  preferred_subtitle_id="${6:-}"
+  log "resolve streams type=$type id=$id preflight=1"
+  start_loading "PocketStremio" "Checking available streams..."
+  api_get "/api/streams/$type/$id?preflight=1" 120 >/tmp/pocketstremio-streams.json
   stream_lookup_rc=$?
   stop_loading
   if [ "$stream_lookup_rc" -ne 0 ]; then
@@ -1282,7 +1375,10 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r '.items | to_entries[] | select(.value.playable == true) | "\(if .value.playback_mode == "direct" then "[DIRECT] " elif .value.playback_mode == "convert" then "[CONVERT]" else "[CHECK]" end) \(.value.source_label // .value.name)\\n\(.value.release_label // "release metadata unavailable")\\n\((.value.compatibility.width // "?")|tostring)x\((.value.compatibility.height // "?")|tostring) \(.value.compatibility.video_codec // "?")/\(.value.compatibility.audio_codec // "?")\t\(.value.id)\t\(.value.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
+  "$JQ" -r --arg failed_ids "$FAILED_STREAM_IDS" '
+    .items[] | select(.playable == true) | . as $stream
+    | select(($failed_ids | contains("|" + $stream.id + "|")) | not)
+    | "\(if .playback_mode == "direct" then "[DIRECT] " elif .playback_mode == "convert" then "[CONVERT]" else "[CHECK]" end) \(.source_label // .name)\\n\(.release_label // "release metadata unavailable")\\n\((.compatibility.width // "?")|tostring)x\((.compatibility.height // "?")|tostring) \(.compatibility.video_codec // "?")/\(.compatibility.audio_codec // "?")\t\(.id)\t\(.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)
     log "no playable streams message=$stream_error"
@@ -1325,6 +1421,9 @@ streams_flow() {
     if [ "$FIELD_TEST" = "1" ]; then
       subtitle_id=none
       log "field-test bypassed subtitle selection"
+    elif [ -n "$preferred_subtitle_id" ]; then
+      subtitle_id="$preferred_subtitle_id"
+      log "reused subtitle selection after playback failure subtitle_id=$subtitle_id"
     else
       subtitle_id=$(select_subtitle "$type" "$id" "$stream_id")
       [ "$subtitle_id" = "back" ] && continue
@@ -1332,7 +1431,13 @@ streams_flow() {
     break
   done
 
-  play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"
+  if ! play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"; then
+    FAILED_STREAM_IDS="${FAILED_STREAM_IDS}|${stream_id}|"
+    STREAM_RETRY_SUBTITLE_ID="$subtitle_id"
+    log "stream failed; returning to filtered picker stream_id=$stream_id"
+    return 11
+  fi
+  return 0
 }
 
 play_selected_stream() {
@@ -1399,16 +1504,16 @@ play_selected_stream() {
 
   log "playback url received"
   start_loading "PocketStremio" "Starting video..."
-  sleep 1
-  stop_loading
+  playback_result=0
   if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE" \
     "$FIELD_TEST" "$subtitle_id" "$resume_seconds"; then
     message "PocketStremio" "$PLAYBACK_ERROR"
+    playback_result=1
   fi
 
   if [ "$type" = "tv" ]; then
     log "live playback ended without progress update"
-    return 0
+    return "$playback_result"
   fi
 
   new_position=$((resume_seconds + PLAYBACK_ELAPSED))
@@ -1424,6 +1529,7 @@ play_selected_stream() {
       log "progress save failed"
     fi
   fi
+  return "$playback_result"
 }
 
 select_subtitle() {
@@ -1435,7 +1541,11 @@ select_subtitle() {
   while :; do
     subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id"
     [ "$subtitle_all" = "1" ] && subtitle_query="$subtitle_query&all=1"
-    if ! api_get "$subtitle_query" >/tmp/pocketstremio-subtitles.json; then
+    start_loading "PocketStremio" "Loading subtitles..."
+    api_get "$subtitle_query" >/tmp/pocketstremio-subtitles.json
+    subtitle_lookup_rc=$?
+    stop_loading
+    if [ "$subtitle_lookup_rc" -ne 0 ]; then
       log "subtitle lookup failed"
       printf '%s' "none"
       return 0

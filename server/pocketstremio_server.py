@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import mimetypes
@@ -49,6 +50,8 @@ DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
 MAX_LIVE_TV_ITEMS = 128
 MAX_SUBTITLE_BYTES = 2 * 1024 * 1024
+MAX_STREAM_LIST_PREFLIGHT = 12
+MAX_STREAM_LIST_PREFLIGHT_WORKERS = 4
 COMPATIBILITY_FIXTURES = (
     {
         "filename": "test-video.mp4",
@@ -740,7 +743,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
 
         if len(parts) == 4 and parts[:2] == ["api", "streams"]:
-            self.handle_streams(parts[2], parts[3])
+            self.handle_streams(parts[2], parts[3], parsed)
             return
 
         if len(parts) == 4 and parts[:2] == ["api", "subtitles"]:
@@ -1206,7 +1209,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             {"count": len(items), "items": items, "failures": failures}
         )
 
-    def handle_streams(self, item_type, item_id):
+    def handle_streams(self, item_type, item_id, parsed=None):
         streams = []
         failures = []
 
@@ -1450,6 +1453,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 )
 
         streams.sort(key=account_stream_quality_rank)
+        query = urllib.parse.parse_qs(parsed.query) if parsed else {}
+        preflight_requested = query.get("preflight", [""])[0].lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if preflight_requested and self.server.ffprobe_path:
+            self.preflight_stream_list(streams)
         for stream in streams:
             probe_target = stream.get("local_path") or stream.get("url")
             cached_compatibility = (
@@ -1495,6 +1506,66 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             if stream.get("playable")
         ]
         self.write_json({"count": len(public_items), "items": public_items, "failures": failures})
+
+    def preflight_stream_list(self, streams):
+        """Probe a bounded set concurrently before presenting the stream picker.
+
+        This is opt-in at the API level because remote media probing can take
+        noticeable time.  It keeps uninspected sources out of a preflight list,
+        so the Miyoo user is not asked to manually discover codec and geometry
+        failures one stream at a time.
+        """
+        candidates = [
+            stream
+            for stream in streams
+            if stream.get("playable")
+            and (stream.get("local_path") or stream.get("url"))
+            and not self.server.probe_cache.get(
+                stream.get("local_path") or stream.get("url")
+            )
+        ][:MAX_STREAM_LIST_PREFLIGHT]
+        if not candidates:
+            return
+
+        with ThreadPoolExecutor(
+            max_workers=min(MAX_STREAM_LIST_PREFLIGHT_WORKERS, len(candidates))
+        ) as executor:
+            futures = {
+                executor.submit(self.preflight_stream, stream["id"], stream): stream
+                for stream in candidates
+            }
+            for future in as_completed(futures):
+                stream = futures[future]
+                try:
+                    compatibility = future.result()
+                    if (
+                        transcoding.needs_downscale(compatibility)
+                        and not transcoding.conversion_geometry_supported(compatibility)
+                    ):
+                        compatibility = dict(compatibility)
+                        compatibility.update(
+                            {
+                                "status": "unsupported",
+                                "message": "This aspect ratio cannot use the current bounded converter",
+                            }
+                        )
+                        self.server.probe_cache.set(
+                            stream.get("local_path") or stream.get("url"), compatibility
+                        )
+                    stream["compatibility"] = compatibility
+                except playback_compatibility.ProbeError:
+                    # A source that cannot even be inspected is not a useful
+                    # candidate for this selection.  Do not persist this as an
+                    # unsupported codec result: providers can recover later.
+                    stream["playable"] = False
+
+        # A preflight request promises a no-trial picker.  Do not show the
+        # remaining, intentionally uninspected tail of a large addon result.
+        for stream in streams:
+            probe_target = stream.get("local_path") or stream.get("url")
+            if not probe_target or self.server.probe_cache.get(probe_target):
+                continue
+            stream["playable"] = False
 
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
