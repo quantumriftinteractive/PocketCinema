@@ -7,6 +7,7 @@ LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/pocketstremio-ui.log"
 PREVIOUS_LOG_FILE="$LOG_DIR/pocketstremio-ui.previous.log"
 CONFIG_FILE="$BASE_DIR/config/pocketstremio.conf"
+LAST_PLAY_FILE="$BASE_DIR/config/last-play.json"
 HTTP_ERROR_FILE=/tmp/pocketstremio-http-error
 SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
 SERVER_ENV_OVERRIDE=0
@@ -212,6 +213,30 @@ api_post_play() {
     log "api post play failed rc=$http_rc detail=$http_detail"
   fi
   return "$http_rc"
+}
+
+save_last_play() {
+  last_type="$1"
+  last_id="$2"
+  last_title="$3"
+  last_year="$4"
+  last_resume_seconds="$5"
+  last_stream_id="$6"
+  last_subtitle_id="$7"
+  last_tmp="$LAST_PLAY_FILE.tmp"
+  "$JQ" -nc \
+    --arg server "$SERVER_BASE" \
+    --arg type "$last_type" \
+    --arg id "$last_id" \
+    --arg title "$last_title" \
+    --arg year "$last_year" \
+    --arg stream_id "$last_stream_id" \
+    --arg subtitle_id "$last_subtitle_id" \
+    --argjson resume_seconds "$last_resume_seconds" \
+    '{server:$server,type:$type,id:$id,title:$title,year:$year,stream_id:$stream_id,subtitle_id:$subtitle_id,resume_seconds:$resume_seconds}' \
+    >"$last_tmp" 2>/dev/null \
+    && mv "$last_tmp" "$LAST_PLAY_FILE"
+  rm -f "$last_tmp"
 }
 
 api_post_progress() {
@@ -801,7 +826,7 @@ home_flow() {
       else
         server_action="Connect to Server"
       fi
-      printf '%s\nSearch\nLive TV\nContinue Watching\nStremio Account\nSettings\nExit\n' \
+      printf '%s\nSearch\nLive TV\nQuick Resume\nContinue Watching\nStremio Account\nSettings\nExit\n' \
         "$server_action" >/tmp/pocketstremio-home.tsv
       action=$(select_from_file "PocketStremio" /tmp/pocketstremio-home.tsv)
     fi
@@ -811,6 +836,9 @@ home_flow() {
         ;;
       "Live TV")
         live_tv_flow
+        ;;
+      "Quick Resume")
+        quick_resume_flow
         ;;
       "Continue Watching")
         continue_watching_flow
@@ -976,6 +1004,43 @@ continue_watching_flow() {
   resume_seconds=$(printf '%s' "$line" | cut -f6)
   log "continue selected type=$type id=$id position_seconds=$resume_seconds"
   media_flow "$type" "$id" "$title" "$year" "$resume_seconds"
+}
+
+quick_resume_flow() {
+  if [ ! -s "$LAST_PLAY_FILE" ]; then
+    message "PocketStremio" "No recent stream to resume"
+    return 0
+  fi
+  quick_server=$("$JQ" -r '.server // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_type=$("$JQ" -r '.type // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_id=$("$JQ" -r '.id // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_title=$("$JQ" -r '.title // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_year=$("$JQ" -r '.year // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_position=$("$JQ" -r '(.resume_seconds // 0) | floor' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_stream_id=$("$JQ" -r '.stream_id // ""' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_subtitle_id=$("$JQ" -r '.subtitle_id // "none"' "$LAST_PLAY_FILE" 2>/dev/null)
+  if [ "$quick_server" != "$SERVER_BASE" ] \
+    || [ -z "$quick_type" ] || [ -z "$quick_id" ] || [ -z "$quick_stream_id" ]; then
+    message "PocketStremio" "Quick Resume is unavailable for this server"
+    return 0
+  fi
+  case "$quick_position" in
+    ''|*[!0-9]*) quick_position=0 ;;
+  esac
+  log "quick resume type=$quick_type id=$quick_id position_seconds=$quick_position"
+  play_selected_stream "$quick_type" "$quick_id" "$quick_title" "$quick_year" \
+    "$quick_position" "$quick_stream_id" "$quick_subtitle_id"
+  quick_rc=$?
+  if [ "$quick_rc" -ne 0 ]; then
+    quick_error=$("$JQ" -r '.error // ""' /tmp/pocketstremio-play.json 2>/dev/null)
+    if [ "$quick_error" = "stream_not_found" ] || [ "$quick_error" = "subtitle_not_found" ]; then
+      rm -f "$LAST_PLAY_FILE"
+      message "PocketStremio" "Saved stream expired; choose it again"
+      media_flow "$quick_type" "$quick_id" "$quick_title" "$quick_year" "$quick_position"
+      return $?
+    fi
+  fi
+  return "$quick_rc"
 }
 
 search_flow() {
@@ -1257,11 +1322,27 @@ streams_flow() {
     done
     [ "$detail_choice" = "Use this stream" ] || continue
 
-    subtitle_id=$(select_subtitle "$type" "$id" "$stream_id")
-    [ "$subtitle_id" = "back" ] && continue
+    if [ "$FIELD_TEST" = "1" ]; then
+      subtitle_id=none
+      log "field-test bypassed subtitle selection"
+    else
+      subtitle_id=$(select_subtitle "$type" "$id" "$stream_id")
+      [ "$subtitle_id" = "back" ] && continue
+    fi
     break
   done
 
+  play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"
+}
+
+play_selected_stream() {
+  type="$1"
+  id="$2"
+  title="$3"
+  year="$4"
+  resume_seconds="$5"
+  stream_id="$6"
+  subtitle_id="$7"
   start_loading "PocketStremio" "Checking compatibility..."
   api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" >/tmp/pocketstremio-play.json
   play_setup_rc=$?
@@ -1280,6 +1361,7 @@ streams_flow() {
     message "PocketStremio" "$play_error"
     return 1
   fi
+  save_last_play "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"
   server_field_test=$("$JQ" -r '.field_test // false' /tmp/pocketstremio-play.json)
   if [ "$FIELD_TEST" = "1" ] && [ "$server_field_test" != "true" ]; then
     log "field-test rejected because server mode is disabled"
@@ -1337,6 +1419,7 @@ streams_flow() {
   if [ "$PLAYBACK_VALID" -eq 1 ] 2>/dev/null && [ "$PAUSE_TRACKING_VALID" -eq 1 ] 2>/dev/null && [ "$PLAYBACK_RC" -eq 0 ] 2>/dev/null && [ "$PLAYBACK_ELAPSED" -gt 0 ] 2>/dev/null; then
     if api_post_progress "$type" "$id" "$title" "$year" "$new_position" "$duration_seconds" "$completed" >/tmp/pocketstremio-progress.json; then
       log "progress saved position_seconds=$new_position duration_seconds=$duration_seconds completed=$completed"
+      save_last_play "$type" "$id" "$title" "$year" "$new_position" "$stream_id" "$subtitle_id"
     else
       log "progress save failed"
     fi

@@ -634,6 +634,12 @@ confirmed smooth candidate playback, no bottom artifact, and clean full-frame
 Menu exit. This confirms the app-local display-surface fix, but not the full
 Milestone 20 duration, synchronization, and resource acceptance criteria.
 
+A later no-subtitle candidate run used the same 640x480 surface and logged a
+640x264 source with SAR 195:197 rendered as a centered 640x266 rectangle at
+`0,106` in that surface. The user confirmed that it looked aspect-correct. This
+settles the presentation-stretch concern for the candidate surface only; it
+does not change the production MPEG-TS fallback or complete Milestone 20.
+
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
 Acceptance criterion: one account-addon movie displays burned-in English
@@ -671,7 +677,12 @@ failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
 testing confirmed the bounded generic PSS/provider category for a pre-readiness
 `502`; newly added subtitle-download and conversion-startup subcategories remain
-pending physical confirmation.
+pending physical confirmation. The device-local Quick Resume entry stores only
+the selected PSS address and opaque stream/subtitle IDs; it skips the prior
+menus while that PSS remains running, then clears the stale selection and
+returns to normal selection after a PSS restart or server change. Its first
+physical run resumed a converted movie at 165 seconds, reached video readiness,
+and saved progress at 185 seconds.
 
 - Show concise PocketStremio server reachability on the main screen.
 - Edit the server host and port from an app-local Settings screen while keeping
@@ -682,6 +693,8 @@ pending physical confirmation.
 - Keep manual HTTP(S) entry available for routed hosts. Warn that PSS has no
   public-facing authentication and must not be exposed directly without an
   authenticated gateway.
+- Offer Quick Resume for the last valid opaque stream selection on the current
+  PSS, with a normal-selection fallback when its in-memory IDs expire.
 - Store ordered audio-language and subtitle-language preferences with an
   explicit fallback choice; never infer language solely from a filename.
 - Apply preferences to server-normalized tracks and subtitle results without
