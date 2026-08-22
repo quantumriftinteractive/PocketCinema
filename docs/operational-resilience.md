@@ -55,6 +55,14 @@ unbuffered so redirected PSS logs are useful before shutdown. These diagnostic
 paths are implemented but their individual device messages remain pending
 physical failure tests.
 
+Manual server entry was physically confirmed on August 22, 2026 when the local
+Wi-Fi could not deliver UDP discovery packets between peers. The Miyoo still
+reached the Mac PSS through its configured HTTP proxy; entering the routed PSS
+address with the controller keyboard passed `/api/status`, updated only
+`SERVER_BASE`, restarted the status monitor, and returned to the home menu.
+This is the expected fallback when broadcast discovery and the device-facing
+HTTP route use different transports.
+
 The first diagnostic field run reproduced the prior symptom with an *Alien:
 Covenant* converted stream. PSS accepted playback setup, but FFplay received
 `502 Bad Gateway` before parsing any media and the Miyoo displayed `PSS or the

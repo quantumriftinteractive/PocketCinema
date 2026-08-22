@@ -166,6 +166,9 @@ subtitle endpoint worked independently, and the same pair worked on retry.
 The client preserves one bounded previous UI log and displays sanitized failure
 categories. Stage-specific subtitle and conversion messages are implemented but
 remain pending physical failure tests.
+Manual PSS entry is physically confirmed: when Wi-Fi peer isolation prevented
+UDP discovery, the controller keyboard accepted the routed Mac PSS address,
+validated it, saved only `SERVER_BASE`, and returned to the connected menu.
 
 Transport independence is physically confirmed. `SERVER_BASE` is explicit,
 `PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.
