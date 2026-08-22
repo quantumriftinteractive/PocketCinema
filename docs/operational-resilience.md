@@ -44,6 +44,31 @@ still-running Windows PSS, and selection plus an app restart preserved the
 Windows `SERVER_BASE`. The monitor and status files are app-local temporary
 state and are removed on exit.
 
+Playback diagnostics were tightened after the later Settings launch overwrote
+the log from an earlier failed playback attempt. Startup now retains at most
+the final 256 KiB of the preceding UI log as `pocketstremio-ui.previous.log`.
+FFplay failures are reduced to a concise sanitized category for both the log
+and the device message, including PSS connectivity, HTTP rejection, provider
+failure, interrupted media, invalid format, unsupported codec, audio startup,
+and missing video readiness. The platform server managers also launch Python
+unbuffered so redirected PSS logs are useful before shutdown. These diagnostic
+paths are implemented but their individual device messages remain pending
+physical failure tests.
+
+The first diagnostic field run reproduced the prior symptom with an *Alien:
+Covenant* converted stream. PSS accepted playback setup, but FFplay received
+`502 Bad Gateway` before parsing any media and the Miyoo displayed `PSS or the
+stream provider returned an error`. The identical opaque stream without a
+subtitle then returned `200` and delivered approximately 4.7 MB over a bounded
+60-second request. The selected subtitle endpoint returned `200`, and the same
+stream-plus-subtitle combination subsequently delivered approximately 4.2 MB
+over 60 seconds. This isolates the observed failure to a transient subtitle or
+conversion-startup failure rather than Miyoo decoding, audio, display geometry,
+or a permanently invalid stream. The exact inner exception was not retained by
+the prior server process. PSS now emits sanitized stage-specific HTTP reasons
+for subtitle download, conversion launch, and missing conversion output; their
+Apps-context messages remain pending physical failure tests.
+
 The physical test exercised a PocketStremio server failure while the configured
 local proxy remained healthy. PocketStremio no longer manages that proxy's
 provider; provider startup and authentication are separate operational scope.

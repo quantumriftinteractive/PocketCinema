@@ -97,6 +97,7 @@ function Start-ManagedServer {
   }
 
   $arguments = @(
+    "-u",
     $serverScript,
     "--host", $HostAddress,
     "--port", $Port,

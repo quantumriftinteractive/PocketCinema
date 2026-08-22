@@ -160,6 +160,12 @@ Settings. The earlier fail-and-exit path also left no stale UI, selector,
 FFplay, infoPanel, or temporary playback state. The server runs under the
 platform lifecycle manager; play sessions are ephemeral across a restart while
 the bounded probe cache and Continue Watching state persist.
+One later converted playback failure was isolated to a transient subtitle or
+conversion-startup `502`: the same stream worked without subtitles, the
+subtitle endpoint worked independently, and the same pair worked on retry.
+The client preserves one bounded previous UI log and displays sanitized failure
+categories. Stage-specific subtitle and conversion messages are implemented but
+remain pending physical failure tests.
 
 Transport independence is physically confirmed. `SERVER_BASE` is explicit,
 `PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.
@@ -242,6 +248,9 @@ overwrite it. Environment variables take precedence over app-local config.
   with `grep` or `sed`.
 - Keep logs under the app-local `logs/` directory and avoid logging private
   upstream stream URLs.
+- Retain only the current UI log and one bounded previous UI log. Playback
+  failures must record and display a concise sanitized cause instead of only
+  `Playback failed`.
 - Always remove `/tmp/stay_awake` after playback, including failure paths.
 - Derive watched time from SDL video readiness, not total FFplay process time;
   initial remote media startup must not advance Continue Watching.

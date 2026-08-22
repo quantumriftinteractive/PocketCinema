@@ -5,6 +5,7 @@ SYS_DIR=/mnt/SDCARD/.tmp_update
 MIYOO_DIR=/mnt/SDCARD/miyoo
 LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/pocketstremio-ui.log"
+PREVIOUS_LOG_FILE="$LOG_DIR/pocketstremio-ui.previous.log"
 CONFIG_FILE="$BASE_DIR/config/pocketstremio.conf"
 HTTP_ERROR_FILE=/tmp/pocketstremio-http-error
 SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
@@ -45,8 +46,14 @@ SERVER_REACHABLE=2
 SERVER_MONITOR_PID=""
 SERVER_STATUS_FILE=/tmp/pocketstremio-server-status
 SERVER_STATUS_JSON=/tmp/pocketstremio-server-status.json
+PLAYBACK_ERROR="Playback failed"
 
 mkdir -p "$LOG_DIR"
+rm -f "$PREVIOUS_LOG_FILE.tmp"
+if [ -s "$LOG_FILE" ]; then
+  tail -c 262144 "$LOG_FILE" >"$PREVIOUS_LOG_FILE.tmp" 2>/dev/null \
+    && mv "$PREVIOUS_LOG_FILE.tmp" "$PREVIOUS_LOG_FILE"
+fi
 : > "$LOG_FILE"
 
 load_config() {
@@ -238,6 +245,54 @@ ffplay_has_subtitles() {
   (unset LD_PRELOAD; "$FFPLAY" -hide_banner -filters 2>/dev/null) | grep -q '[[:space:]]subtitles[[:space:]]'
 }
 
+playback_setup_error() {
+  case "$1" in
+    5|6) printf '%s\n' "PSS address could not be resolved" ;;
+    7) printf '%s\n' "PSS is offline or refused the connection" ;;
+    28) printf '%s\n' "PSS did not respond in time" ;;
+    35|60) printf '%s\n' "Secure connection to PSS failed" ;;
+    *) printf '%s\n' "Could not contact PSS for playback" ;;
+  esac
+}
+
+classify_playback_error() {
+  failure_log="$1"
+  failure_rc="$2"
+  if grep -Eqi 'HTTP error (401|403)|Server returned (401|403)' "$failure_log"; then
+    printf '%s\n' "Stream access was denied or expired"
+  elif grep -Eqi 'HTTP error (404|410)|Server returned (404|410)' "$failure_log"; then
+    printf '%s\n' "Stream is no longer available"
+  elif grep -Eqi 'HTTP error 429|Server returned 429' "$failure_log"; then
+    printf '%s\n' "Stream provider is rate-limiting requests"
+  elif grep -Eqi 'HTTP error 502 Subtitle download failed' "$failure_log"; then
+    printf '%s\n' "Selected subtitle could not be downloaded"
+  elif grep -Eqi 'HTTP error 502 Conversion (could not start|produced no media)' "$failure_log"; then
+    printf '%s\n' "PSS conversion could not start"
+  elif grep -Eqi 'HTTP error 5[0-9][0-9]|Server returned 5[0-9][0-9]' "$failure_log"; then
+    printf '%s\n' "PSS or the stream provider returned an error"
+  elif grep -Eqi 'Connection refused|Connection timed out|Network is unreachable|No route to host|Could not resolve|Temporary failure in name resolution' "$failure_log"; then
+    printf '%s\n' "Could not reach the media stream"
+  elif grep -Eqi 'Input/output error|partial file|Connection reset|End of file' "$failure_log"; then
+    printf '%s\n' "Media stream ended or was interrupted"
+  elif grep -Eqi 'Invalid data found when processing input|could not find codec parameters|moov atom not found|Invalid argument' "$failure_log"; then
+    printf '%s\n' "Stream format is unsupported or invalid"
+  elif grep -Eqi 'Decoder.*not found|Unknown decoder|codec.*not supported|Could not open codec' "$failure_log"; then
+    printf '%s\n' "Video or audio codec is unsupported"
+  elif grep -Eqi '/dev/dsp.*(fail|error|No such)|SDL_OpenAudio.*(fail|error)|audio device.*(fail|error)' "$failure_log"; then
+    printf '%s\n' "Audio could not initialize"
+  elif grep -q 'Input #0' "$failure_log" && grep -q 'SDL_SetVideoMode' "$failure_log"; then
+    printf '%s\n' "Playback stopped unexpectedly after video started"
+  elif grep -q 'Input #0' "$failure_log"; then
+    printf '%s\n' "Video could not start on this device"
+  elif [ "$failure_rc" -eq 126 ] 2>/dev/null || [ "$failure_rc" -eq 127 ] 2>/dev/null; then
+    printf '%s\n' "FFplay could not be started"
+  elif [ ! -s "$failure_log" ]; then
+    printf '%s\n' "FFplay exited without diagnostic output"
+  else
+    printf '%s\n' "Media stream could not be opened"
+  fi
+}
+
 run_ffplay() (
   video_filter="$1"
   url="$2"
@@ -290,6 +345,7 @@ play_url() {
   PLAYBACK_PAUSED=0
   PAUSE_TRACKING_VALID=0
   PLAYBACK_VALID=0
+  PLAYBACK_ERROR="Playback failed"
   playback_visible_started=0
   ffplay_log=/tmp/pocketstremio-ffplay.log
   pause_result=/tmp/pocketstremio-paused-seconds
@@ -406,6 +462,10 @@ play_url() {
     log "field-test accepted intentional disconnect after video readiness"
     PLAYBACK_VALID=1
     PLAYBACK_RC=0
+  fi
+  if [ "$PLAYBACK_VALID" -ne 1 ] || [ "$PLAYBACK_RC" -ne 0 ] 2>/dev/null; then
+    PLAYBACK_ERROR=$(classify_playback_error "$ffplay_log" "$PLAYBACK_RC")
+    log "playback failure rc=$PLAYBACK_RC reason=$PLAYBACK_ERROR"
   fi
   rm -f "$ffplay_log"
   if [ "$PLAYBACK_VALID" -ne 1 ] && [ "$PLAYBACK_RC" -eq 0 ]; then
@@ -1207,13 +1267,15 @@ streams_flow() {
   play_setup_rc=$?
   stop_loading
   if [ "$play_setup_rc" -ne 0 ]; then
-    message "PocketStremio" "Playback setup failed"
+    play_error=$(playback_setup_error "$play_setup_rc")
+    log "playback setup transport failure rc=$play_setup_rc reason=$play_error"
+    message "PocketStremio" "$play_error"
     return 1
   fi
   play_url_value=$("$JQ" -r '.url // ""' /tmp/pocketstremio-play.json)
   if [ -z "$play_url_value" ]; then
     play_error=$("$JQ" -r '.message // "Playback setup failed"' /tmp/pocketstremio-play.json 2>/dev/null)
-    [ -n "$play_error" ] || play_error="Playback setup failed"
+    [ -n "$play_error" ] || play_error="PSS returned an invalid playback response"
     log "playback setup rejected message=$play_error"
     message "PocketStremio" "$play_error"
     return 1
@@ -1259,7 +1321,7 @@ streams_flow() {
   stop_loading
   if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE" \
     "$FIELD_TEST" "$subtitle_id" "$resume_seconds"; then
-    message "PocketStremio" "Playback failed"
+    message "PocketStremio" "$PLAYBACK_ERROR"
   fi
 
   if [ "$type" = "tv" ]; then

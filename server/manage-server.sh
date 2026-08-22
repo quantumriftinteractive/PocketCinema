@@ -144,7 +144,7 @@ start_server() {
 
   mkdir -p "$DATA_DIR"
   umask 077
-  set -- "$SERVER_SCRIPT" \
+  set -- -u "$SERVER_SCRIPT" \
     --host "$HOST_ADDRESS" \
     --port "$PORT" \
     --public-host "$PUBLIC_HOST" \

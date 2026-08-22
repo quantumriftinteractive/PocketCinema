@@ -638,7 +638,13 @@ restart. With the configured Mac PSS intentionally stopped, the menu appeared
 immediately with no black screen and dynamically reported `Server: Offline`;
 selecting that row opened Settings, which restored the Windows connection.
 Manual-entry interaction and the no-config first-run route remain pending
-physical confirmation.
+physical confirmation. Playback failure reporting now classifies bounded,
+sanitized FFplay and transport symptoms instead of displaying only `Playback
+failed`, and the client retains one bounded previous UI log so a later restart
+does not erase the immediately preceding diagnostic evidence. Physical failure
+testing confirmed the bounded generic PSS/provider category for a pre-readiness
+`502`; newly added subtitle-download and conversion-startup subcategories remain
+pending physical confirmation.
 
 - Show concise PocketStremio server reachability on the main screen.
 - Edit the server host and port from an app-local Settings screen while keeping
@@ -656,6 +662,8 @@ physical confirmation.
 - Add an explicit Remove action for individual Continue Watching entries.
 - Keep compatibility modes visible and allow a bounded preference between
   direct, converted, and uninspected candidates.
+- Report a concise actionable playback failure category while keeping upstream
+  media URLs and provider details out of device messages and logs.
 
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly

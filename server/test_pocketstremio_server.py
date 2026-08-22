@@ -902,6 +902,110 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(self.server.active_transcodes, 0)
         self.assertEqual(list(self.server.transcode_dir.iterdir()), [])
 
+    def test_transcode_reports_subtitle_download_stage(self):
+        stream_id = "subtitle-failure-stream"
+        upstream_url = "https://cdn.example/video.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Subtitle failure",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "confirmed",
+                "message": "test",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 640,
+                "height": 360,
+            },
+        )
+        subtitle_id = "blocked-subtitle"
+        self.server.subtitle_cache[subtitle_id] = {
+            "id": subtitle_id,
+            "lang": "eng",
+            "item_type": "movie",
+            "item_id": "tt0000001",
+            "local_path": str(self.server.fixture_dir / "blocked.srt"),
+        }
+        self.server.ffmpeg_path = "test-ffmpeg"
+
+        _, play = self.post_json(
+            "/api/play",
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "stream_id": stream_id,
+                "subtitle_id": subtitle_id,
+            },
+        )
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(play["url"], timeout=5)
+        self.assertEqual(caught.exception.code, 502)
+        self.assertEqual(caught.exception.reason, "Subtitle download failed")
+        with caught.exception as response:
+            payload = json.load(response)
+        self.assertEqual(payload["error"], "subtitle_download_failed")
+        self.assertEqual(self.server.active_transcodes, 0)
+
+    def test_transcode_reports_missing_output_stage(self):
+        stream_id = "empty-transcode-stream"
+        upstream_url = "https://cdn.example/video.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Empty transcode",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "candidate",
+                "message": "test",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "ac3",
+                "width": 1280,
+                "height": 528,
+            },
+        )
+        self.server.ffmpeg_path = "test-ffmpeg"
+
+        class EmptyProcess:
+            def __init__(self):
+                self.stdout = io.BytesIO()
+                self.stderr = io.BytesIO(b"safe conversion error\n")
+
+            def poll(self):
+                return 1
+
+            def wait(self, timeout=None):
+                del timeout
+                return 1
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        _, play = self.post_json(
+            "/api/play",
+            {"type": "movie", "id": "tt0000001", "stream_id": stream_id},
+        )
+        with mock.patch.object(
+            pocket.subprocess, "Popen", side_effect=lambda *args, **kwargs: EmptyProcess()
+        ):
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(play["url"], timeout=5)
+        self.assertEqual(caught.exception.code, 502)
+        self.assertEqual(caught.exception.reason, "Conversion produced no media")
+        with caught.exception as response:
+            payload = json.load(response)
+        self.assertEqual(payload["error"], "transcode_failed")
+        self.assertEqual(self.server.active_transcodes, 0)
+
     def test_transcode_policy_and_command_are_bounded(self):
         self.assertTrue(transcoding.needs_downscale({"width": 1280, "height": 720}))
         self.assertTrue(

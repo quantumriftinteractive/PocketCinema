@@ -1680,18 +1680,21 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         stderr_thread = None
         stderr_buffer = bytearray()
         response_started = False
+        failure_stage = "conversion"
         with self.server.transcode_state_lock:
             self.server.active_transcodes += 1
         try:
             subtitle_url = session.get("subtitle_url") or ""
             subtitle_local_path = session.get("subtitle_path") or ""
             if session.get("field_test"):
+                failure_stage = "subtitle"
                 for subtitle in session.get("field_test_subtitles", []):
                     subtitle_paths.append(
                         self.download_transcode_subtitle(
                             subtitle.get("url", ""), subtitle.get("local_path", "")
                         )
                     )
+                failure_stage = "conversion"
                 command = transcoding.build_matroska_command(
                     self.server.ffmpeg_path,
                     session["source_url"],
@@ -1700,9 +1703,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 )
             else:
                 if subtitle_url or subtitle_local_path:
+                    failure_stage = "subtitle"
                     subtitle_path = self.download_transcode_subtitle(
                         subtitle_url, subtitle_local_path
                     )
+                failure_stage = "conversion"
                 command = transcoding.build_command(
                     self.server.ffmpeg_path,
                     session["source_url"],
@@ -1776,12 +1781,29 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             if response_started:
                 print(f"Transcode interrupted: {diagnostic}", flush=True)
             else:
+                if failure_stage == "subtitle":
+                    error = "subtitle_download_failed"
+                    message = "Selected subtitle could not be downloaded"
+                    reason = "Subtitle download failed"
+                elif process is None:
+                    error = "transcode_start_failed"
+                    message = "Converted playback could not start"
+                    reason = "Conversion could not start"
+                else:
+                    error = "transcode_failed"
+                    message = "Converted playback produced no media"
+                    reason = "Conversion produced no media"
+                print(
+                    f"Transcode failed before response: {failure_stage} ({diagnostic})",
+                    flush=True,
+                )
                 self.write_json(
                     {
-                        "error": "transcode_failed",
-                        "message": "Converted playback could not start",
+                        "error": error,
+                        "message": message,
                     },
                     status=502,
+                    reason=reason,
                 )
         finally:
             if process is not None and process.poll() is None:
@@ -2103,9 +2125,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print("%s - %s" % (self.address_string(), fmt % args), flush=True)
 
-    def write_json(self, payload, status=200):
+    def write_json(self, payload, status=200, reason=None):
         body = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
-        self.send_response(status)
+        self.send_response(status, message=reason)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
