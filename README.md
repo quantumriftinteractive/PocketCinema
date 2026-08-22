@@ -12,8 +12,10 @@ Apps -> PocketStremio -> search -> select media or episode -> Play -> select str
 
 It uses direct HTTP or an optional configured HTTP proxy, a lightweight SDL 1.2
 selector, a Python server on the gaming PC, and the PC's localhost-only Stremio
-Service as an optional backend. Tailscale is an independent network provider,
-not a PocketStremio runtime dependency. The known-compatible Big Buck Bunny test
+Service as an optional backend. The PSS can also run on macOS while reaching a
+Windows Stremio Service through a loopback-only SSH tunnel. Tailscale is an
+independent network provider, not a PocketStremio runtime dependency. The
+known-compatible Big Buck Bunny test
 stream plays as H.264 640x360 with AAC audio. See
 `docs/vertical-slice.md`, `docs/ffplay-playback-poc.md`, and
 `docs/operational-resilience.md` for confirmed results and current limitations.
@@ -21,9 +23,10 @@ stream plays as H.264 640x360 with AAC audio. See
 See [docs/roadmap.md](docs/roadmap.md) for milestone status, acceptance criteria,
 sequencing, deferred features, and known risks.
 
-Normal server operations use `server/manage-server.ps1`. Tracked Miyoo app files
-can be upgraded with `scripts/deploy-miyoo.ps1`; the deployment preserves the
-app's real config, logs, networking-provider state, and OnionOS core files.
+Normal server operations use `server/manage-server.ps1` on Windows or
+`server/manage-server.sh` on macOS. Tracked Miyoo app files can be upgraded with
+`scripts/deploy-miyoo.ps1`; the deployment preserves the app's real config,
+logs, networking-provider state, and OnionOS core files.
 
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
@@ -51,7 +54,7 @@ The basic architecture is:
           │
           ▼
 ┌──────────────────────┐
-│      Gaming PC       │
+│  Gaming PC or Mac    │
 │                      │
 │ PocketStremio Server │
 │        │             │
@@ -78,7 +81,7 @@ The final client should ideally support:
 * Subtitle support
 * Send playback progress back to the server
 * Play remote video through OnionOS/FFplay
-* Connect securely to the server through Tailscale
+* Connect securely to the server through a trusted network or VPN
 
 The Miyoo client should remain as lightweight as possible.
 

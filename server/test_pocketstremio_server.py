@@ -1,6 +1,7 @@
 import collections
 import io
 import json
+import socket
 import tempfile
 import threading
 import unittest
@@ -11,6 +12,7 @@ from pathlib import Path
 from unittest import mock
 
 from server import hls_relay
+from server import discovery
 from server import link_stremio_account
 from server import open_media_addon
 from server import playback_compatibility
@@ -18,6 +20,63 @@ from server import pocketstremio_server as pocket
 from server import stremio_account
 from server import stremio_service
 from server import transcoding
+
+
+class DiscoveryResponderTest(unittest.TestCase):
+    def test_instance_id_is_persistent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "discovery_instance_id"
+            first = discovery.load_or_create_instance_id(path)
+            second = discovery.load_or_create_instance_id(path)
+        self.assertRegex(first, r"^[a-f0-9]{16}$")
+        self.assertEqual(first, second)
+
+    def test_responder_returns_one_named_preferred_address(self):
+        responder = discovery.DiscoveryResponder(
+            "0123456789abcdef",
+            "Mac PSS",
+            "Overlay",
+            "http://192.0.2.10:8755",
+            "test-version",
+            port=0,
+            bind_host="127.0.0.1",
+        ).start()
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client.settimeout(2)
+        try:
+            client.sendto(
+                discovery.DISCOVERY_REQUEST,
+                ("127.0.0.1", responder.bound_port),
+            )
+            packet, _ = client.recvfrom(discovery.MAX_PACKET_BYTES)
+        finally:
+            client.close()
+            responder.close()
+        self.assertEqual(
+            packet.decode("utf-8"),
+            "POCKETSTREMIO_PSS_V1\t0123456789abcdef\tMac PSS\tOverlay\t"
+            "http://192.0.2.10:8755\ttest-version\n",
+        )
+
+    def test_responder_ignores_unknown_probe(self):
+        responder = discovery.DiscoveryResponder(
+            "0123456789abcdef",
+            "Mac PSS",
+            "LAN",
+            "http://192.0.2.20:8755",
+            "test-version",
+            port=0,
+            bind_host="127.0.0.1",
+        ).start()
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client.settimeout(0.3)
+        try:
+            client.sendto(b"not-pocketstremio\n", ("127.0.0.1", responder.bound_port))
+            with self.assertRaises(socket.timeout):
+                client.recvfrom(discovery.MAX_PACKET_BYTES)
+        finally:
+            client.close()
+            responder.close()
 
 
 class RedirectingMediaHandler(BaseHTTPRequestHandler):
@@ -334,6 +393,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertTrue(status["state"]["probe_cache_persistent"])
         self.assertFalse(status["stremio_service"]["configured"])
         self.assertFalse(status["stremio_account"]["configured"])
+        self.assertFalse(status["discovery"]["enabled"])
 
     def test_unconfigured_account_addon_endpoint_is_empty(self):
         _, addons = self.get_json("/api/addons")
@@ -944,8 +1004,19 @@ class PocketStremioServerTest(unittest.TestCase):
                 "item_id": "tt0000001",
                 "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
             }
-        self.server.field_test_enabled = True
         self.server.ffmpeg_path = "test-ffmpeg"
+        _, normal_play = self.post_json(
+            "/api/play",
+            {
+                "type": "movie",
+                "id": "tt0000001",
+                "stream_id": stream_id,
+                "subtitle_id": "field-one",
+                "field_test": True,
+            },
+        )
+        self.assertFalse(normal_play["field_test"])
+        self.server.field_test_enabled = True
         _, play = self.post_json(
             "/api/play",
             {
@@ -957,6 +1028,7 @@ class PocketStremioServerTest(unittest.TestCase):
             },
         )
         self.assertTrue(play["transcoded"])
+        self.assertTrue(play["field_test"])
         self.assertNotIn(upstream_url, json.dumps(play))
 
         transport = b"\x1a\x45\xdf\xa3" + b"matroska-field-test"

@@ -5,8 +5,9 @@
 Implemented on the gaming PC and deployed to the Miyoo client. Automated and
 desktop-side account-stream checks pass. Apps-context subtitle rendering,
 resume clock correction, pause accounting, and one synchronized episode track
-are physically confirmed. Multi-track switching and the remaining milestone
-acceptance tests are still pending.
+are physically confirmed. Experimental multi-track switching is also physically
+confirmed, while the milestone's sustained playback, synchronization, audio,
+cleanup, and resource acceptance tests remain pending.
 
 ## Device Evidence
 
@@ -85,6 +86,12 @@ The implementation enforces one nonblocking conversion job. A second request
 receives a bounded `transcode_busy` response. FFmpeg is terminated on client
 disconnect, temporary subtitles are deleted in `finally`, stderr retention is
 bounded to 32 KiB, and URL-bearing FFmpeg diagnostics are omitted from logs.
+
+The app-local resource monitor recognizes both Onion's normal FFplay path and
+the opt-in candidate path, labels each sample accordingly, and records only
+device memory plus the active player process. It does not inspect a networking
+provider. This prepares the remaining duration/resource run without changing
+either playback path or treating the candidate as production.
 
 ## Subtitle Clock Correction
 
@@ -190,6 +197,20 @@ experimental cleanup result; startup failures remain rejected. The wrapper
 remains experimental and disabled after the test; the normal MPEG-TS burn-in
 path remains unchanged.
 
+The client also verifies the server-confirmed field-test mode before it
+downloads a Matroska subtitle wrapper or launches the candidate. If the normal
+server mode is active, the experiment stops with a specific pre-playback
+message instead of passing ordinary subtitle content to FFplay as an `.mkv`
+file. This guard does not alter normal MPEG-TS conversion.
+
+The mismatch was reproduced physically after the server and device had been
+restored to normal mode: a one-shot candidate client request received the
+production MPEG-TS response and ordinary subtitle content, then failed before
+video readiness with an EBML-header error. It saved no progress and left no
+FFplay, selector, monitor, stay-awake flag, or temporary subtitle file after B
+exit; `/api/status` returned the active conversion count to zero. This is
+failure/cleanup evidence, not wrapper playback acceptance.
+
 Latest visual-isolation checkpoint: production MPEG-TS burn-in passed without
 the artifact, while the candidate displayed it even with no subtitle selected.
 The deployed candidate matched the local rebuild byte-for-byte (SHA-256
@@ -217,6 +238,18 @@ pair confirmed the surface fix with Matroska subtitles: playback was smooth,
 the bottom artifact was absent, and Menu exit no longer exposed a partly
 rendered PocketStremio title. The run was intentionally brief and is display
 cleanup evidence, not long-duration playback acceptance.
+
+An incidental normal-fallback run of the same source then reached readiness in
+9 seconds and recorded 244 valid watched seconds. FFprobe measured the source
+at 1280x536 and FFplay received the aspect-equivalent 640x268 conversion, both
+about 2.39:1, but the operator reported that Onion's system-player presentation
+looked slightly vertically stretched. Across 235 samples, FFplay used
+6,780--26,472 kB RSS and zero swap; minimum MemFree was 2,092 kB, minimum
+MemAvailable was 38,068 kB, and minimum SwapFree was 130,168 kB. Menu and B exit
+left no device playback process or temporary state, and the server returned to
+zero active conversions. Because this used the production player and exposed a
+presentation concern, it is fallback diagnostic evidence rather than candidate
+duration acceptance.
 
 The first SDL comparison then hid only the app-local candidate SDL library so
 the same candidate binary fell back to Miyoo's system SDL. The bottom artifact
@@ -284,12 +317,14 @@ and 80 valid unpaused seconds, and left no FFplay process after Menu exit.
 
 ## Pending Device Confirmation
 
-- an account-addon movie has a synchronized English subtitle match;
-- a deterministic Matroska response can carry switchable subtitle tracks on
-  the deployed FFplay build;
-- smooth playback of the previously stuttering 720p *Invincible* episode;
-- audible synchronized audio and Menu-button cleanup;
-- controller mapping for FFplay's subtitle-channel cycle command.
+- sustained playback with the known-good Spider-Man release/subtitle pair,
+  checking subtitle and audio synchronization near both ends of the run;
+- smooth downscaled playback of the previously stuttering 720p *Invincible*
+  episode for the chosen acceptance duration;
+- startup time, gaming-PC CPU/RAM, Miyoo RAM/swap, and smoothness measurements
+  during those runs;
+- Menu-button exit followed by confirmation that FFmpeg, FFplay, selector,
+  relay, and temporary subtitle state are all cleaned up.
 
 ## Protocol References
 

@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import secrets
+import socket
 import subprocess
 import threading
 import time
@@ -16,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 try:
+    from server import discovery
     from server import hls_relay
     from server import link_stremio_account
     from server import open_media_addon
@@ -24,6 +26,7 @@ try:
     from server import stremio_service
     from server import transcoding
 except ImportError:
+    import discovery
     import hls_relay
     import link_stremio_account
     import open_media_addon
@@ -34,7 +37,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.16.1-subtitle-sync"
+SERVER_VERSION = "0.17.0-device-discovery"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
@@ -661,6 +664,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "service": "pocketstremio-server",
                     "version": SERVER_VERSION,
                     "message": "PocketStremio server is reachable",
+                    "discovery": {
+                        "enabled": bool(
+                            getattr(self.server, "discovery_responder", None)
+                        ),
+                        "name": getattr(self.server, "discovery_name", ""),
+                        "network": getattr(self.server, "discovery_network", ""),
+                        "port": getattr(self.server, "discovery_port", 0),
+                    },
                     "uptime_seconds": max(
                         0, int(time.time() - self.server.started_at)
                     ),
@@ -901,6 +912,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "compatibility": compatibility,
                 "transcoded": transcode,
                 "server_seek_applied": bool(transcode and start_seconds),
+                "field_test": field_test,
             }
         )
 
@@ -2160,6 +2172,23 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8755)
     parser.add_argument("--public-host", default=None)
+    parser.add_argument(
+        "--server-name",
+        default=socket.gethostname(),
+        help="Friendly PSS name shown by device discovery",
+    )
+    parser.add_argument(
+        "--network-name",
+        default="Network",
+        help="Transport label shown by device discovery, such as LAN or Tailscale",
+    )
+    parser.add_argument(
+        "--discovery-port",
+        type=int,
+        default=discovery.DISCOVERY_PORT,
+        help="UDP port used for local PSS discovery",
+    )
+    parser.add_argument("--disable-discovery", action="store_true")
     parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
     parser.add_argument(
         "--stremio-account-config",
@@ -2222,12 +2251,18 @@ def main():
     fixture_dir = Path(args.fixture_dir).resolve()
     data_dir = Path(args.data_dir).resolve()
     data_dir.mkdir(parents=True, exist_ok=True)
+    if args.discovery_port < 1 or args.discovery_port > 65535:
+        parser.error("--discovery-port must be between 1 and 65535")
 
     httpd = ThreadingHTTPServer((args.host, args.port), PocketStremioHandler)
     httpd.media_dir = media_dir
     httpd.fixture_dir = fixture_dir
     httpd.public_host = args.public_host or args.host
     httpd.server_port = args.port
+    httpd.discovery_name = discovery.safe_name(args.server_name)
+    httpd.discovery_network = discovery.safe_name(args.network_name)
+    httpd.discovery_port = args.discovery_port
+    httpd.discovery_responder = None
     service_roots = args.stremio_local_media_root or [str(media_dir)]
     httpd.stremio_service = stremio_service.StremioServiceBackend(
         args.stremio_service_url,
@@ -2276,8 +2311,34 @@ def main():
     httpd.started_at = time.time()
     httpd.daemon_threads = True
 
+    if not args.disable_discovery:
+        instance_id = discovery.load_or_create_instance_id(
+            data_dir / "discovery_instance_id"
+        )
+        advertised_url = discovery.public_url(httpd.public_host, args.port)
+        try:
+            httpd.discovery_responder = discovery.DiscoveryResponder(
+                instance_id,
+                httpd.discovery_name,
+                httpd.discovery_network,
+                advertised_url,
+                SERVER_VERSION,
+                port=args.discovery_port,
+            ).start()
+        except OSError as error:
+            print(
+                f"PSS discovery unavailable on UDP {args.discovery_port}: {error}",
+                flush=True,
+            )
+
     print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
+    if httpd.discovery_responder:
+        print(
+            f"PSS discovery: {httpd.discovery_name} | "
+            f"{httpd.discovery_network} | {advertised_url} | UDP {args.discovery_port}",
+            flush=True,
+        )
     print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
     print(
         "Stremio Service backend: "
@@ -2316,6 +2377,8 @@ def main():
         httpd.serve_forever()
     finally:
         httpd.server_close()
+        if httpd.discovery_responder:
+            httpd.discovery_responder.close()
         if open_media_server:
             open_media_server.shutdown()
             open_media_server.server_close()

@@ -28,16 +28,23 @@ end_time=$(($(date +%s) + MAX_SECONDS))
 printf 'monitor_start %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" >>"$LOG_FILE"
 
 while [ "$(date +%s)" -lt "$end_time" ]; do
-  ffplay_pid=$(ps | awk '/\/mnt\/SDCARD\/\.tmp_update\/bin\/ffplay/ && !/awk/ {print $1; exit}')
+  ffplay_process=$(ps | awk '
+    /\/mnt\/SDCARD\/\.tmp_update\/bin\/ffplay/ && !/awk/ {
+      print $1 " system"
+      exit
+    }
+    /\/mnt\/SDCARD\/App\/PocketStremio\/experiments\/ffplay\/bin\/ffplay/ && !/awk/ {
+      print $1 " candidate"
+      exit
+    }
+  ')
+  ffplay_pid=${ffplay_process%% *}
+  ffplay_kind=${ffplay_process#* }
   if [ -n "$ffplay_pid" ] && [ -r "/proc/$ffplay_pid/status" ]; then
-    printf 'sample %s pid=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$ffplay_pid" >>"$LOG_FILE"
+    printf 'sample %s pid=%s player=%s\n' \
+      "$(date '+%Y-%m-%dT%H:%M:%S')" "$ffplay_pid" "$ffplay_kind" >>"$LOG_FILE"
     grep -E '^(MemTotal|MemFree|MemAvailable|SwapTotal|SwapFree):' /proc/meminfo >>"$LOG_FILE"
     grep -E '^(VmRSS|VmSwap|Threads):' "/proc/$ffplay_pid/status" >>"$LOG_FILE"
-    tailscaled_pid=$(ps | awk '/[t]ailscaled/ {print $1; exit}')
-    if [ -n "$tailscaled_pid" ] && [ -r "/proc/$tailscaled_pid/status" ]; then
-      grep -E '^(VmRSS|VmSwap|Threads):' "/proc/$tailscaled_pid/status" |
-        sed 's/^/tailscaled_/' >>"$LOG_FILE"
-    fi
   fi
   sleep 1
 done

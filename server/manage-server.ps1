@@ -4,6 +4,10 @@ param(
   [string]$HostAddress = $env:POCKETSTREMIO_HOST,
   [int]$Port = 8755,
   [string]$PublicHost = "",
+  [string]$ServerName = $env:COMPUTERNAME,
+  [string]$NetworkName = "Network",
+  [int]$DiscoveryPort = 8754,
+  [switch]$DisableDiscovery,
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
   [string]$StremioLocalMediaRoot = "",
   [int]$OpenMediaAddonPort = 8756,
@@ -97,11 +101,17 @@ function Start-ManagedServer {
     "--host", $HostAddress,
     "--port", $Port,
     "--public-host", $PublicHost,
+    "--server-name", $ServerName,
+    "--network-name", $NetworkName,
+    "--discovery-port", $DiscoveryPort,
     "--stremio-service-url", $StremioServiceUrl,
     "--open-media-addon-port", $OpenMediaAddonPort
   )
   if ($EnableFieldTest) {
     $arguments += "--enable-field-test"
+  }
+  if ($DisableDiscovery) {
+    $arguments += "--disable-discovery"
   }
   if ($StremioLocalMediaRoot) {
     $arguments += @("--stremio-local-media-root", $StremioLocalMediaRoot)

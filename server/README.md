@@ -29,6 +29,58 @@ stale PID files, rejects duplicate managed instances, and verifies `/api/status`
 after startup. `start-server.ps1` remains the foreground development entry
 point.
 
+On macOS, the equivalent lifecycle manager discovers Homebrew `python3`,
+`ffprobe`, and `ffmpeg` from `PATH`:
+
+```sh
+POCKETSTREMIO_HOST=100.x.y.z ./server/manage-server.sh start
+./server/manage-server.sh status --host 100.x.y.z
+./server/manage-server.sh stop
+```
+
+PSS advertises one preferred device-facing address on UDP `8754` for the
+Miyoo's local-network scan. Give each instance a short machine name and a
+descriptive transport label:
+
+```sh
+./server/manage-server.sh start \
+  --host 100.x.y.z \
+  --public-host 100.x.y.z \
+  --server-name "Mac PSS" \
+  --network-name "Tailscale"
+```
+
+The scan displays `name - IP:port - network`. A machine with both LAN and
+overlay addresses still appears once because the PSS advertises only its
+configured `--public-host`; repeated replies are deduplicated by a persistent,
+ignored PSS instance ID. Use `--disable-discovery` where UDP broadcast is not
+wanted. Discovery exposes no Stremio ports, addon transports, media URLs, or
+account credentials, and each reply must pass `/api/status` validation before
+the Miyoo offers it.
+
+For a split-host development setup, keep Stremio Service on the Windows host
+and forward it through an externally managed SSH tunnel bound only to macOS
+loopback. PSS remains transport-agnostic and does not expose or manage the raw
+Stremio Service ports:
+
+```sh
+ssh -N -L 127.0.0.1:21470:127.0.0.1:11470 user@windows-host
+./server/manage-server.sh start \
+  --host 100.x.y.z \
+  --public-host 100.x.y.z \
+  --stremio-service-url http://127.0.0.1:21470
+```
+
+Do not supply a Windows `file://` media root to a macOS PSS. Link the Stremio
+account separately on each PSS host instead of copying the ignored auth-key
+file between machines. Continue Watching and probe-cache state are likewise
+owned by the active PSS host.
+
+The Miyoo Settings screen can also accept `host:port` or a full HTTP(S) URL.
+PSS does not currently provide public-facing authentication, so do not expose
+it directly to the internet without an authenticated gateway. A trusted LAN,
+VPN, or other access-controlled network is the supported security boundary.
+
 Endpoints:
 
 ```text

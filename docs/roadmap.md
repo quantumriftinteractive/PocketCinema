@@ -514,7 +514,8 @@ account-addon playback flow.
 
 ### 20. Bounded English Subtitles and Downscaling
 
-**Status: Next**
+**Status: In Progress (acceptance pending; temporarily paused for the
+user-prioritized host-portability slice in Milestone 21)**
 
 External subtitles cannot render on the target FFplay build, and physically
 tested 720p and 1080p sources exceed reliable direct-play behavior. Add one
@@ -618,11 +619,33 @@ cleans up every server and device process without exposing upstream tokens.
 
 ### 21. Device Settings and Playback Preferences
 
-**Status: Planned**
+**Status: Next**
+
+The user-prioritized server-connectivity slice is implemented for split-host
+development. The home screen reports connected, offline, or unconfigured
+state without preventing access to Settings. Settings can discover PSS
+instances by local UDP broadcast or accept a controller-keyboard HTTP(S)
+address manually, validates candidates through `/api/status`, and atomically
+updates only `SERVER_BASE` in the authoritative app-local config. Each PSS
+advertises one preferred address and a stable ignored instance identity, so a
+machine with both LAN and overlay addresses is not presented as multiple PSS
+instances. Choices are labeled `name - IP:port - network`; the transport label
+is explicit PSS configuration rather than Tailscale inspection. A device-shell
+probe and the Apps-context Settings flow both found and displayed the Mac PSS as
+`Mac PSS - advertised-IP:8755 - Tailscale`; controller selection atomically
+saved the same `SERVER_BASE` while preserving the other live settings. App
+restart behavior, manual-entry interaction, and multi-PSS display remain
+pending physical confirmation.
 
 - Show concise PocketStremio server reachability on the main screen.
 - Edit the server host and port from an app-local Settings screen while keeping
   `/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf` authoritative.
+- Discover one preferred address per PSS on the local network, deduplicate it
+  by instance rather than interface, and show name, IP:port, and configured
+  network label before selection.
+- Keep manual HTTP(S) entry available for routed hosts. Warn that PSS has no
+  public-facing authentication and must not be exposed directly without an
+  authenticated gateway.
 - Store ordered audio-language and subtitle-language preferences with an
   explicit fallback choice; never infer language solely from a filename.
 - Apply preferences to server-normalized tracks and subtitle results without

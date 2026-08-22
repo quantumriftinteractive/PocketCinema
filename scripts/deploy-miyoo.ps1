@@ -38,6 +38,7 @@ $files = @(
   @{ Local = "client/miyoo/bin/pocketstremio-selector"; Remote = "bin/pocketstremio-selector" },
   @{ Local = "client/miyoo/bin/pocketstremio-pause-monitor"; Remote = "bin/pocketstremio-pause-monitor" },
   @{ Local = "client/miyoo/bin/pocketstremio-playback-control"; Remote = "bin/pocketstremio-playback-control" },
+  @{ Local = "client/miyoo/bin/pocketstremio-discovery"; Remote = "bin/pocketstremio-discovery" },
   @{ Local = "client/miyoo/pocketstremio.conf.example"; Remote = "config/pocketstremio.conf.example" },
   @{ Local = "experiments/button-diagnostic.sh"; Remote = "experiments/button-diagnostic.sh" },
   @{ Local = "client/miyoo/bin/pocketstremio-button-diagnostic"; Remote = "bin/pocketstremio-button-diagnostic" }
@@ -54,6 +55,7 @@ $modeTargets = @(
   "$Destination/bin/pocketstremio-selector",
   "$Destination/bin/pocketstremio-pause-monitor",
   "$Destination/bin/pocketstremio-playback-control",
+  "$Destination/bin/pocketstremio-discovery",
   "$Destination/bin/pocketstremio-button-diagnostic",
   "$Destination/experiments/button-diagnostic.sh"
 ) -join " "

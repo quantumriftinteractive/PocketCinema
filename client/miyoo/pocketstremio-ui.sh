@@ -8,6 +8,8 @@ LOG_FILE="$LOG_DIR/pocketstremio-ui.log"
 CONFIG_FILE="$BASE_DIR/config/pocketstremio.conf"
 HTTP_ERROR_FILE=/tmp/pocketstremio-http-error
 SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
+SERVER_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_SERVER:-}" ] && SERVER_ENV_OVERRIDE=1
 PROXY="${POCKETSTREMIO_PROXY:-}"
 AUTO_FIRST="${POCKETSTREMIO_AUTO_FIRST:-}"
 DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-}"
@@ -18,6 +20,7 @@ SHELLECT="$SYS_DIR/script/shellect.sh"
 SDL_SELECTOR="$BASE_DIR/bin/pocketstremio-selector"
 PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
 PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
+DISCOVERY_CLIENT="$BASE_DIR/bin/pocketstremio-discovery"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
@@ -37,6 +40,9 @@ PLAYBACK_CONTROL_PID=""
 PLAYBACK_CONTROL_FILE=/tmp/pocketstremio-playback-control
 READY_ERROR=""
 CONFIG_ERROR=""
+SERVER_CONFIG_MESSAGE=""
+SERVER_URL_VALID=1
+SERVER_REACHABLE=0
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
@@ -61,8 +67,8 @@ AUTO_FIRST="${AUTO_FIRST:-0}"
 DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
 case "$SERVER_BASE" in
   http://*|https://*) ;;
-  '') CONFIG_ERROR="SERVER_BASE is required" ;;
-  *) CONFIG_ERROR="SERVER_BASE must be an HTTP URL" ;;
+  '') SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="No PocketStremio server configured" ;;
+  *) SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="SERVER_BASE must be an HTTP URL" ;;
 esac
 case "$PROXY" in
   ''|http://*) ;;
@@ -87,6 +93,9 @@ cleanup() {
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
     /tmp/pocketstremio-addons.json /tmp/pocketstremio-live-tv.json \
     /tmp/pocketstremio-live-tv.tsv \
+    /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv \
+    /tmp/pocketstremio-discovery-status.json \
+    /tmp/pocketstremio-settings.tsv \
     /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
 }
@@ -493,13 +502,181 @@ ensure_ready() {
   return 1
 }
 
+validate_pss_url() {
+  candidate_url="$1"
+  rm -f /tmp/pocketstremio-discovery-status.json
+  if ! curl_request -fsS --connect-timeout 4 --max-time 7 \
+    "$candidate_url/api/status" >/tmp/pocketstremio-discovery-status.json \
+    2>>"$HTTP_ERROR_FILE"; then
+    return 1
+  fi
+  "$JQ" -e '.status == "ok" and .service == "pocketstremio-server"' \
+    /tmp/pocketstremio-discovery-status.json >/dev/null 2>&1
+}
+
+save_server_base() {
+  new_server_base="$1"
+  config_temp="$CONFIG_FILE.tmp"
+  mkdir -p "$BASE_DIR/config"
+  if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.bak" || return 1
+  fi
+  awk -v server_base="$new_server_base" '
+    BEGIN { replaced = 0 }
+    /^SERVER_BASE=/ {
+      if (!replaced) {
+        print "SERVER_BASE=" server_base
+        replaced = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!replaced) print "SERVER_BASE=" server_base
+    }
+  ' "$CONFIG_FILE" 2>/dev/null >"$config_temp" || {
+    printf 'SERVER_BASE=%s\n' "$new_server_base" >"$config_temp" || return 1
+  }
+  mv "$config_temp" "$CONFIG_FILE" || return 1
+  chmod 644 "$CONFIG_FILE"
+}
+
+activate_server_base() {
+  new_server_base="$1"
+  server_description="$2"
+  if ! save_server_base "$new_server_base"; then
+    message "PocketStremio Settings" "Could not save server setting"
+    return 1
+  fi
+  if [ "$SERVER_ENV_OVERRIDE" -eq 1 ]; then
+    message "PocketStremio Settings" "Saved. Environment override remains active."
+    return 0
+  fi
+  SERVER_BASE="$new_server_base"
+  SERVER_URL_VALID=1
+  SERVER_CONFIG_MESSAGE=""
+  SERVER_REACHABLE=1
+  log "saved PSS server=$SERVER_BASE"
+  message "PocketStremio Settings" "Connected to $server_description"
+}
+
+server_status_flow() {
+  if [ "$SERVER_URL_VALID" -ne 1 ]; then
+    message "PocketStremio Server" "$SERVER_CONFIG_MESSAGE"
+  elif [ "$SERVER_REACHABLE" -eq 1 ]; then
+    message "PocketStremio Server" "Connected: $SERVER_BASE"
+  else
+    message "PocketStremio Server" "Offline: $SERVER_BASE"
+  fi
+}
+
+scan_for_pss() {
+  if [ ! -x "$DISCOVERY_CLIENT" ]; then
+    message "PocketStremio Settings" "Discovery helper is unavailable"
+    return 1
+  fi
+
+  start_loading "PocketStremio Settings" "Scanning for PSS..."
+  rm -f /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv
+  "$DISCOVERY_CLIENT" >/tmp/pocketstremio-discovery.raw 2>>"$LOG_FILE"
+  discovery_rc=$?
+  : >/tmp/pocketstremio-discovery.tsv
+  if [ "$discovery_rc" -eq 0 ]; then
+    tab=$(printf '\t')
+    while IFS="$tab" read -r discovered_name discovered_url discovered_network; do
+      [ -n "$discovered_name" ] && [ -n "$discovered_url" ] \
+        && [ -n "$discovered_network" ] || continue
+      if validate_pss_url "$discovered_url"; then
+        discovered_address=$(printf '%s' "$discovered_url" | sed 's|^[A-Za-z]*://||')
+        short_name=$(printf '%s' "$discovered_name" | cut -c1-12)
+        short_network=$(printf '%s' "$discovered_network" | cut -c1-10)
+        printf '%s - %s - %s\t%s\n' "$short_name" "$discovered_address" \
+          "$short_network" "$discovered_url" >>/tmp/pocketstremio-discovery.tsv
+      else
+        log "ignored discovery response that failed PSS status validation url=$discovered_url"
+      fi
+    done </tmp/pocketstremio-discovery.raw
+  fi
+  stop_loading
+
+  if [ ! -s /tmp/pocketstremio-discovery.tsv ]; then
+    message "PocketStremio Settings" "No PSS found on the local network"
+    return 1
+  fi
+
+  discovered_choice=$(select_from_file "Select PSS" /tmp/pocketstremio-discovery.tsv)
+  [ -n "$discovered_choice" ] || return 0
+  discovered_line=$(grep -F "$discovered_choice	" \
+    /tmp/pocketstremio-discovery.tsv | head -n 1)
+  discovered_url=$(printf '%s' "$discovered_line" | cut -f2)
+  [ -n "$discovered_url" ] || {
+    message "PocketStremio Settings" "Server selection failed"
+    return 1
+  }
+  activate_server_base "$discovered_url" "$discovered_choice"
+}
+
+enter_server_manually() {
+  message "PocketStremio Settings" \
+    "PSS has no public login. Prefer a VPN or trusted network."
+  manual_initial="$SERVER_BASE"
+  [ -n "$manual_initial" ] || manual_initial="http://"
+  manual_url=$(read_keyboard "$manual_initial" "PSS URL or host:port")
+  manual_url=$(printf '%s' "$manual_url" | tr -d '\r\n')
+  [ -n "$manual_url" ] || return 0
+  case "$manual_url" in
+    http://*|https://*) ;;
+    *://*)
+      message "PocketStremio Settings" "Only HTTP and HTTPS URLs are supported"
+      return 1
+      ;;
+    *) manual_url="http://$manual_url" ;;
+  esac
+  case "$manual_url" in
+    *[[:space:]]*|http://*@*|https://*@*)
+      message "PocketStremio Settings" "Invalid PSS URL"
+      return 1
+      ;;
+  esac
+
+  start_loading "PocketStremio Settings" "Checking PSS..."
+  validate_pss_url "$manual_url"
+  manual_rc=$?
+  stop_loading
+  if [ "$manual_rc" -ne 0 ]; then
+    message "PocketStremio Settings" "No valid PSS found at that address"
+    return 1
+  fi
+  activate_server_base "$manual_url" "$manual_url"
+}
+
+settings_flow() {
+  while :; do
+    printf 'Scan for PSS\nEnter Manually\nBack\n' >/tmp/pocketstremio-settings.tsv
+    settings_action=$(select_from_file "Settings" /tmp/pocketstremio-settings.tsv)
+    case "$settings_action" in
+      "Scan for PSS") scan_for_pss ;;
+      "Enter Manually") enter_server_manually ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
 home_flow() {
   while :; do
     if [ "$AUTO_FIRST" = "1" ]; then
       action="Search"
       log "auto-selected home action=Search"
     else
-      printf 'Search\nLive TV\nContinue Watching\nStremio Account\nExit\n' >/tmp/pocketstremio-home.tsv
+      if [ "$SERVER_REACHABLE" -eq 1 ]; then
+        server_action="Server: Connected"
+      elif [ "$SERVER_URL_VALID" -eq 1 ]; then
+        server_action="Server: Offline"
+      else
+        server_action="Server: Not Configured"
+      fi
+      printf '%s\nSearch\nLive TV\nContinue Watching\nStremio Account\nSettings\nExit\n' \
+        "$server_action" >/tmp/pocketstremio-home.tsv
       action=$(select_from_file "PocketStremio" /tmp/pocketstremio-home.tsv)
     fi
     case "$action" in
@@ -514,6 +691,12 @@ home_flow() {
         ;;
       "Stremio Account")
         account_flow
+        ;;
+      "Server: Connected"|"Server: Offline"|"Server: Not Configured")
+        server_status_flow
+        ;;
+      Settings)
+        settings_flow
         ;;
       *)
         return 0
@@ -969,6 +1152,12 @@ streams_flow() {
     message "PocketStremio" "$play_error"
     return 1
   fi
+  server_field_test=$("$JQ" -r '.field_test // false' /tmp/pocketstremio-play.json)
+  if [ "$FIELD_TEST" = "1" ] && [ "$server_field_test" != "true" ]; then
+    log "field-test rejected because server mode is disabled"
+    message "PocketStremio" "Subtitle field test is disabled on the server"
+    return 1
+  fi
   duration_seconds=$("$JQ" -r '(.duration_seconds // 0) | floor' /tmp/pocketstremio-play.json)
   compatibility_status=$("$JQ" -r '.compatibility.status // "unknown"' /tmp/pocketstremio-play.json)
   compatibility_message=$("$JQ" -r '.compatibility.message // ""' /tmp/pocketstremio-play.json)
@@ -1068,11 +1257,17 @@ if [ -n "$CONFIG_ERROR" ]; then
   message "PocketStremio" "$CONFIG_ERROR"
   exit 1
 fi
-if ! ensure_ready; then
-  [ -n "$READY_ERROR" ] || READY_ERROR="PocketStremio unavailable"
+if [ "$SERVER_URL_VALID" -eq 1 ] && ensure_ready; then
+  SERVER_REACHABLE=1
+else
+  SERVER_REACHABLE=0
+  if [ "$SERVER_URL_VALID" -eq 1 ]; then
+    [ -n "$READY_ERROR" ] || READY_ERROR="PocketStremio unavailable"
+  else
+    READY_ERROR="$SERVER_CONFIG_MESSAGE"
+  fi
   log "startup unavailable message=$READY_ERROR"
-  message "PocketStremio" "$READY_ERROR"
-  exit 1
+  message "PocketStremio" "$READY_ERROR. Open Settings to scan."
 fi
 
 home_flow

@@ -5,8 +5,14 @@
 These instructions apply to the entire repository.
 
 PocketStremio is an experimental thin client for the Miyoo Mini Plus running
-OnionOS. The gaming PC owns metadata, stream resolution, and media proxying. The
-Miyoo owns controller interaction, compact JSON parsing, and FFplay launch.
+OnionOS. The active PSS host owns metadata, stream resolution, media proxying,
+and server-side state. The Miyoo owns controller interaction, compact JSON
+parsing, and FFplay launch. The confirmed deployment uses the gaming PC as the
+PSS host; macOS is also a supported development host when its prerequisites are
+verified.
+
+In development discussion and documentation, `PSS` is the accepted shorthand
+for the PocketStremio server. Spell it out on first use in user-facing material.
 
 Read `docs/roadmap.md` before starting feature work. Only the milestone marked
 **Next** should receive new feature scope unless the user explicitly changes the
@@ -96,13 +102,13 @@ general stream resolver.
 
 The server has a read-only Stremio account addon adapter. Account linking uses
 the official temporary browser approval flow and stores only the auth key in the
-ignored gaming-PC file `server/config/stremio_account.json`. Never print, copy,
-commit, or deploy that file. Account addon transports and stream URLs remain
-server-side. Direct HTTPS media returned by the user's configured account addons
-is permitted even when debrid-labeled; P2P identifiers, external-player,
-local/private-address, and non-HTTP results are rejected. The legal ERT News
-account result is physically confirmed through the bounded server-side
-HLS-to-MPEG-TS bridge. Do not expose
+ignored PSS-host file `server/config/stremio_account.json`. Link each PSS host
+separately; never print, copy between hosts, commit, or deploy that file. Account
+addon transports and stream URLs remain server-side. Direct HTTPS media returned
+by the user's configured account addons is permitted even when debrid-labeled;
+P2P identifiers, external-player, local/private-address, and non-HTTP results
+are rejected. The legal ERT News account result is physically confirmed through
+the bounded server-side HLS-to-MPEG-TS bridge. Do not expose
 upstream playlists or segment URLs, broaden the bridge beyond unencrypted
 MPEG-TS without tests, or describe the bridge as transcoding.
 
@@ -120,7 +126,7 @@ episode also confirmed pause tracking, Menu exit, and progress saving. Account
 display text must remain whitespace-collapsed because embedded newlines become
 separate SDL selector values.
 
-The next milestone is the bounded gaming-PC subtitle/downscaling pipeline in
+The bounded active-PSS-host subtitle/downscaling pipeline in
 `docs/bounded-transcoding.md`. The first slice is English subtitle burn-in plus
 conditional 640x360 downscaling. Feed FFmpeg through an opaque loopback relay so
 account media tokens never appear in Miyoo APIs, logs, or FFmpeg process
@@ -136,8 +142,8 @@ passes.
 
 Server-mediated Stremio account binding is physically confirmed. The Miyoo
 receives only an official short approval link, renders it locally as QR, and
-polls after A; the retrieval code and auth key stay on the gaming PC. A linked
-account cannot be replaced or removed through the remote API. Tailscale's home
+polls after A; the retrieval code and auth key stay on the active PSS host. A
+linked account cannot be replaced or removed through the remote API. Tailscale's home
 screen QR for the admin machines page is also physically confirmed without
 changing the working node identity.
 
@@ -205,6 +211,8 @@ client/miyoo/bin/pocketstremio-selector
   -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-selector
 client/miyoo/bin/pocketstremio-pause-monitor
   -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-pause-monitor
+client/miyoo/bin/pocketstremio-discovery
+  -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-discovery
 client/miyoo/pocketstremio.conf.example
   -> /mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf.example
 ```
@@ -302,6 +310,9 @@ Scale tests to the change. Before committing, run the relevant checks:
   session creation, and a byte-range media request on an alternate local port.
 - For selector changes, cross-compile with `-Wall -Wextra -Werror` and verify the
   rebuilt binary matches the committed binary when using the same toolchain.
+- For discovery-helper changes, use `scripts/build-miyoo-discovery.ps1` with
+  `-Wall -Wextra -Werror`, verify the committed binary, and test a real local
+  broadcast response from the device.
 - For deployment, verify executable permissions, absence of stale test markers,
   and absence of leftover selector, FFplay, or UI processes.
 - For controller, framebuffer, or audio changes, obtain a physical Apps-menu
