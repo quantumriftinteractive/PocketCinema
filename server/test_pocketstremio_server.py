@@ -1073,6 +1073,16 @@ class PocketStremioServerTest(unittest.TestCase):
                 {"width": 640, "height": 360, "video_profile": "High 10"}
             )
         )
+        self.assertFalse(
+            transcoding.conversion_geometry_supported(
+                {"width": 1920, "height": 800}
+            )
+        )
+        self.assertTrue(
+            transcoding.conversion_geometry_supported(
+                {"width": 1280, "height": 536}
+            )
+        )
         self.assertTrue(
             transcoding.needs_downscale(
                 {

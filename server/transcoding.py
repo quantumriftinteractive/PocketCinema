@@ -59,6 +59,18 @@ def needs_downscale(compatibility):
     )
 
 
+def conversion_geometry_supported(compatibility):
+    """Whether the unchanged 640x360 aspect-preserving filter yields 4:2:0 size."""
+    width = int(compatibility.get("width") or 0)
+    height = int(compatibility.get("height") or 0)
+    if width <= 0 or height <= 0:
+        return True
+    scale = min(MAX_WIDTH / width, MAX_HEIGHT / height)
+    output_width = int(round(width * scale))
+    output_height = int(round(height * scale))
+    return output_width > 0 and output_height > 0 and output_width % 2 == 0 and output_height % 2 == 0
+
+
 def playback_mode(compatibility):
     status = str(compatibility.get("status") or "candidate")
     if status == "unsupported":

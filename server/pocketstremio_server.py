@@ -872,6 +872,26 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         start_seconds = nonnegative_int(payload.get("resume_seconds"))
         transcode = bool(subtitle) or transcoding.needs_downscale(compatibility)
+        if transcode and not transcoding.conversion_geometry_supported(compatibility):
+            compatibility = dict(compatibility)
+            compatibility.update(
+                {
+                    "status": "unsupported",
+                    "message": "This aspect ratio cannot use the current bounded converter",
+                }
+            )
+            probe_target = stream.get("local_path") or stream.get("url")
+            if probe_target:
+                self.server.probe_cache.set(probe_target, compatibility)
+            self.write_json(
+                {
+                    "error": "conversion_geometry_unsupported",
+                    "message": compatibility["message"],
+                    "compatibility": compatibility,
+                },
+                status=409,
+            )
+            return
         if transcode and not self.server.ffmpeg_path:
             self.write_json(
                 {
