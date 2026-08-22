@@ -425,6 +425,14 @@ def subtitle_match_rank(raw, stream):
     return -(hash_score + resolution_score + overlap + trusted_score)
 
 
+def subtitle_is_strong_match(raw, stream):
+    """Keep only a defensible release match in the default subtitle list."""
+    video_hash = str(stream.get("video_hash") or "").lower()
+    if video_hash and str(raw.get("moviehash") or "").lower() == video_hash:
+        return True
+    return -subtitle_match_rank(raw, stream) >= 6
+
+
 def manifest_supports(manifest, resource, item_type):
     resources = manifest.get("resources") or []
     resource_names = {
@@ -1469,6 +1477,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
+        include_all = query.get("all", [""])[0].lower() in {"1", "true", "yes"}
         stream = self.server.stream_cache.get(query.get("stream_id", [""])[0], {})
         subtitles = []
 
@@ -1500,6 +1509,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "local_path": str(fixture.resolve()),
                         "item_type": item_type,
                         "item_id": item_id,
+                        "strong_match": True,
                     }
                 )
 
@@ -1551,6 +1561,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                             "url": subtitle_url,
                             "item_type": item_type,
                             "item_id": item_id,
+                            "strong_match": subtitle_is_strong_match(raw, stream),
                         }
                     )
 
@@ -1611,6 +1622,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "url": subtitle_url,
                         "item_type": item_type,
                         "item_id": item_id,
+                        "strong_match": subtitle_is_strong_match(raw, stream),
                     }
                 )
                 if len(subtitles) >= 40:
@@ -1620,16 +1632,33 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         for subtitle in subtitles:
             self.server.subtitle_cache[subtitle["id"]] = subtitle
+        strong_subtitles = [
+            subtitle for subtitle in subtitles if subtitle.get("strong_match")
+        ]
+        visible_subtitles = subtitles if include_all else strong_subtitles
         public_items = [
             {
                 k: v
                 for k, v in subtitle.items()
                 if k
-                not in {"url", "local_path", "source", "item_type", "item_id"}
+                not in {
+                    "url",
+                    "local_path",
+                    "source",
+                    "item_type",
+                    "item_id",
+                    "strong_match",
+                }
             }
-            for subtitle in subtitles
+            for subtitle in visible_subtitles
         ]
-        self.write_json({"count": len(public_items), "items": public_items})
+        self.write_json(
+            {
+                "count": len(public_items),
+                "items": public_items,
+                "other_count": 0 if include_all else len(subtitles) - len(strong_subtitles),
+            }
+        )
 
     def handle_play_session(self, session_id, parsed=None):
         session, expired = self.server.play_sessions.get(session_id)
@@ -1692,12 +1721,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 payload = response.read(MAX_SUBTITLE_BYTES + 1)
         if not payload or len(payload) > MAX_SUBTITLE_BYTES:
             raise OSError("Subtitle download is invalid")
-        suffix = transcoding.subtitle_suffix(payload)
-        path = self.server.transcode_dir / (
-            f"subtitle-{secrets.token_hex(8)}{suffix}"
+        return transcoding.normalize_subtitle_payload(
+            self.server.ffmpeg_path, payload, self.server.transcode_dir
         )
-        path.write_bytes(payload)
-        return path
 
     def stream_transcode(self, session):
         # A converted seek/aspect restart closes the previous HTTP response

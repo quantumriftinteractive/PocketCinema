@@ -1348,29 +1348,47 @@ select_subtitle() {
   id="$2"
   stream_id="$3"
 
-  if ! api_get "/api/subtitles/$type/$id?stream_id=$stream_id" >/tmp/pocketstremio-subtitles.json; then
-    log "subtitle lookup failed"
-    printf '%s' "none"
-    return 0
-  fi
-  count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-subtitles.json)
-  if [ "$count" = "0" ] || [ "$AUTO_FIRST" = "1" ]; then
-    [ "$AUTO_FIRST" = "1" ] && log "auto-selected subtitles=none"
-    printf '%s' "none"
-    return 0
-  fi
+  subtitle_all=0
+  while :; do
+    subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id"
+    [ "$subtitle_all" = "1" ] && subtitle_query="$subtitle_query&all=1"
+    if ! api_get "$subtitle_query" >/tmp/pocketstremio-subtitles.json; then
+      log "subtitle lookup failed"
+      printf '%s' "none"
+      return 0
+    fi
+    count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-subtitles.json)
+    other_count=$("$JQ" -r '.other_count // 0' /tmp/pocketstremio-subtitles.json)
+    if [ "$AUTO_FIRST" = "1" ]; then
+      log "auto-selected subtitles=none"
+      printf '%s' "none"
+      return 0
+    fi
+    if [ "$count" = "0" ] && [ "$other_count" = "0" ]; then
+      printf '%s' "none"
+      return 0
+    fi
 
-  printf 'No subtitles\tnone\n' >/tmp/pocketstremio-subtitles.tsv
-  "$JQ" -r '.items[] | "\(.name) [\(.lang)]\t\(.id)"' /tmp/pocketstremio-subtitles.json >>/tmp/pocketstremio-subtitles.tsv
-  selected=$(select_from_file "Select Subtitles" /tmp/pocketstremio-subtitles.tsv)
-  if [ -z "$selected" ]; then
-    printf '%s' "back"
+    printf 'No subtitles\tnone\n' >/tmp/pocketstremio-subtitles.tsv
+    "$JQ" -r '.items[] | "\(.name) [\(.lang)]\t\(.id)"' /tmp/pocketstremio-subtitles.json >>/tmp/pocketstremio-subtitles.tsv
+    if [ "$subtitle_all" != "1" ] && [ "$other_count" -gt 0 ]; then
+      printf 'Show other English subtitles\tmore\n' >>/tmp/pocketstremio-subtitles.tsv
+    fi
+    selected=$(select_from_file "Select Subtitles" /tmp/pocketstremio-subtitles.tsv)
+    if [ -z "$selected" ]; then
+      printf '%s' "back"
+      return 0
+    fi
+    line=$(grep -F "$selected	" /tmp/pocketstremio-subtitles.tsv | head -n 1)
+    subtitle_id=$(printf '%s' "$line" | cut -f2)
+    if [ "$subtitle_id" = "more" ]; then
+      subtitle_all=1
+      continue
+    fi
+    log "selected subtitle_id=$subtitle_id name=$selected scope=$subtitle_all"
+    printf '%s' "$subtitle_id"
     return 0
-  fi
-  line=$(grep -F "$selected	" /tmp/pocketstremio-subtitles.tsv | head -n 1)
-  subtitle_id=$(printf '%s' "$line" | cut -f2)
-  log "selected subtitle_id=$subtitle_id name=$selected"
-  printf '%s' "$subtitle_id"
+  done
 }
 
 cd "$SYS_DIR" || exit 1

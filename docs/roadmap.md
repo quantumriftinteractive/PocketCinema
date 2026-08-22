@@ -539,6 +539,15 @@ PSS has no FFmpeg conversion service, and omits external subtitle choices when
 its FFmpeg build lacks subtitle burn-in support. Unprobed sources remain marked
 `CHECK` so opening a stream list never probes every addon result.
 
+On the split-host Mac PSS, the stock Homebrew FFmpeg lacked libass and was
+therefore correctly reported as unable to burn external subtitles. A separate
+Mac-local FFmpeg build with libass restored the production burn-in capability;
+the previously failing stream/subtitle pair then rendered burned-in subtitles
+correctly on the Miyoo. Subtitle results now show strong release/hash matches
+first, with an explicit controller option to show the remaining English
+choices. This is focused subtitle evidence only; the Milestone 20 acceptance
+criteria remain pending.
+
 The current MPEG-TS path burns one subtitle into the video and therefore cannot
 switch it inside FFplay. The deterministic Matroska experiment passes startup
 and embedded-track detection. An isolated, app-local FFplay 2.4.14 rebuild with

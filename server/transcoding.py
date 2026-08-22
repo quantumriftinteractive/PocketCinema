@@ -1,5 +1,6 @@
 import shutil
 import re
+import secrets
 import subprocess
 from pathlib import Path
 
@@ -64,7 +65,65 @@ def playback_mode(compatibility):
 
 
 def subtitle_suffix(payload):
-    return ".vtt" if payload.lstrip().startswith(b"WEBVTT") else ".srt"
+    stripped = payload.lstrip()
+    if stripped.startswith(b"WEBVTT"):
+        return ".vtt"
+    if re.search(rb"(?:^|\n)\[Script Info\]", stripped, re.IGNORECASE):
+        return ".ass"
+    if stripped.startswith(b"<?xml") or re.search(rb"<tt(?:\s|>)", stripped):
+        return ".ttml"
+    return ".srt"
+
+
+def normalize_subtitle_payload(ffmpeg_path, payload, directory):
+    """Store SRT/WebVTT directly or convert other text subtitle formats to SRT.
+
+    The conversion input and output stay in PSS's app-local transcode directory;
+    neither an upstream subtitle URL nor arbitrary source path reaches FFmpeg.
+    Image-based subtitles are deliberately not OCR'd and fail as unsupported.
+    """
+    directory = Path(directory)
+    suffix = subtitle_suffix(payload)
+    token = secrets.token_hex(8)
+    source_path = directory / f"subtitle-source-{token}{suffix}"
+    source_path.write_bytes(payload)
+    if suffix in {".srt", ".vtt"}:
+        return source_path
+
+    normalized_path = directory / f"subtitle-{token}.srt"
+    command = [
+        ffmpeg_path,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        "-i",
+        source_path.name,
+        "-map",
+        "0:s:0",
+        "-c:s",
+        "srt",
+        "-f",
+        "srt",
+        normalized_path.name,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=directory,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+        if result.returncode != 0 or not normalized_path.is_file() or not normalized_path.stat().st_size:
+            raise OSError("Subtitle format is unsupported")
+        return normalized_path
+    finally:
+        source_path.unlink(missing_ok=True)
+        if not normalized_path.is_file() or not normalized_path.stat().st_size:
+            normalized_path.unlink(missing_ok=True)
 
 
 def build_command(

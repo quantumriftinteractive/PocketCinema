@@ -315,6 +315,17 @@ minimum SwapFree:     129,096 kB
 The device reached video readiness in 10 seconds, measured 31 paused seconds
 and 80 valid unpaused seconds, and left no FFplay process after Menu exit.
 
+On the split-host Mac PSS, its stock Homebrew FFmpeg did not include libass, so
+the server correctly hid external subtitles rather than offering a failing
+choice. A separate Mac-local FFmpeg build with libass restored production
+burn-in. The same stream/subtitle pair that had failed on that PSS then rendered
+burned-in subtitles correctly on the Miyoo. PSS also now returns strong
+release/hash subtitle matches first and makes the remaining English choices an
+explicit fallback. ASS/SSA and TTML text inputs are normalized server-side to
+SRT before burn-in or Matroska packaging; image-based subtitles are not OCR'd.
+This is focused subtitle-rendering evidence, not duration, synchronization,
+audio, cleanup, or resource acceptance evidence.
+
 ## Pending Device Confirmation
 
 - sustained playback with the known-good Spider-Man release/subtitle pair,

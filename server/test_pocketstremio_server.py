@@ -1281,14 +1281,64 @@ class PocketStremioServerTest(unittest.TestCase):
                 ]
             },
         ):
-            _, subtitles = self.get_json("/api/subtitles/movie/tt0078748")
+            _, subtitles = self.get_json("/api/subtitles/movie/tt0078748?all=1")
         self.assertEqual(subtitles["count"], 1)
+        self.assertEqual(subtitles["other_count"], 0)
         subtitle = subtitles["items"][0]
         self.assertEqual(subtitle["lang"], "eng")
         self.assertNotIn("url", subtitle)
         self.assertEqual(
             self.server.subtitle_cache[subtitle["id"]]["url"], upstream_url
         )
+
+    def test_subtitle_default_filters_weak_matches_with_explicit_fallback(self):
+        self.server.stream_cache["matched-stream"] = {
+            "id": "matched-stream",
+            "subtitle_match_text": "Example Show S01E04 720p WEB x264",
+        }
+        self.server.stream_addons = [
+            {
+                "name": "Test subtitles",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+        with mock.patch.object(
+            pocket,
+            "fetch_json",
+            return_value={
+                "subtitles": [
+                    {
+                        "url": "https://cdn.example/matched.srt",
+                        "lang": "eng",
+                        "name": "Example.Show.S01E04.720p.WEB.x264",
+                    },
+                    {
+                        "url": "https://cdn.example/unrelated.srt",
+                        "lang": "eng",
+                        "name": "Different.Show.S02E03.1080p.BluRay",
+                    },
+                ]
+            },
+        ):
+            _, matched = self.get_json(
+                "/api/subtitles/movie/tt0078748?stream_id=matched-stream"
+            )
+            _, all_subtitles = self.get_json(
+                "/api/subtitles/movie/tt0078748?stream_id=matched-stream&all=1"
+            )
+        self.assertEqual(matched["count"], 1)
+        self.assertEqual(matched["other_count"], 1)
+        self.assertEqual(all_subtitles["count"], 2)
+        self.assertEqual(all_subtitles["other_count"], 0)
+
+    def test_srt_subtitle_normalization_keeps_local_srt(self):
+        payload = b"1\n00:00:00,000 --> 00:00:01,000\nPocketStremio\n"
+        with tempfile.TemporaryDirectory() as directory:
+            path = transcoding.normalize_subtitle_payload(
+                "unused-ffmpeg", payload, directory
+            )
+            self.assertEqual(path.suffix, ".srt")
+            self.assertEqual(path.read_bytes(), payload)
 
     def test_open_media_addon_resolves_opaque_real_stream(self):
         addon = open_media_addon.create_server("127.0.0.1", 0)
