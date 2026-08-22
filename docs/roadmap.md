@@ -584,7 +584,7 @@ deployed candidate matched the local rebuild byte-for-byte. Clearing its SDL
 surface removed stale top-of-screen PocketStremio pixels but not the bottom
 artifact. The remaining investigation is ordered around candidate SDL versus
 Miyoo SDL, display geometry, and other candidate build/runtime differences.
-Milestone 20 remains Next and is not Confirmed.
+Milestone 20 remains In Progress and is not Confirmed.
 
 The first runtime comparison also forced the candidate to use Miyoo's system
 SDL instead of its bundled SDL library; the bottom artifact remained with no
@@ -630,12 +630,15 @@ updates only `SERVER_BASE` in the authoritative app-local config. Each PSS
 advertises one preferred address and a stable ignored instance identity, so a
 machine with both LAN and overlay addresses is not presented as multiple PSS
 instances. Choices are labeled `name - IP:port - network`; the transport label
-is explicit PSS configuration rather than Tailscale inspection. A device-shell
-probe and the Apps-context Settings flow both found and displayed the Mac PSS as
-`Mac PSS - advertised-IP:8755 - Tailscale`; controller selection atomically
-saved the same `SERVER_BASE` while preserving the other live settings. App
-restart behavior, manual-entry interaction, and multi-PSS display remain
-pending physical confirmation.
+is explicit PSS configuration rather than Tailscale inspection. Device-shell
+and Apps-context scans displayed both the Mac and Windows PSS instances as two
+distinct name/address/network choices. Controller selection switched from Mac
+to Windows, atomically preserved the other live settings, and survived an app
+restart. With the configured Mac PSS intentionally stopped, the menu appeared
+immediately with no black screen and dynamically reported `Server: Offline`;
+selecting that row opened Settings, which restored the Windows connection.
+Manual-entry interaction and the no-config first-run route remain pending
+physical confirmation.
 
 - Show concise PocketStremio server reachability on the main screen.
 - Edit the server host and port from an app-local Settings screen while keeping

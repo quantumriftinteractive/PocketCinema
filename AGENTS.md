@@ -153,11 +153,13 @@ ignored by git and reproducible through
 `experiments/ffplay/generate-series-av-sync-fixture.ps1`. Real-series playback
 through an addon remains unconfirmed.
 
-Operational resilience is physically confirmed for an unreachable gaming-PC
-server. The Apps-context client displayed a specific error and exited without
-stale UI, selector, FFplay, infoPanel, or temporary playback state. The server
-runs under `server/manage-server.ps1`; play sessions are ephemeral across a
-restart while the bounded probe cache and Continue Watching state persist.
+Operational resilience is physically confirmed for an unreachable PSS. The
+Apps-context client now opens its menu immediately, updates the first row from
+connecting to offline without a black startup screen, and routes that row to
+Settings. The earlier fail-and-exit path also left no stale UI, selector,
+FFplay, infoPanel, or temporary playback state. The server runs under the
+platform lifecycle manager; play sessions are ephemeral across a restart while
+the bounded probe cache and Continue Watching state persist.
 
 Transport independence is physically confirmed. `SERVER_BASE` is explicit,
 `PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.

@@ -32,6 +32,18 @@ The following behavior was confirmed on August 13, 2026:
   the normal server through `127.0.0.1:1055` again. Tailscale state was not
   changed.
 
+The Apps-context unreachable-server behavior was intentionally improved and
+reconfirmed on August 22, 2026. Startup no longer waits through the synchronous
+readiness retry loop before creating SDL. The home menu appears immediately,
+its first row is backed by an app-local status file, and a bounded background
+probe changes that row between `Server: Connecting...`, `Server: Connected`,
+and `Server: Offline` without leaving the menu. With the configured Mac PSS
+stopped, the Miyoo displayed the menu directly at `Server: Offline` with no
+black screen. Selecting the offline row opened Settings, scanning found the
+still-running Windows PSS, and selection plus an app restart preserved the
+Windows `SERVER_BASE`. The monitor and status files are app-local temporary
+state and are removed on exit.
+
 The physical test exercised a PocketStremio server failure while the configured
 local proxy remained healthy. PocketStremio no longer manages that proxy's
 provider; provider startup and authentication are separate operational scope.
@@ -107,7 +119,7 @@ The build uses `-Wall -Wextra -Werror -O2` and SDL 1.2. The verified output and
 committed ARMv7 selector both had SHA-256:
 
 ```text
-19FDB397A062CD75F5A560AEF98540EF78365422313606712138EDE174045E28
+E1CB375F08DE7867727B373B19777471D9345CE79D5DD5DC36FC82059D13B3BF
 ```
 
 The toolchain and sysroot remain ignored development inputs and are not bundled

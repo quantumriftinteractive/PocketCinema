@@ -38,11 +38,13 @@ LOADING_PID=""
 PAUSE_MONITOR_PID=""
 PLAYBACK_CONTROL_PID=""
 PLAYBACK_CONTROL_FILE=/tmp/pocketstremio-playback-control
-READY_ERROR=""
 CONFIG_ERROR=""
 SERVER_CONFIG_MESSAGE=""
 SERVER_URL_VALID=1
-SERVER_REACHABLE=0
+SERVER_REACHABLE=2
+SERVER_MONITOR_PID=""
+SERVER_STATUS_FILE=/tmp/pocketstremio-server-status
+SERVER_STATUS_JSON=/tmp/pocketstremio-server-status.json
 
 mkdir -p "$LOG_DIR"
 : > "$LOG_FILE"
@@ -81,6 +83,7 @@ esac
 
 cleanup() {
   stop_loading
+  stop_server_monitor
   if [ -n "$PAUSE_MONITOR_PID" ] && kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
     kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
     wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
@@ -96,6 +99,7 @@ cleanup() {
     /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv \
     /tmp/pocketstremio-discovery-status.json \
     /tmp/pocketstremio-settings.tsv \
+    "$SERVER_STATUS_FILE" "$SERVER_STATUS_JSON" \
     /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
 }
@@ -429,7 +433,16 @@ select_from_file() {
   log "select title=$title waiting for input debounce"
   sleep 1
   if [ -x "$SDL_SELECTOR" ]; then
-    selected=$(POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" cut -f1 "$file" | POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" "$SDL_SELECTOR" "$title" "Up/Down move  A select  B back")
+    if [ "$file" = "/tmp/pocketstremio-home.tsv" ]; then
+      selected=$(POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" cut -f1 "$file" | \
+        POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" \
+        POCKETSTREMIO_DYNAMIC_FIRST_ITEM_FILE="$SERVER_STATUS_FILE" \
+        "$SDL_SELECTOR" "$title" "Up/Down move  A select  B back")
+    else
+      selected=$(POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" cut -f1 "$file" | \
+        POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" \
+        "$SDL_SELECTOR" "$title" "Up/Down move  A select  B back")
+    fi
     rc=$?
     log "sdl selector rc=$rc"
   else
@@ -477,29 +490,75 @@ read_keyboard() {
   '
 }
 
-ensure_ready() {
-  ready_attempts="${POCKETSTREMIO_READY_ATTEMPTS:-6}"
-  ready_timeout="${POCKETSTREMIO_READY_TIMEOUT:-5}"
-  case "$ready_attempts:$ready_timeout" in
-    *[!0-9:]*|0:*|*:0) ready_attempts=6; ready_timeout=5 ;;
+stop_server_monitor() {
+  if [ -n "$SERVER_MONITOR_PID" ] \
+    && kill -0 "$SERVER_MONITOR_PID" 2>/dev/null; then
+    kill "$SERVER_MONITOR_PID" 2>/dev/null || true
+    wait "$SERVER_MONITOR_PID" 2>/dev/null || true
+  fi
+  SERVER_MONITOR_PID=""
+}
+
+write_server_status() {
+  status_value="$1"
+  status_temp="$SERVER_STATUS_FILE.tmp"
+  printf '%s\n' "$status_value" >"$status_temp" && mv "$status_temp" "$SERVER_STATUS_FILE"
+}
+
+sync_server_status() {
+  [ -f "$SERVER_STATUS_FILE" ] || return 0
+  IFS= read -r server_status_value <"$SERVER_STATUS_FILE" || return 0
+  case "$server_status_value" in
+    "Server: Connected") SERVER_REACHABLE=1 ;;
+    "Server: Connecting...") SERVER_REACHABLE=2 ;;
+    *) SERVER_REACHABLE=0 ;;
   esac
-  attempts=0
-  while [ "$attempts" -lt "$ready_attempts" ]; do
-    if api_get "/api/status" "$ready_timeout" >/tmp/pocketstremio-status.json; then
-      server_status=$("$JQ" -r '.status // ""' /tmp/pocketstremio-status.json 2>/dev/null)
-      if [ "$server_status" = "ok" ]; then
-        server_version=$("$JQ" -r '.version // "unknown"' /tmp/pocketstremio-status.json)
-        log "server ready after attempts=$((attempts + 1)) version=$server_version"
-        return 0
+}
+
+start_server_monitor() {
+  stop_server_monitor
+  if [ "$SERVER_URL_VALID" -ne 1 ]; then
+    SERVER_REACHABLE=0
+    write_server_status "Connect to Server"
+    return 0
+  fi
+
+  monitor_interval="${POCKETSTREMIO_STATUS_INTERVAL:-10}"
+  case "$monitor_interval" in
+    ''|*[!0-9]*|0) monitor_interval=10 ;;
+  esac
+  SERVER_REACHABLE=2
+  write_server_status "Server: Connecting..."
+  (
+    monitor_child_pid=""
+    stop_monitor_child() {
+      trap - TERM INT HUP
+      if [ -n "$monitor_child_pid" ] \
+        && kill -0 "$monitor_child_pid" 2>/dev/null; then
+        kill "$monitor_child_pid" 2>/dev/null || true
+        wait "$monitor_child_pid" 2>/dev/null || true
       fi
-      log "server readiness returned invalid status=$server_status"
-    fi
-    attempts=$((attempts + 1))
-    log "server readiness attempt=$attempts failed"
-    sleep 2
-  done
-  READY_ERROR="PocketStremio server unavailable"
-  return 1
+      exit 0
+    }
+    trap stop_monitor_child TERM INT HUP
+    while :; do
+      rm -f "$SERVER_STATUS_JSON"
+      if curl_request -fsS --connect-timeout 3 --max-time 5 \
+        "$SERVER_BASE/api/status" >"$SERVER_STATUS_JSON" 2>/dev/null \
+        && "$JQ" -e '.status == "ok" and .service == "pocketstremio-server"' \
+          "$SERVER_STATUS_JSON" >/dev/null 2>&1; then
+        write_server_status "Server: Connected"
+      else
+        write_server_status "Server: Offline"
+      fi
+      sleep "$monitor_interval" &
+      monitor_child_pid=$!
+      wait "$monitor_child_pid" 2>/dev/null || true
+      monitor_child_pid=""
+    done
+  ) &
+  SERVER_MONITOR_PID=$!
+  log "server status monitor start pid=$SERVER_MONITOR_PID server=$SERVER_BASE"
 }
 
 validate_pss_url() {
@@ -556,17 +615,21 @@ activate_server_base() {
   SERVER_URL_VALID=1
   SERVER_CONFIG_MESSAGE=""
   SERVER_REACHABLE=1
+  start_server_monitor
   log "saved PSS server=$SERVER_BASE"
   message "PocketStremio Settings" "Connected to $server_description"
 }
 
 server_status_flow() {
+  sync_server_status
   if [ "$SERVER_URL_VALID" -ne 1 ]; then
-    message "PocketStremio Server" "$SERVER_CONFIG_MESSAGE"
+    settings_flow
   elif [ "$SERVER_REACHABLE" -eq 1 ]; then
     message "PocketStremio Server" "Connected: $SERVER_BASE"
+  elif [ "$SERVER_REACHABLE" -eq 2 ]; then
+    message "PocketStremio Server" "Connecting to $SERVER_BASE"
   else
-    message "PocketStremio Server" "Offline: $SERVER_BASE"
+    settings_flow
   fi
 }
 
@@ -664,16 +727,19 @@ settings_flow() {
 
 home_flow() {
   while :; do
+    sync_server_status
     if [ "$AUTO_FIRST" = "1" ]; then
       action="Search"
       log "auto-selected home action=Search"
     else
       if [ "$SERVER_REACHABLE" -eq 1 ]; then
         server_action="Server: Connected"
+      elif [ "$SERVER_REACHABLE" -eq 2 ]; then
+        server_action="Server: Connecting..."
       elif [ "$SERVER_URL_VALID" -eq 1 ]; then
         server_action="Server: Offline"
       else
-        server_action="Server: Not Configured"
+        server_action="Connect to Server"
       fi
       printf '%s\nSearch\nLive TV\nContinue Watching\nStremio Account\nSettings\nExit\n' \
         "$server_action" >/tmp/pocketstremio-home.tsv
@@ -692,7 +758,7 @@ home_flow() {
       "Stremio Account")
         account_flow
         ;;
-      "Server: Connected"|"Server: Offline"|"Server: Not Configured")
+      "Server: Connected"|"Server: Connecting..."|"Server: Offline"|"Connect to Server")
         server_status_flow
         ;;
       Settings)
@@ -1257,19 +1323,7 @@ if [ -n "$CONFIG_ERROR" ]; then
   message "PocketStremio" "$CONFIG_ERROR"
   exit 1
 fi
-if [ "$SERVER_URL_VALID" -eq 1 ] && ensure_ready; then
-  SERVER_REACHABLE=1
-else
-  SERVER_REACHABLE=0
-  if [ "$SERVER_URL_VALID" -eq 1 ]; then
-    [ -n "$READY_ERROR" ] || READY_ERROR="PocketStremio unavailable"
-  else
-    READY_ERROR="$SERVER_CONFIG_MESSAGE"
-  fi
-  log "startup unavailable message=$READY_ERROR"
-  message "PocketStremio" "$READY_ERROR. Open Settings to scan."
-fi
-
+start_server_monitor
 home_flow
 log "PocketStremio UI exit"
 sync

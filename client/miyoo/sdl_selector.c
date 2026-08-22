@@ -110,6 +110,29 @@ static int has_line_break(const char *text) {
     return text && strstr(text, "\\n") != NULL;
 }
 
+static int update_dynamic_first_item(char **items, int count, const char *path) {
+    char value[MAX_LINE];
+    char *replacement;
+    FILE *file;
+
+    if (!path || !*path || count < 1) return 0;
+    file = fopen(path, "r");
+    if (!file) return 0;
+    if (!fgets(value, sizeof(value), file)) {
+        fclose(file);
+        return 0;
+    }
+    fclose(file);
+    if (!strchr(value, '\n') && strlen(value) == sizeof(value) - 1) return 0;
+    value[strcspn(value, "\r\n")] = '\0';
+    if (!value[0] || strchr(value, '\t') || strcmp(items[0], value) == 0) return 0;
+    replacement = strdup(value);
+    if (!replacement) return 0;
+    free(items[0]);
+    items[0] = replacement;
+    return 1;
+}
+
 static void draw_item(SDL_Surface *screen, const char *text, int x, int y,
                       int scale, Uint32 color, int max_chars, int max_lines) {
     int line = 0;
@@ -210,6 +233,8 @@ int main(int argc, char **argv) {
     const char *title = argc > (qr_mode ? 2 : 1) ? argv[qr_mode ? 2 : 1] : "PocketStremio";
     const char *bottom = argc > (qr_mode ? 3 : 2) ? argv[qr_mode ? 3 : 2] : "Up/Down move  A select  B back";
     const char *log_path = getenv("POCKETSTREMIO_SELECTOR_LOG");
+    const char *dynamic_first_item_path =
+        getenv("POCKETSTREMIO_DYNAMIC_FIRST_ITEM_FILE");
     char *items[MAX_ITEMS];
     char line[MAX_LINE];
     char qr_text[MAX_QR_TEXT];
@@ -261,6 +286,10 @@ int main(int argc, char **argv) {
     int selected = 0;
     int done = 0;
     int rc = 1;
+    Uint32 last_dynamic_check = 0;
+    if (!qr_mode) {
+        update_dynamic_first_item(items, count, dynamic_first_item_path);
+    }
     if (qr_mode) {
         draw_qr(screen, title, bottom, qr_text, qrcode);
     } else {
@@ -269,7 +298,22 @@ int main(int argc, char **argv) {
 
     while (!done) {
         SDL_Event event;
-        if (!SDL_WaitEvent(&event)) continue;
+        if (!qr_mode && dynamic_first_item_path && *dynamic_first_item_path) {
+            Uint32 now = SDL_GetTicks();
+            if (now - last_dynamic_check >= 200) {
+                if (update_dynamic_first_item(
+                        items, count, dynamic_first_item_path)) {
+                    draw_menu(screen, title, bottom, items, count, selected);
+                }
+                last_dynamic_check = now;
+            }
+            if (!SDL_PollEvent(&event)) {
+                SDL_Delay(20);
+                continue;
+            }
+        } else if (!SDL_WaitEvent(&event)) {
+            continue;
+        }
         if (event.type == SDL_QUIT) {
             done = 1;
         } else if (event.type == SDL_KEYDOWN) {
