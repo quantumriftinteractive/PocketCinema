@@ -6,7 +6,8 @@ for a conservative v1.0 release; it is not a claim that v1.0 is currently
 ready.
 
 Current assessment: **not release-ready**. The normal PocketStremio vertical
-slice is substantially physically confirmed, but Milestone 20 remains Next.
+slice is substantially physically confirmed, but Milestone 20 remains in
+progress and its full acceptance criteria are not complete.
 The app-local FFplay/libass experiment now renders embedded text and has a
 track-aware rebuild. Apps-context testing confirmed upright, bottom-positioned
 text and visible R1 switching. It remains isolated and must not replace the
@@ -43,6 +44,9 @@ working burn-in production path until the remaining release gates pass.
   mode.
 - A normal direct-play movie, a series episode, a converted subtitle case, and
   a server restart/recovery case pass from Apps.
+- A converted multi-audio stream allows choosing a verified audio track before
+  playback; this is now physically confirmed. Persistent language preferences
+  remain outside the current release gate.
 - R1/R2 behavior is documented from the deployed builds. The current candidate
   physically confirmed upright/bottom-positioned text and visible R1
   transitions; R2 did not trigger that candidate.
@@ -60,7 +64,8 @@ expanded:
 
 - account library/catalog browsing;
 - favorites, richer history, posters, image caching, and a full UI;
-- audio-track selection and persistent language preferences;
+- persistent audio-language preferences beyond the now-confirmed per-play
+  converted-track selection;
 - arbitrary seeking in a nonseekable live converted response;
 - offline downloads;
 - torrent ingestion, P2P handling, or local torrent management;
@@ -143,6 +148,8 @@ acceptance criteria before implementation.
       Menu exit.
 - [ ] Test a converted English-subtitle/downscale case, including subtitle
       synchronization and cleanup.
+- [ ] If the selected source has multiple audio tracks, verify the displayed
+      FFprobe labels and choose the intended track before converted playback.
 - [ ] Test a bad server address and confirm a specific error followed by clean
       return to the UI.
 - [ ] Reboot, reopen Apps, and confirm no stale process, panel, marker, or
@@ -241,8 +248,11 @@ separately reviewed authentication and transport design.
 - Opus audio is rejected in the current compatibility envelope.
 - The HLS bridge is bounded to unencrypted MPEG-TS and has only limited long-
   duration physical evidence.
-- Account catalog browsing, audio selection, offline downloads, torrent/P2P
-  ingestion, posters, and a full UI are not v1.0 requirements.
+- Account catalog browsing, persistent audio-language preferences, offline
+  downloads, torrent/P2P ingestion, posters, and a full UI are not v1.0
+  requirements. Per-play verified audio-track selection for converted streams
+  is implemented and physically confirmed, but remains a limited preference
+  rather than a full language-preference system.
 - Tailscale clean-account onboarding and disconnected-boot behavior require
   separate physical testing; the working authenticated identity must not be
   reset during ordinary development.
@@ -314,6 +324,9 @@ confirm every version actually shipped and include the applicable notices.
 **Do not publish v1.0 yet.** The working burn-in/downscaling path remains the
 safe production fallback. The isolated subtitle experiment is physically
 confirmed for orientation and R1 switching, but resource use, long playback,
-Menu cleanup, and production integration still require release-level review.
+Menu cleanup, subtitle acceptance, long playback, and production integration
+still require release-level review. Converted multi-audio track selection is
+now physically confirmed and documented, but does not close those remaining
+Milestone 20 gates.
 Update Milestone 20 and its evidence document together when all acceptance
 criteria are complete.
