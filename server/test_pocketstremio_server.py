@@ -2001,6 +2001,27 @@ segments.ts
         _, listing = self.get_json("/api/continue-watching")
         self.assertEqual(listing["count"], 0)
 
+    def test_continue_watching_repairs_generic_saved_title(self):
+        self.post_json(
+            "/api/progress",
+            {
+                "type": "movie",
+                "id": "tt16366836",
+                "title": "PocketStremio",
+                "year": 2024,
+                "position_seconds": 155,
+                "duration_seconds": 6537,
+            },
+        )
+        with mock.patch.object(
+            pocket,
+            "fetch_json",
+            return_value={"meta": {"id": "tt16366836", "name": "Venom: The Last Dance", "year": 2024}},
+        ):
+            _, listing = self.get_json("/api/continue-watching")
+        self.assertEqual(listing["items"][0]["title"], "Venom: The Last Dance")
+        self.assertEqual(listing["items"][0]["position_seconds"], 155)
+
 
 if __name__ == "__main__":
     unittest.main()

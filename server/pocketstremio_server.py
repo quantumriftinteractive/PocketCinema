@@ -656,6 +656,43 @@ class ProgressStore:
 class PocketStremioHandler(BaseHTTPRequestHandler):
     server_version = "PocketStremio/0.9"
 
+    def refresh_generic_progress_titles(self, items):
+        """Repair old client records that saved the app name as the title."""
+        refreshed = []
+        for item in items:
+            if str(item.get("title") or "").strip().casefold() != "pocketstremio":
+                refreshed.append(item)
+                continue
+            item = dict(item)
+            item_type = item.get("type") or "movie"
+            item_id = item.get("id") or ""
+            try:
+                if item_type == "series" and split_episode_video_id(item_id):
+                    series_id, season, episode = split_episode_video_id(item_id)
+                    data = fetch_json(
+                        f"{CINEMETA_BASE}/meta/series/{urllib.parse.quote(series_id)}.json"
+                    )
+                    meta = normalize_series_episode(data.get("meta") or {}, item_id)
+                    if meta:
+                        item["title"] = (
+                            f"{meta['series_title']} - S{season}E{episode} "
+                            f"{meta['title']}"
+                        )
+                        item["year"] = meta.get("year") or item.get("year")
+                else:
+                    data = fetch_json(
+                        f"{CINEMETA_BASE}/meta/{urllib.parse.quote(item_type)}/"
+                        f"{urllib.parse.quote(item_id)}.json"
+                    )
+                    meta = normalize_meta(data.get("meta") or {})
+                    if meta.get("title"):
+                        item["title"] = meta["title"]
+                        item["year"] = meta.get("year") or item.get("year")
+            except Exception:
+                pass
+            refreshed.append(item)
+        return refreshed
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         parts = [
@@ -752,6 +789,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/continue-watching":
             items = self.server.progress_store.list_items()
+            items = self.refresh_generic_progress_titles(items)
             self.write_json({"count": len(items), "items": items})
             return
 
