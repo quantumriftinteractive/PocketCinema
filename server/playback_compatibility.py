@@ -56,6 +56,8 @@ def probe_media(ffprobe_path, url, timeout=20):
             capture_output=True,
             check=False,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
@@ -67,7 +69,7 @@ def probe_media(ffprobe_path, url, timeout=20):
         raise ProbeError("The stream source could not be inspected")
     try:
         return json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
+    except (TypeError, json.JSONDecodeError) as exc:
         raise ProbeError("Media inspection returned invalid data") from exc
 
 

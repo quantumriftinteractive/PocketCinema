@@ -1596,6 +1596,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     # candidate for this selection.  Do not persist this as an
                     # unsupported codec result: providers can recover later.
                     stream["playable"] = False
+                except Exception as exc:
+                    # A malformed provider response or local probe failure must
+                    # not turn the entire bounded stream lookup into a 500.
+                    print(
+                        f"stream preflight failed for {stream.get('id', '')}: "
+                        f"{type(exc).__name__}",
+                        flush=True,
+                    )
+                    stream["playable"] = False
 
         # A preflight request promises a no-trial picker.  Do not show the
         # remaining, intentionally uninspected tail of a large addon result.
