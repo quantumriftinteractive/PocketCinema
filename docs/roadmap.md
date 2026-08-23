@@ -724,7 +724,10 @@ language/title labels before playback. The selected track is passed to the
 bounded converter and preserved for Quick Resume; this is necessary because
 converted MPEG-TS/Matroska output cannot reliably use FFplay's L1 cycling.
 Direct-play audio cycling remains an FFplay responsibility. Physical testing
-with a real multi-audio converted source is pending.
+with a real multi-audio converted source is now confirmed by the user: the
+track picker appeared and the selected audio played correctly. This confirms
+audio-track selection for converted playback, but does not complete the wider
+Milestone 20 acceptance criteria.
 
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
