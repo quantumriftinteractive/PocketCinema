@@ -871,6 +871,22 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 status=502,
             )
             return
+
+        try:
+            audio_stream_index = max(0, int(payload.get("audio_stream_index", 0)))
+        except (TypeError, ValueError):
+            self.write_json({"error": "invalid_audio_stream"}, status=400)
+            return
+        audio_tracks = compatibility.get("audio_tracks") or []
+        if audio_tracks and audio_stream_index >= len(audio_tracks):
+            self.write_json(
+                {
+                    "error": "invalid_audio_stream",
+                    "message": "The selected audio track is unavailable",
+                },
+                status=409,
+            )
+            return
         if compatibility["status"] == "unsupported":
             self.write_json(
                 {
@@ -965,6 +981,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             "duration_seconds": duration_seconds,
             "compatibility": compatibility,
             "hls": compatibility.get("container") == "hls",
+            "audio_stream_index": audio_stream_index,
         }
         if transcode:
             source_session_id = self.server.play_sessions.create(session_data)
@@ -982,6 +999,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "subtitle_url": subtitle.get("url", "") if subtitle else "",
                 "subtitle_path": subtitle.get("local_path", "") if subtitle else "",
                 "start_seconds": start_seconds,
+                "audio_stream_index": audio_stream_index,
                 "field_test": field_test,
                 "field_test_subtitles": field_test_subtitles,
             }
@@ -1905,6 +1923,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     session["source_url"],
                     [path.name for path in subtitle_paths],
                     session.get("start_seconds", 0),
+                    session.get("audio_stream_index", 0),
                 )
             else:
                 if subtitle_url or subtitle_local_path:
@@ -1918,6 +1937,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     session["source_url"],
                     subtitle_path.name if subtitle_path else "",
                     session.get("start_seconds", 0),
+                    session.get("audio_stream_index", 0),
                 )
             process = subprocess.Popen(
                 command,

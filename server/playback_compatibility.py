@@ -111,7 +111,13 @@ def classify_probe(data):
         title = str(tags.get("title") or "").strip()
         if language and language not in audio_languages:
             audio_languages.append(language)
-        audio_tracks.append({"language": language, "title": title})
+        audio_tracks.append(
+            {
+                "ordinal": len(audio_tracks),
+                "language": language,
+                "title": title,
+            }
+        )
     width = _positive_int(video.get("width"))
     height = _positive_int(video.get("height"))
     average_frame_rate = _frame_rate(video.get("avg_frame_rate"))

@@ -718,6 +718,14 @@ This avoids guessing from release filenames while keeping the feature useful
 for sources that expose correct FFprobe language metadata.  Physical controller
 testing of the new picker is pending.
 
+Audio track metadata is now collected during FFprobe preflight. When a source
+has multiple detected audio tracks, the Miyoo picker presents their verified
+language/title labels before playback. The selected track is passed to the
+bounded converter and preserved for Quick Resume; this is necessary because
+converted MPEG-TS/Matroska output cannot reliably use FFplay's L1 cycling.
+Direct-play audio cycling remains an FFplay responsibility. Physical testing
+with a real multi-audio converted source is pending.
+
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue

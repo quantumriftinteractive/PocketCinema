@@ -149,6 +149,7 @@ def build_command(
     input_url,
     subtitle_filename="",
     start_seconds=0,
+    audio_stream_index=0,
 ):
     command = [
         ffmpeg_path,
@@ -176,7 +177,7 @@ def build_command(
             "-map",
             "0:v:0",
             "-map",
-            "0:a:0?",
+            f"0:a:{max(0, int(audio_stream_index))}?",
             "-vf",
             ",".join(filters),
             "-c:v",
@@ -218,6 +219,7 @@ def build_matroska_command(
     input_url,
     subtitle_filenames=(),
     start_seconds=0,
+    audio_stream_index=0,
 ):
     """Build the opt-in embedded-subtitle field-test command.
 
@@ -243,7 +245,9 @@ def build_matroska_command(
         "scale=640:360:force_original_aspect_ratio=decrease",
         "fps=30",
     ]
-    command.extend(["-map", "0:v:0", "-map", "0:a:0?"])
+    command.extend(
+        ["-map", "0:v:0", "-map", f"0:a:{max(0, int(audio_stream_index))}?"]
+    )
     for index in range(len(tuple(subtitle_filenames))):
         command.extend(["-map", f"{index + 1}:0"])
     command.extend(

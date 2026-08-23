@@ -222,14 +222,16 @@ api_post_play() {
   stream_id="$3"
   subtitle_id="${4:-none}"
   resume_seconds="${5:-0}"
+  audio_stream_index="${6:-0}"
   body=$("$JQ" -nc \
     --arg type "$type" \
     --arg id "$id" \
     --arg stream_id "$stream_id" \
     --arg subtitle_id "$subtitle_id" \
+    --argjson audio_stream_index "$audio_stream_index" \
     --argjson field_test "$([ "$FIELD_TEST" = "1" ] && printf 1 || printf 0)" \
     --argjson resume_seconds "$resume_seconds" \
-    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,field_test:($field_test == 1),resume_seconds:$resume_seconds}')
+    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,field_test:($field_test == 1),resume_seconds:$resume_seconds}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -248,6 +250,7 @@ save_last_play() {
   last_resume_seconds="$5"
   last_stream_id="$6"
   last_subtitle_id="$7"
+  last_audio_stream_index="${8:-0}"
   last_tmp="$LAST_PLAY_FILE.tmp"
   "$JQ" -nc \
     --arg server "$SERVER_BASE" \
@@ -257,8 +260,9 @@ save_last_play() {
     --arg year "$last_year" \
     --arg stream_id "$last_stream_id" \
     --arg subtitle_id "$last_subtitle_id" \
+    --argjson audio_stream_index "$last_audio_stream_index" \
     --argjson resume_seconds "$last_resume_seconds" \
-    '{server:$server,type:$type,id:$id,title:$title,year:$year,stream_id:$stream_id,subtitle_id:$subtitle_id,resume_seconds:$resume_seconds}' \
+    '{server:$server,type:$type,id:$id,title:$title,year:$year,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,resume_seconds:$resume_seconds}' \
     >"$last_tmp" 2>/dev/null \
     && mv "$last_tmp" "$LAST_PLAY_FILE"
   rm -f "$last_tmp"
@@ -1100,6 +1104,7 @@ quick_resume_flow() {
   quick_position=$("$JQ" -r '(.resume_seconds // 0) | floor' "$LAST_PLAY_FILE" 2>/dev/null)
   quick_stream_id=$("$JQ" -r '.stream_id // ""' "$LAST_PLAY_FILE" 2>/dev/null)
   quick_subtitle_id=$("$JQ" -r '.subtitle_id // "none"' "$LAST_PLAY_FILE" 2>/dev/null)
+  quick_audio_stream_index=$("$JQ" -r '.audio_stream_index // 0' "$LAST_PLAY_FILE" 2>/dev/null)
   if [ "$quick_server" != "$SERVER_BASE" ] \
     || [ -z "$quick_type" ] || [ -z "$quick_id" ] || [ -z "$quick_stream_id" ]; then
     message "PocketStremio" "Quick Resume is unavailable for this server"
@@ -1110,7 +1115,7 @@ quick_resume_flow() {
   esac
   log "quick resume type=$quick_type id=$quick_id position_seconds=$quick_position"
   play_selected_stream "$quick_type" "$quick_id" "$quick_title" "$quick_year" \
-    "$quick_position" "$quick_stream_id" "$quick_subtitle_id"
+    "$quick_position" "$quick_stream_id" "$quick_subtitle_id" "$quick_audio_stream_index"
   quick_rc=$?
   if [ "$quick_rc" -ne 0 ]; then
     quick_error=$("$JQ" -r '.error // ""' /tmp/pocketstremio-play.json 2>/dev/null)
@@ -1358,6 +1363,26 @@ media_flow() {
   done
 }
 
+select_audio_track() {
+  stream_id="$1"
+  track_count=$("$JQ" -r --arg id "$stream_id" '
+    [.items[] | select(.id == $id) | (.compatibility.audio_tracks // [])[]] | length
+  ' /tmp/pocketstremio-streams.json)
+  case "$track_count" in
+    ''|0|1) printf '0'; return 0 ;;
+  esac
+  : > /tmp/pocketstremio-audio-tracks.tsv
+  "$JQ" -r --arg id "$stream_id" '
+    .items[] | select(.id == $id) | (.compatibility.audio_tracks // [])[] |
+    ("Track " + ((.ordinal + 1)|tostring) + ": " +
+      (if .language == "" then "language unknown" else .language end) +
+      (if .title == "" then "" else " - " + .title end)) + "\t" + (.ordinal|tostring)
+  ' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-audio-tracks.tsv
+  selected_audio=$(select_from_file "Select audio track" /tmp/pocketstremio-audio-tracks.tsv)
+  [ -n "$selected_audio" ] || { printf 'back'; return 0; }
+  grep -F "$selected_audio	" /tmp/pocketstremio-audio-tracks.tsv | head -n 1 | cut -f2
+}
+
 streams_flow() {
   type="$1"
   id="$2"
@@ -1441,6 +1466,9 @@ streams_flow() {
       [ -z "$detail_choice" ] && break
     done
     [ "$detail_choice" = "Use this stream" ] || continue
+    audio_stream_index=$(select_audio_track "$stream_id")
+    [ "$audio_stream_index" = "back" ] && continue
+    log "selected audio_stream_index=$audio_stream_index"
 
     if [ "$FIELD_TEST" = "1" ]; then
       subtitle_id=none
@@ -1455,7 +1483,7 @@ streams_flow() {
     break
   done
 
-  if ! play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"; then
+  if ! play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id" "$audio_stream_index"; then
     FAILED_STREAM_IDS="${FAILED_STREAM_IDS}|${stream_id}|"
     STREAM_RETRY_SUBTITLE_ID="$subtitle_id"
     log "stream failed; returning to filtered picker stream_id=$stream_id"
@@ -1472,8 +1500,9 @@ play_selected_stream() {
   resume_seconds="$5"
   stream_id="$6"
   subtitle_id="$7"
+  audio_stream_index="${8:-0}"
   start_loading "PocketStremio" "Checking compatibility..."
-  api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" >/tmp/pocketstremio-play.json
+  api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" "$audio_stream_index" >/tmp/pocketstremio-play.json
   play_setup_rc=$?
   stop_loading
   if [ "$play_setup_rc" -ne 0 ]; then
@@ -1490,7 +1519,7 @@ play_selected_stream() {
     message "PocketStremio" "$play_error"
     return 1
   fi
-  save_last_play "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id"
+  save_last_play "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id" "$audio_stream_index"
   server_field_test=$("$JQ" -r '.field_test // false' /tmp/pocketstremio-play.json)
   if [ "$FIELD_TEST" = "1" ] && [ "$server_field_test" != "true" ]; then
     log "field-test rejected because server mode is disabled"
@@ -1548,7 +1577,7 @@ play_selected_stream() {
   if [ "$PLAYBACK_VALID" -eq 1 ] 2>/dev/null && [ "$PAUSE_TRACKING_VALID" -eq 1 ] 2>/dev/null && [ "$PLAYBACK_RC" -eq 0 ] 2>/dev/null && [ "$PLAYBACK_ELAPSED" -gt 0 ] 2>/dev/null; then
     if api_post_progress "$type" "$id" "$title" "$year" "$new_position" "$duration_seconds" "$completed" >/tmp/pocketstremio-progress.json; then
       log "progress saved position_seconds=$new_position duration_seconds=$duration_seconds completed=$completed"
-      save_last_play "$type" "$id" "$title" "$year" "$new_position" "$stream_id" "$subtitle_id"
+      save_last_play "$type" "$id" "$title" "$year" "$new_position" "$stream_id" "$subtitle_id" "$audio_stream_index"
     else
       log "progress save failed"
     fi
