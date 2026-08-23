@@ -25,6 +25,7 @@ SHELLECT="$SYS_DIR/script/shellect.sh"
 SDL_SELECTOR="$BASE_DIR/bin/pocketstremio-selector"
 PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
 PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
+RESOURCE_MONITOR="$BASE_DIR/client/pocketstremio-resource-monitor.sh"
 DISCOVERY_CLIENT="$BASE_DIR/bin/pocketstremio-discovery"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
@@ -52,6 +53,7 @@ PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
 PAUSE_MONITOR_PID=""
 PLAYBACK_CONTROL_PID=""
+RESOURCE_MONITOR_PID=""
 PLAYBACK_CONTROL_FILE=/tmp/pocketstremio-playback-control
 CONFIG_ERROR=""
 SERVER_CONFIG_MESSAGE=""
@@ -120,6 +122,11 @@ cleanup() {
   if [ -n "$PAUSE_MONITOR_PID" ] && kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
     kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
     wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
+  fi
+  if [ -n "$RESOURCE_MONITOR_PID" ]; then
+    kill "$RESOURCE_MONITOR_PID" 2>/dev/null || true
+    wait "$RESOURCE_MONITOR_PID" 2>/dev/null || true
+    RESOURCE_MONITOR_PID=""
   fi
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
     "$FIELD_TEST_SUBTITLE_FILE" \
@@ -409,6 +416,7 @@ play_url() {
   pause_result=/tmp/pocketstremio-paused-seconds
   PAUSE_MONITOR_PID=""
   PLAYBACK_CONTROL_PID=""
+  RESOURCE_MONITOR_PID=""
   rm -f "$ffplay_log" "$pause_result" "$PLAYBACK_CONTROL_FILE"
   log "ffplay launch url=$url resume_seconds=$player_seek_seconds subtitles=${subtitle_file:-none}"
   touch /tmp/stay_awake
@@ -423,6 +431,17 @@ play_url() {
     rm -f "$PLAYBACK_CONTROL_FILE"
     run_ffplay "$video_filter" "$current_url" 0 "$aspect_mode" >"$ffplay_log" 2>&1 &
     ffplay_pid=$!
+    if [ "$first_ready" = "1" ] && [ -x "$RESOURCE_MONITOR" ]; then
+      if [ "$CANDIDATE_PLAYER" = "1" ]; then
+        resource_player="app-local"
+      else
+        resource_player="onion"
+      fi
+      "$RESOURCE_MONITOR" "$BASE_DIR/logs/playback-resources.log" \
+        "$ffplay_pid" "$resource_player" >>"$LOG_FILE" 2>&1 &
+      RESOURCE_MONITOR_PID=$!
+      log "resource monitor start pid=$RESOURCE_MONITOR_PID player_pid=$ffplay_pid"
+    fi
     while kill -0 "$ffplay_pid" 2>/dev/null; do
       if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
         if [ "$first_ready" = "1" ]; then
@@ -508,6 +527,11 @@ play_url() {
     kill "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
     wait "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
     PLAYBACK_CONTROL_PID=""
+  fi
+  if [ -n "$RESOURCE_MONITOR_PID" ]; then
+    kill "$RESOURCE_MONITOR_PID" 2>/dev/null || true
+    wait "$RESOURCE_MONITOR_PID" 2>/dev/null || true
+    RESOURCE_MONITOR_PID=""
   fi
   cat "$ffplay_log" >>"$LOG_FILE"
   if grep -q 'Input #0' "$ffplay_log" \

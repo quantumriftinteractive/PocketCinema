@@ -574,6 +574,79 @@ class ProbeCache:
             return len(self.items)
 
 
+class TranscodeResourceMonitor:
+    """Append bounded, source-free FFmpeg resource samples for converted runs."""
+
+    interval_seconds = 5
+    max_bytes = 256 * 1024
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self.lock = threading.Lock()
+
+    def append(self, line):
+        with self.lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+            if self.path.stat().st_size > self.max_bytes:
+                payload = self.path.read_bytes()[-(self.max_bytes * 3 // 4) :]
+                self.path.write_bytes(payload)
+
+    @staticmethod
+    def sample(pid):
+        try:
+            if os.name == "nt":
+                command = (
+                    "$p=Get-Process -Id " + str(int(pid))
+                    + " -ErrorAction Stop; '{0} {1}' -f $p.WorkingSet64,$p.CPU"
+                )
+                result = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", command],
+                    capture_output=True,
+                    text=True,
+                    timeout=3,
+                    check=False,
+                )
+                fields = result.stdout.split()
+                if result.returncode or len(fields) != 2:
+                    return None
+                return int(fields[0]) // 1024, float(fields[1]), "cpu_seconds"
+            result = subprocess.run(
+                ["ps", "-o", "rss=", "-o", "%cpu=", "-p", str(int(pid))],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+            fields = result.stdout.split()
+            if result.returncode or len(fields) < 2:
+                return None
+            return int(fields[0]), float(fields[1]), "cpu_percent"
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return None
+
+    def start(self, pid):
+        stop_event = threading.Event()
+
+        def monitor():
+            self.append(f"transcode_monitor_start time={int(time.time())} pid={pid}")
+            while not stop_event.wait(self.interval_seconds):
+                sample = self.sample(pid)
+                if sample is None:
+                    break
+                rss_kb, cpu_value, cpu_label = sample
+                self.append(
+                    f"transcode_sample time={int(time.time())} pid={pid} "
+                    f"rss_kb={rss_kb} {cpu_label}={cpu_value:.2f}"
+                )
+            self.append(f"transcode_monitor_end time={int(time.time())} pid={pid}")
+
+        thread = threading.Thread(target=monitor, daemon=True)
+        thread.start()
+        return stop_event, thread
+
+
 class ProgressStore:
     def __init__(self, path):
         self.path = Path(path)
@@ -1901,6 +1974,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         subtitle_path = None
         subtitle_paths = []
         stderr_thread = None
+        resource_monitor = None
         stderr_buffer = bytearray()
         response_started = False
         failure_stage = "conversion"
@@ -1947,6 +2021,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 stderr=subprocess.PIPE,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
+            process_pid = getattr(process, "pid", None)
+            if process_pid:
+                resource_monitor = self.server.transcode_resource_monitor.start(process_pid)
 
             def drain_stderr():
                 while True:
@@ -2031,6 +2108,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     reason=reason,
                 )
         finally:
+            if resource_monitor is not None:
+                resource_monitor[0].set()
+                resource_monitor[1].join(timeout=3)
             if process is not None and process.poll() is None:
                 process.terminate()
                 try:
@@ -2556,6 +2636,9 @@ def main():
     httpd.transcode_job_lock = threading.Lock()
     httpd.transcode_state_lock = threading.Lock()
     httpd.active_transcodes = 0
+    httpd.transcode_resource_monitor = TranscodeResourceMonitor(
+        data_dir / "transcode-resources.log"
+    )
     httpd.probe_timeout = max(1, args.probe_timeout)
     httpd.progress_store = ProgressStore(data_dir / "continue_watching.json")
     httpd.started_at = time.time()
