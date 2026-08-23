@@ -35,6 +35,7 @@ $files = @(
   @{ Local = "app/launch.sh"; Remote = "launch.sh" },
   @{ Local = "app/playback-poc.sh"; Remote = "playback-poc.sh" },
   @{ Local = "client/miyoo/pocketstremio-ui.sh"; Remote = "client/pocketstremio-ui.sh" },
+  @{ Local = "client/miyoo/pocketstremio-resource-monitor.sh"; Remote = "client/pocketstremio-resource-monitor.sh" },
   @{ Local = "client/miyoo/bin/pocketstremio-selector"; Remote = "bin/pocketstremio-selector" },
   @{ Local = "client/miyoo/bin/pocketstremio-pause-monitor"; Remote = "bin/pocketstremio-pause-monitor" },
   @{ Local = "client/miyoo/bin/pocketstremio-playback-control"; Remote = "bin/pocketstremio-playback-control" },
@@ -52,6 +53,7 @@ $modeTargets = @(
   "$Destination/launch.sh",
   "$Destination/playback-poc.sh",
   "$Destination/client/pocketstremio-ui.sh",
+  "$Destination/client/pocketstremio-resource-monitor.sh",
   "$Destination/bin/pocketstremio-selector",
   "$Destination/bin/pocketstremio-pause-monitor",
   "$Destination/bin/pocketstremio-playback-control",
@@ -59,7 +61,7 @@ $modeTargets = @(
   "$Destination/bin/pocketstremio-button-diagnostic",
   "$Destination/experiments/button-diagnostic.sh"
 ) -join " "
-$verify = "chmod +x $modeTargets && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh"
+$verify = "chmod +x $modeTargets && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh && /bin/sh -n $Destination/client/pocketstremio-resource-monitor.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
 if ($EnableButtonDiagnostic) {
   Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch $Destination/config/button-diagnostic.mode"))

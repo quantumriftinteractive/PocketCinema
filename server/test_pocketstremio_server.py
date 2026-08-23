@@ -296,6 +296,9 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.transcode_job_lock = threading.Lock()
         self.server.transcode_state_lock = threading.Lock()
         self.server.active_transcodes = 0
+        self.server.transcode_resource_monitor = pocket.TranscodeResourceMonitor(
+            root / "data" / "transcode-resources.log"
+        )
         self.server.probe_timeout = 5
         self.server.progress_store = pocket.ProgressStore(
             root / "data" / "continue_watching.json"
