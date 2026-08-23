@@ -43,7 +43,8 @@ def probe_media(ffprobe_path, url, timeout=20):
         (
             "format=format_name,duration,bit_rate:"
             "stream=index,codec_type,codec_name,profile,width,height,"
-            "avg_frame_rate,r_frame_rate,sample_rate,channels"
+            "avg_frame_rate,r_frame_rate,sample_rate,channels:"
+            "stream_tags=language,title"
         ),
         "-of",
         "json",
@@ -98,6 +99,17 @@ def classify_probe(data):
     }
     video_codec = str(video.get("codec_name") or "").lower()
     audio_codec = str(audio.get("codec_name") or "").lower()
+    audio_languages = []
+    audio_tracks = []
+    for item in streams:
+        if item.get("codec_type") != "audio":
+            continue
+        tags = item.get("tags") or {}
+        language = str(tags.get("language") or "").strip().lower()
+        title = str(tags.get("title") or "").strip()
+        if language and language not in audio_languages:
+            audio_languages.append(language)
+        audio_tracks.append({"language": language, "title": title})
     width = _positive_int(video.get("width"))
     height = _positive_int(video.get("height"))
     average_frame_rate = _frame_rate(video.get("avg_frame_rate"))
@@ -124,6 +136,8 @@ def classify_probe(data):
         "duration_seconds": duration,
         "audio_channels": _positive_int(audio.get("channels")),
         "audio_sample_rate": _positive_int(audio.get("sample_rate")),
+        "audio_languages": audio_languages,
+        "audio_tracks": audio_tracks,
     }
 
     if not video_codec:

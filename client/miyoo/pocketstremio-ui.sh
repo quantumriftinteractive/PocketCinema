@@ -1375,9 +1375,33 @@ streams_flow() {
     return 1
   fi
 
-  "$JQ" -r --arg failed_ids "$FAILED_STREAM_IDS" '
+  source_filter=""
+  audio_filter=""
+  if [ "${POCKETSTREMIO_DRY_RUN:-0}" != "1" ]; then
+    printf 'All sources\tall\n' > /tmp/pocketstremio-source-filters.tsv
+    "$JQ" -r '.items[] | select(.playable == true) | (.source_label // .name) + "\t" + (.source_label // .name)' \
+      /tmp/pocketstremio-streams.json | sort -u >> /tmp/pocketstremio-source-filters.tsv
+    selected_source=$(select_from_file "Stream source" /tmp/pocketstremio-source-filters.tsv)
+    if [ -n "$selected_source" ] && [ "$selected_source" != "All sources" ]; then
+      source_filter="$selected_source"
+    fi
+
+    printf 'All audio languages\t\n' > /tmp/pocketstremio-audio-filters.tsv
+    "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[]' \
+      /tmp/pocketstremio-streams.json | sort -u | while IFS= read -r language; do
+        [ -n "$language" ] && printf '%s (verified)\t%s\n' "$language" "$language"
+      done >> /tmp/pocketstremio-audio-filters.tsv
+    selected_audio=$(select_from_file "Audio language (verified tags)" /tmp/pocketstremio-audio-filters.tsv)
+    if [ -n "$selected_audio" ]; then
+      audio_filter=$(grep -F "$selected_audio	" /tmp/pocketstremio-audio-filters.tsv | head -n 1 | cut -f2)
+    fi
+  fi
+
+  "$JQ" -r --arg failed_ids "$FAILED_STREAM_IDS" --arg source_filter "$source_filter" --arg audio_filter "$audio_filter" '
     .items[] | select(.playable == true) | . as $stream
     | select(($failed_ids | contains("|" + $stream.id + "|")) | not)
+    | select(($source_filter == "") or (($stream.source_label // $stream.name) == $source_filter))
+    | select(($audio_filter == "") or (($stream.compatibility.audio_languages // []) | map(ascii_downcase) | any(. == ($audio_filter | ascii_downcase))))
     | "\(if .playback_mode == "direct" then "[DIRECT] " elif .playback_mode == "convert" then "[CONVERT]" else "[CHECK]" end) \(.source_label // .name)\\n\(.release_label // "release metadata unavailable")\\n\((.compatibility.width // "?")|tostring)x\((.compatibility.height // "?")|tostring) \(.compatibility.video_codec // "?")/\(.compatibility.audio_codec // "?")\t\(.id)\t\(.description // "")"' /tmp/pocketstremio-streams.json >/tmp/pocketstremio-streams.tsv
   if [ ! -s /tmp/pocketstremio-streams.tsv ]; then
     stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketstremio-streams.json)

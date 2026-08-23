@@ -1798,12 +1798,22 @@ segments.ts
                     "codec_name": "aac",
                     "sample_rate": "48000",
                     "channels": 2,
+                    "tags": {"language": "eng", "title": "English"},
+                },
+                {
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "sample_rate": "48000",
+                    "channels": 2,
+                    "tags": {"language": "spa", "title": "Spanish"},
                 },
             ],
         }
         compatibility = playback_compatibility.classify_probe(confirmed_probe)
         self.assertEqual(compatibility["status"], "confirmed")
         self.assertEqual(compatibility["duration_seconds"], 120)
+        self.assertEqual(compatibility["audio_languages"], ["eng", "spa"])
+        self.assertEqual(len(compatibility["audio_tracks"]), 2)
 
         confirmed_vp8_probe = {
             "format": {

@@ -709,6 +709,15 @@ and saved progress at 185 seconds.
 - Report a concise actionable playback failure category while keeping upstream
   media URLs and provider details out of device messages and logs.
 
+The stream picker now supports local filtering by normalized addon/source name,
+so a user can show only Torrentio, AIOStreams, or another configured source
+without exposing addon transports or media URLs.  It also offers audio-language
+filters only for language tags verified by server-side media preflight; streams
+without a verified language tag remain available under the all-audio choice.
+This avoids guessing from release filenames while keeping the feature useful
+for sources that expose correct FFprobe language metadata.  Physical controller
+testing of the new picker is pending.
+
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue
