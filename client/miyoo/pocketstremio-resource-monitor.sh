@@ -29,14 +29,35 @@ finish() {
 
 trap finish INT TERM
 
+find_player_child() {
+  for proc_dir in /proc/[0-9]*; do
+    [ -r "$proc_dir/status" ] || continue
+    proc_pid=${proc_dir##*/}
+    proc_parent=""
+    while read -r field value ignored; do
+      [ "$field" = "PPid:" ] || continue
+      proc_parent=$value
+      break
+    done <"$proc_dir/status"
+    if [ "$proc_parent" = "$PLAYER_PID" ]; then
+      printf '%s\n' "$proc_pid"
+      return 0
+    fi
+  done
+  return 1
+}
+
 printf 'monitor_start time=%s pid=%s player=%s interval_seconds=%s\n' \
   "$(date '+%Y-%m-%dT%H:%M:%S')" "$PLAYER_PID" "$PLAYER_KIND" "$INTERVAL_SECONDS" >>"$LOG_FILE"
 
 while kill -0 "$PLAYER_PID" 2>/dev/null && [ "$(date +%s)" -lt "$end_time" ]; do
-  if [ -r "/proc/$PLAYER_PID/status" ]; then
-    printf 'sample time=%s pid=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$PLAYER_PID" >>"$LOG_FILE"
+  sample_pid=$(find_player_child 2>/dev/null || true)
+  [ -n "$sample_pid" ] || sample_pid=$PLAYER_PID
+  if [ -r "/proc/$sample_pid/status" ]; then
+    printf 'sample time=%s pid=%s wrapper_pid=%s\n' \
+      "$(date '+%Y-%m-%dT%H:%M:%S')" "$sample_pid" "$PLAYER_PID" >>"$LOG_FILE"
     grep -E '^(MemTotal|MemFree|MemAvailable|SwapTotal|SwapFree):' /proc/meminfo >>"$LOG_FILE"
-    grep -E '^(VmRSS|VmSwap|Threads):' "/proc/$PLAYER_PID/status" >>"$LOG_FILE"
+    grep -E '^(VmRSS|VmSwap|Threads):' "/proc/$sample_pid/status" >>"$LOG_FILE"
   fi
   log_bytes=$(wc -c <"$LOG_FILE" 2>/dev/null | tr -d ' ')
   if [ "${log_bytes:-0}" -gt "$MAX_BYTES" ] 2>/dev/null; then
