@@ -10,6 +10,12 @@ slice and Milestone 20 bounded subtitle/downscaling path are physically
 confirmed. The remaining release work includes fresh-install regression,
 packaging and licensing review, and a deliberate decision about whether the
 confirmed Milestone 22 selectable-Matroska mode is included in v1.0.
+Milestone 23 now makes a user-installable PocketStremio Server desktop
+distribution an explicit release requirement, but its implementation is gated:
+Milestone 21 is still **Next** and has not met its documented acceptance rules.
+Until Milestone 23 is implemented and accepted from the actual packaged
+artifact, the Python/PowerShell workflow below remains a developer/source path,
+not the intended end-user v1.0 installation.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
@@ -46,6 +52,10 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   with credentials remaining on the gaming PC.
 - A fresh SD-card installation can be configured without copying private URLs,
   tokens, generated media, logs, or runtime state from the development machine.
+- A normal Windows user can install or extract the PocketStremio Server desktop
+  application, configure it, and operate its owned server without installing
+  Python, running PowerShell, cloning the repository, or preparing environment
+  variables.
 - The app returns to OnionOS cleanly after success, cancellation, network
   failure, FFplay failure, and Menu exit.
 
@@ -54,6 +64,19 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
 - Keep the physically confirmed Milestone 20 acceptance evidence aligned in
   `docs/bounded-transcoding.md` and `docs/roadmap.md`; do not regress its
   production MPEG-TS burn-in fallback.
+- Do not begin Milestone 23 implementation until `docs/roadmap.md` marks
+  Milestone 21 **Confirmed** and its controller/device acceptance evidence is
+  complete. Code presence is not completion evidence.
+- A clean supported Windows PC can install or extract the actual PocketStremio
+  Server artifact, configure and persist PSS name, listen interface/address,
+  port, device-facing address, and Stremio Service through the desktop UI,
+  verify or select FFmpeg and FFprobe, start the server, and connect a Miyoo
+  Mini Plus without Python, PowerShell, repository knowledge, or manual
+  environment-variable configuration.
+- The desktop release passes configuration persistence, application/server
+  restart, invalid/occupied port, missing FFmpeg/FFprobe, unreachable Stremio
+  Service, disappeared-interface, clean stop/removal, and sanitized-log/privacy
+  tests.
 - Milestone 22's selectable-Matroska acceptance criteria, including fallback
   and synchronized A/V, are physically confirmed. If the feature does not ship
   in v1.0, keep the mode disabled and omit its experimental player artifacts.
@@ -100,11 +123,40 @@ expanded:
 Deferred work must remain outside the active milestone and receive its own
 acceptance criteria before implementation.
 
-## Installation prerequisites
+## Installation paths
 
-### Gaming PC
+### End-user release installation
 
-- Windows with PowerShell and Python available on `PATH`.
+This is the required v1.0 direction, not a currently available artifact.
+
+#### Windows
+
+- A supported Windows version and the signed or clearly labeled development
+  PocketStremio Server application bundle.
+- Network access from the Miyoo to the selected PSS interface/address. Direct
+  LAN HTTP is supported; Tailscale remains optional, independent transport.
+- Stremio/Stremio Service only where required by the existing account or Local
+  Files architecture, with PSS access remaining loopback-only.
+- FFmpeg and FFprobe detected automatically or selected through the desktop UI.
+  They are not to be bundled until redistribution provenance and licensing are
+  approved.
+- No Python installation, PowerShell commands, repository checkout, `pip`, or
+  manual environment variables for normal operation.
+
+#### macOS
+
+The architecture must support a later `.app`, but macOS is not an end-user
+release target until native Apple Silicon and any claimed Intel/universal build
+are tested from their actual bundles. Developer ID signing, hardened-runtime
+review, notarization, ticket stapling, and Gatekeeper testing are release gates,
+not optional release polish.
+
+### Developer/source installation
+
+#### PSS host
+
+- Windows with PowerShell and Python available on `PATH`, or macOS with the
+  documented shell/Python prerequisites.
 - The repository checked out to a stable directory.
 - `ffprobe.exe` and `ffmpeg.exe` available, normally from the installed
   Stremio runtime or explicit `-FFprobePath`/`-FFmpegPath` arguments.
@@ -117,7 +169,7 @@ acceptance criteria before implementation.
 - Optional account binding performed only through the official temporary
   approval flow.
 
-### Miyoo
+#### Miyoo
 
 - Miyoo Mini Plus running the tested OnionOS version or a separately measured
   compatible version.
@@ -131,6 +183,11 @@ acceptance criteria before implementation.
 - Do not overwrite the live config during deployment.
 
 ## Clean-account onboarding path
+
+The steps below describe the current developer/source workflow. The Milestone 23
+desktop application must provide the equivalent official approval flow using
+its separate per-user credential file; it must not expose the auth key or ask a
+normal user to edit JSON.
 
 1. Install and start the gaming-PC server with no account key present.
 2. Configure only the required server host, port, and legal addon manifests.
@@ -152,7 +209,46 @@ acceptance criteria before implementation.
     identity that must remain. Never reset or reauthenticate the working
     Tailscale node as part of account testing.
 
-## Fresh-SD test checklist
+## Fresh release test checklists
+
+### Clean Windows PSS and fresh Miyoo
+
+Run this from the actual Milestone 23 release artifact, never from the
+development working tree:
+
+- [ ] Start with a supported Windows environment that has no PocketStremio
+      development checkout and does not rely on a separately installed Python
+      or PowerShell lifecycle commands.
+- [ ] Install or extract only the release artifact and verify its SHA-256
+      checksum.
+- [ ] Launch PocketStremio Server and confirm that its per-user directories are
+      created outside the application bundle.
+- [ ] Configure the PSS name, listen interface/address, port, advertised Miyoo
+      address, and Stremio Service in the UI; restart the app and verify that
+      non-secret settings persist.
+- [ ] Confirm FFmpeg and FFprobe automatic detection and manual selection, then
+      verify useful missing-tool handling without a traceback in the primary UI.
+- [ ] Start PSS, verify `/api/status`, and copy the displayed device-reachable
+      URL. Confirm that a wildcard bind never displays `0.0.0.0` as that URL.
+- [ ] Test an invalid port, occupied port, disappeared interface, and unreachable
+      Stremio Service; each must produce a concise actionable state and preserve
+      recoverability.
+- [ ] Connect a clean/fresh Miyoo installation to the displayed address.
+- [ ] Test direct playback, converted/downscaled playback, subtitles, Continue
+      Watching, Resume, Play from Start, progress saving, and Menu cleanup.
+- [ ] Restart PSS and the desktop application; confirm intended configuration,
+      account state, Continue Watching, and probe cache persistence, plus expiry
+      of ephemeral play sessions.
+- [ ] Stop or exit the application according to its documented behavior and
+      confirm that only its owned PSS process is stopped. Unrelated Python,
+      FFmpeg, Stremio, and Tailscale processes must be untouched.
+- [ ] Test removal/uninstall behavior. Preserve or explicitly offer removal of
+      user data; never silently delete credentials or user-owned configuration.
+- [ ] Inspect the bundle and normal diagnostics for private/development files,
+      credentials, addon URLs/tokens, upstream URLs, local media, caches, and
+      logs. None may be shipped or exposed.
+
+### Fresh Miyoo SD card
 
 - [ ] Use a freshly formatted or disposable SD card and the target OnionOS
       version.
@@ -181,7 +277,28 @@ acceptance criteria before implementation.
 - [ ] Collect only sanitized logs needed for evidence; remove them before
       packaging the card or release archive.
 
-## Windows server setup checklist
+## Windows server installation checklists
+
+### End-user release installation
+
+This checklist becomes actionable only after Milestone 23 produces a packaged
+artifact:
+
+- [ ] Download and verify the PocketStremio Server release artifact.
+- [ ] Install or extract it and launch the desktop application.
+- [ ] Choose a listen interface and confirm the separately displayed Miyoo
+      address.
+- [ ] Configure and validate the port.
+- [ ] Configure and check the loopback Stremio Service endpoint.
+- [ ] Verify FFmpeg and FFprobe detection or select their executable paths.
+- [ ] Connect a Stremio account through the existing official approval flow if
+      desired; never manually copy an auth key into the application bundle.
+- [ ] Start PSS, confirm Running status, and configure the Miyoo with the copied
+      address.
+- [ ] Stop/restart PSS from the UI and verify clean owned-process lifecycle and
+      persisted settings.
+
+### Developer/source installation
 
 - [ ] Clone the repository and read `AGENTS.md` and `docs/roadmap.md`.
 - [ ] Run `python -m py_compile server/pocketstremio_server.py`.
@@ -226,6 +343,16 @@ acceptance criteria before implementation.
 - [ ] No account email, password, auth key, addon token, private addon URL,
       upstream media URL, subtitle URL, or Tailscale state appears in the
       Miyoo API, logs, process arguments, Git history, or release archive.
+- [ ] Desktop preferences, Stremio account credentials, private addon
+      configuration, persistent PSS data, and logs use separate per-user paths.
+      Secrets are never stored in the ordinary UI preferences file.
+- [ ] A desktop migration does not silently discover or copy credentials or
+      private addon configuration from a repository checkout or another PSS
+      host. Any future migration is explicit, preserves the source, restricts
+      destination permissions, and never displays the values.
+- [ ] The desktop lifecycle manager tracks the exact child it started and never
+      kills a process merely because its name contains Python, FFmpeg, Stremio,
+      PocketStremio, or Tailscale.
 - [ ] `/api/streams` returns opaque stream IDs; `/api/play` returns opaque play
       URLs/session IDs.
 - [ ] Account media is limited to safe direct HTTP(S) results; reject P2P,
@@ -302,6 +429,10 @@ confirm every version actually shipped and include the applicable notices.
 
 - PocketStremio server/client scripts: repository-authored code; retain the
   repository’s chosen license file if one is added before release.
+- PocketStremio Server desktop application, bundled Python interpreter,
+  application GUI runtime, and packaging bootloader: record exact versions,
+  source/provenance, licenses, build options, and whether each component is
+  redistributed in the Windows directory or macOS `.app`.
 - Project Nayuki `qrcodegen`: vendored MIT-licensed component; retain its
   notice and source attribution.
 - SDL 1.2, `curl`, `jq`, `kbinput`, `infoPanel`, and Onion FFplay: runtime
@@ -319,6 +450,15 @@ confirm every version actually shipped and include the applicable notices.
 
 ### Audit actions before release
 
+- [ ] Record the clean build operating system, architecture, Python version,
+      packaging-tool version, GUI/Tcl/Tk version, spec/configuration, and exact
+      reproducible build command for every desktop artifact.
+- [ ] Record Windows code-signing and installer status; for macOS record target
+      architecture, Developer ID signing, hardened-runtime, notarization, and
+      ticket-stapling status.
+- [ ] Treat FFmpeg and FFprobe as externally detected tools until the exact
+      redistributed builds, configurations, provenance, notices, source
+      obligations, and update process have passed review.
 - [ ] Record `--version` output and build configuration for every bundled
       executable/library.
 - [ ] Preserve source or written source-offer information for LGPL/GPL-covered
@@ -335,6 +475,15 @@ confirm every version actually shipped and include the applicable notices.
 
 - [ ] Release from a clean, reviewed tag on the intended branch.
 - [ ] Run all automated checks listed in `AGENTS.md`.
+- [ ] Build the Windows one-directory application on Windows and the macOS
+      `.app` on macOS; do not claim cross-platform support from source-only tests.
+- [ ] Include the bundled Python/GUI runtime and application assets required for
+      normal use without including writable preferences, credentials, private
+      addon configuration, PSS data, logs, or local media.
+- [ ] Record exact build-environment and packaging-tool versions and publish
+      reproducible build instructions/specification.
+- [ ] State code-signing, installer, macOS architecture, hardened-runtime, and
+      notarization status accurately for each artifact.
 - [ ] Generate only reproducible, release-appropriate selector binaries and
       explicitly documented app assets.
 - [ ] Exclude `.tmp/`, server data, logs, caches, local media, account config,
@@ -364,4 +513,8 @@ physically confirmed. A v1.0 that excludes selectable Matroska must keep the
 option disabled and omit the experimental player artifacts. Fresh-SD
 onboarding, final movie/episode/converted regressions, reproducible release
 artifacts, third-party notices, and the privacy review must still pass before
-publishing.
+publishing. Milestone 23 desktop implementation remains gated on documented
+Milestone 21 completion; once that gate is met, the Windows release must also
+pass the clean-PC packaged-artifact acceptance above. A macOS build is not a
+supported end-user release until its equivalent clean-bundle, architecture,
+signing, notarization, privacy, lifecycle, and real-Miyoo checks pass.
