@@ -13,7 +13,8 @@ param(
   [int]$OpenMediaAddonPort = 8756,
   [string]$FFprobePath = "",
   [string]$FFmpegPath = "",
-  [switch]$EnableFieldTest
+  [switch]$EnableFieldTest,
+  [switch]$EnableMatroskaSubtitles
 )
 
 $ErrorActionPreference = "Stop"
@@ -110,6 +111,9 @@ function Start-ManagedServer {
   )
   if ($EnableFieldTest) {
     $arguments += "--enable-field-test"
+  }
+  if ($EnableMatroskaSubtitles) {
+    $arguments += "--enable-matroska-subtitles"
   }
   if ($DisableDiscovery) {
     $arguments += "--disable-discovery"

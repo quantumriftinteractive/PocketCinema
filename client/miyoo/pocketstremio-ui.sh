@@ -31,9 +31,14 @@ INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 APP_LOCAL_PLAYER="${POCKETSTREMIO_APP_LOCAL_PLAYER:-1}"
 FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
+MATROSKA_SUBTITLES="${POCKETSTREMIO_MATROSKA_SUBTITLES:-0}"
 if [ -f "$BASE_DIR/config/ffplay-field-test.mode" ]; then
   FIELD_TEST=1
   rm -f "$BASE_DIR/config/ffplay-field-test.mode"
+fi
+if [ -f "$BASE_DIR/config/matroska-subtitles.mode" ]; then
+  MATROSKA_SUBTITLES=1
+  rm -f "$BASE_DIR/config/matroska-subtitles.mode"
 fi
 DISPLAY_SURFACE_TEST="${POCKETSTREMIO_DISPLAY_SURFACE_TEST:-0}"
 if [ -f "$BASE_DIR/config/ffplay-display-surface-test.mode" ]; then
@@ -237,8 +242,9 @@ api_post_play() {
     --arg subtitle_id "$subtitle_id" \
     --argjson audio_stream_index "$audio_stream_index" \
     --argjson field_test "$([ "$FIELD_TEST" = "1" ] && printf 1 || printf 0)" \
+    --argjson matroska_subtitles "$([ "$MATROSKA_SUBTITLES" = "1" ] && printf 1 || printf 0)" \
     --argjson resume_seconds "$resume_seconds" \
-    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,field_test:($field_test == 1),resume_seconds:$resume_seconds}')
+    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,field_test:($field_test == 1),matroska_subtitles:($matroska_subtitles == 1),resume_seconds:$resume_seconds}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -1550,6 +1556,12 @@ play_selected_stream() {
     message "PocketStremio" "Subtitle field test is disabled on the server"
     return 1
   fi
+  server_matroska_subtitles=$("$JQ" -r '.matroska_subtitles // false' /tmp/pocketstremio-play.json)
+  if [ "$MATROSKA_SUBTITLES" = "1" ] && [ "$server_matroska_subtitles" != "true" ]; then
+    log "matroska subtitles rejected because server mode is disabled"
+    message "PocketStremio" "Matroska subtitles are disabled on this PSS"
+    return 1
+  fi
   duration_seconds=$("$JQ" -r '(.duration_seconds // 0) | floor' /tmp/pocketstremio-play.json)
   compatibility_status=$("$JQ" -r '.compatibility.status // "unknown"' /tmp/pocketstremio-play.json)
   compatibility_message=$("$JQ" -r '.compatibility.message // ""' /tmp/pocketstremio-play.json)
@@ -1562,10 +1574,17 @@ play_selected_stream() {
   log "playback conversion=$transcoded subtitle_id=${subtitle_id:-none} server_seek=$server_seek_applied"
 
   FIELD_TEST_SUBTITLE_FILE=""
-  if [ "$FIELD_TEST" = "1" ] && [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
+  if { [ "$FIELD_TEST" = "1" ] || [ "$MATROSKA_SUBTITLES" = "1" ]; } \
+    && [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
     FIELD_TEST_SUBTITLE_FILE="$BASE_DIR/experiments/ffplay/.field-test-subtitle-$$.mkv"
-    if ! curl_request -fsS --max-time 60 -o "$FIELD_TEST_SUBTITLE_FILE" \
-      "$SERVER_BASE/subtitle/$subtitle_id?format=matroska&offset_seconds=$resume_seconds" 2>>"$HTTP_ERROR_FILE"; then
+    subtitle_pack_url="$SERVER_BASE/subtitle/$subtitle_id?format=matroska&offset_seconds=$resume_seconds"
+    if [ "$MATROSKA_SUBTITLES" = "1" ]; then
+      subtitle_pack_url=$("$JQ" -r '.subtitle_pack_url // ""' /tmp/pocketstremio-play.json)
+      track_count=$("$JQ" -r '(.subtitle_tracks // []) | length' /tmp/pocketstremio-play.json)
+      log "matroska subtitle tracks=$track_count (use R1 to cycle)"
+    fi
+    if [ -z "$subtitle_pack_url" ] || ! curl_request -fsS --max-time 60 -o "$FIELD_TEST_SUBTITLE_FILE" \
+      "$subtitle_pack_url" 2>>"$HTTP_ERROR_FILE"; then
       log "field-test subtitle download failed"
       rm -f "$FIELD_TEST_SUBTITLE_FILE"
       FIELD_TEST_SUBTITLE_FILE=""
@@ -1582,8 +1601,11 @@ play_selected_stream() {
   log "playback url received"
   start_loading "PocketStremio" "Starting video..."
   playback_result=0
+  nonseekable_mode=0
+  [ "$FIELD_TEST" = "1" ] && nonseekable_mode=1
+  [ "$MATROSKA_SUBTITLES" = "1" ] && nonseekable_mode=1
   if ! play_url "$play_url_value" "$ffplay_resume_seconds" "$FIELD_TEST_SUBTITLE_FILE" \
-    "$FIELD_TEST" "$subtitle_id" "$resume_seconds"; then
+    "$nonseekable_mode" "$subtitle_id" "$resume_seconds"; then
     message "PocketStremio" "$PLAYBACK_ERROR"
     playback_result=1
   fi

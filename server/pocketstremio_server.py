@@ -809,6 +809,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "subtitle_burn_in": bool(
                             getattr(self.server, "subtitle_burn_in_available", False)
                         ),
+                        "matroska_subtitles": bool(
+                            getattr(self.server, "matroska_subtitles_enabled", False)
+                        ),
                         "maximum": 1,
                     },
                     "sessions": {
@@ -872,6 +875,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         if len(parts) == 2 and parts[0] == "subtitle":
             self.handle_subtitle(parts[1], parsed)
+            return
+
+        if len(parts) == 2 and parts[0] == "subtitle-pack":
+            self.handle_subtitle_pack(parts[1])
             return
 
         if parsed.path == "/media/test-video.mp4":
@@ -982,6 +989,12 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         field_test = bool(payload.get("field_test")) and getattr(
             self.server, "field_test_enabled", False
         )
+        matroska_subtitles = bool(payload.get("matroska_subtitles")) and getattr(
+            self.server, "matroska_subtitles_enabled", False
+        )
+        if field_test and matroska_subtitles:
+            self.write_json({"error": "invalid_subtitle_mode"}, status=400)
+            return
         field_test_subtitles = []
         if field_test and subtitle:
             field_test_subtitles.append(subtitle)
@@ -999,6 +1012,31 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             ) != payload.get("id"):
                 self.write_json({"error": "subtitle_mismatch"}, status=409)
                 return
+        matroska_tracks = []
+        if matroska_subtitles:
+            if not subtitle:
+                self.write_json(
+                    {"error": "subtitle_required", "message": "Choose an English subtitle first"},
+                    status=409,
+                )
+                return
+            if subtitle.get("item_type") != payload.get("type") or subtitle.get(
+                "item_id"
+            ) != payload.get("id"):
+                self.write_json({"error": "subtitle_mismatch"}, status=409)
+                return
+            matroska_tracks.append(subtitle)
+            for candidate in self.server.subtitle_cache.values():
+                if len(matroska_tracks) >= 3:
+                    break
+                if (
+                    candidate.get("id") == subtitle.get("id")
+                    or candidate.get("item_type") != payload.get("type")
+                    or candidate.get("item_id") != payload.get("id")
+                    or candidate.get("lang") not in {"eng", "en"}
+                ):
+                    continue
+                matroska_tracks.append(candidate)
 
         start_seconds = nonnegative_int(payload.get("resume_seconds"))
         transcode = bool(subtitle) or transcoding.needs_downscale(compatibility)
@@ -1031,7 +1069,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 status=503,
             )
             return
-        if subtitle and not field_test and not getattr(
+        if subtitle and not (field_test or matroska_subtitles) and not getattr(
             self.server, "subtitle_burn_in_available", False
         ):
             self.write_json(
@@ -1075,6 +1113,8 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "audio_stream_index": audio_stream_index,
                 "field_test": field_test,
                 "field_test_subtitles": field_test_subtitles,
+                "matroska_subtitles": matroska_subtitles,
+                "matroska_tracks": matroska_tracks,
             }
         session_id = self.server.play_sessions.create(session_data)
 
@@ -1088,6 +1128,16 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "transcoded": transcode,
                 "server_seek_applied": bool(transcode and start_seconds),
                 "field_test": field_test,
+                "matroska_subtitles": matroska_subtitles,
+                "subtitle_tracks": [
+                    {"id": track.get("id", ""), "name": track.get("name", "English")[:80]}
+                    for track in matroska_tracks
+                ],
+                "subtitle_pack_url": (
+                    f"http://{self.server.public_host}:{self.server.server_port}/subtitle-pack/{session_id}"
+                    if matroska_subtitles
+                    else ""
+                ),
             }
         )
 
@@ -1983,9 +2033,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         try:
             subtitle_url = session.get("subtitle_url") or ""
             subtitle_local_path = session.get("subtitle_path") or ""
-            if session.get("field_test"):
+            if session.get("field_test") or session.get("matroska_subtitles"):
                 failure_stage = "subtitle"
-                for subtitle in session.get("field_test_subtitles", []):
+                subtitle_tracks = (
+                    session.get("field_test_subtitles", [])
+                    if session.get("field_test")
+                    else session.get("matroska_tracks", [])
+                )
+                for subtitle in subtitle_tracks:
                     subtitle_paths.append(
                         self.download_transcode_subtitle(
                             subtitle.get("url", ""), subtitle.get("local_path", "")
@@ -2036,10 +2091,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
             stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
             stderr_thread.start()
-            if session.get("field_test"):
+            if session.get("field_test") or session.get("matroska_subtitles"):
                 prefix = process.stdout.read(4)
                 if prefix != b"\x1a\x45\xdf\xa3":
-                    raise OSError("Field-test playback did not produce Matroska")
+                    raise OSError("Matroska playback did not produce Matroska")
             else:
                 prefix = process.stdout.read(188 * 3)
                 if len(prefix) < 188 * 3 or any(
@@ -2050,7 +2105,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header(
                 "Content-Type",
-                "video/x-matroska" if session.get("field_test") else "video/mp2t",
+                "video/x-matroska"
+                if session.get("field_test") or session.get("matroska_subtitles")
+                else "video/mp2t",
             )
             self.send_header("Cache-Control", "no-store")
             self.send_header("Connection", "close")
@@ -2314,6 +2371,21 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
         self.proxy_remote_url(subtitle["url"])
 
+    def handle_subtitle_pack(self, session_id):
+        session, expired = self.server.play_sessions.get(session_id)
+        if not session:
+            self.write_json(
+                {"error": "play_session_expired" if expired else "play_session_not_found"},
+                status=410 if expired else 404,
+            )
+            return
+        if not session.get("matroska_subtitles"):
+            self.write_json({"error": "subtitle_pack_unavailable"}, status=409)
+            return
+        self.stream_subtitles_matroska(
+            session.get("matroska_tracks", []), session.get("start_seconds", 0)
+        )
+
     def stream_subtitle_matroska(self, subtitle, offset_seconds=0):
         subtitle_path = None
         shifted_subtitle_path = None
@@ -2380,6 +2452,80 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 subtitle_path.unlink(missing_ok=True)
             if shifted_subtitle_path is not None:
                 shifted_subtitle_path.unlink(missing_ok=True)
+            self.close_connection = True
+
+    def stream_subtitles_matroska(self, subtitles, offset_seconds=0):
+        """Serve a bounded sidecar whose track order matches the media Matroska."""
+        subtitle_paths = []
+        process = None
+        try:
+            for subtitle in tuple(subtitles)[:3]:
+                path = self.download_transcode_subtitle(
+                    subtitle.get("url", ""), subtitle.get("local_path", "")
+                )
+                if offset_seconds:
+                    shifted_path = self.server.transcode_dir / (
+                        f"subtitle-shifted-{secrets.token_hex(8)}{path.suffix}"
+                    )
+                    shifted_path.write_bytes(
+                        transcoding.shift_subtitle_payload(path.read_bytes(), offset_seconds)
+                    )
+                    path.unlink(missing_ok=True)
+                    path = shifted_path
+                subtitle_paths.append((path, subtitle.get("name", "English")))
+            if not subtitle_paths:
+                raise OSError("No subtitle tracks are available")
+            command = transcoding.build_subtitles_matroska_command(
+                self.server.ffmpeg_path,
+                [
+                    (
+                        path.name,
+                        "webvtt" if path.suffix == ".vtt" else "srt",
+                        name,
+                    )
+                    for path, name in subtitle_paths
+                ],
+            )
+            process = subprocess.Popen(
+                command, cwd=self.server.transcode_dir, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            prefix = process.stdout.read(4)
+            if prefix != b"\x1a\x45\xdf\xa3":
+                raise OSError("Subtitle packaging did not produce Matroska")
+            self.send_response(200)
+            self.send_header("Content-Type", "video/x-matroska")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(prefix)
+            while True:
+                chunk = process.stdout.read(64 * 1024)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            print("Subtitle packaging client disconnected", flush=True)
+        except (OSError, urllib.error.URLError, urllib.error.HTTPError) as exc:
+            if not getattr(self, "_headers_buffer", None):
+                self.write_json({"error": "subtitle_packaging_failed"}, status=502)
+            print(f"Subtitle packaging failed: {type(exc).__name__}", flush=True)
+        finally:
+            if process is not None and process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=3)
+            if process is not None:
+                if process.stdout is not None:
+                    process.stdout.close()
+                if process.stderr is not None:
+                    process.stderr.close()
+            for path, _name in subtitle_paths:
+                path.unlink(missing_ok=True)
             self.close_connection = True
 
     def proxy_remote_url(self, url):
@@ -2547,6 +2693,11 @@ def main():
         action="store_true",
         help="Enable the app-local embedded-subtitle field-test route",
     )
+    parser.add_argument(
+        "--enable-matroska-subtitles",
+        action="store_true",
+        help="Enable bounded selectable Matroska subtitles for the app-local player",
+    )
     parser.add_argument("--probe-timeout", type=int, default=45)
     parser.add_argument("--probe-cache-ttl", type=int, default=DEFAULT_PROBE_CACHE_TTL)
     parser.add_argument("--max-probe-cache", type=int, default=DEFAULT_MAX_PROBE_CACHE)
@@ -2629,6 +2780,7 @@ def main():
         httpd.ffmpeg_path
     )
     httpd.field_test_enabled = args.enable_field_test
+    httpd.matroska_subtitles_enabled = args.enable_matroska_subtitles
     httpd.transcode_dir = data_dir / "transcode"
     httpd.transcode_dir.mkdir(parents=True, exist_ok=True)
     for stale_path in httpd.transcode_dir.glob("subtitle-*"):

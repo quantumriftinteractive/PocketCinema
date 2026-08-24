@@ -334,10 +334,24 @@ def shift_subtitle_payload(payload, offset_seconds):
 
 
 def build_subtitle_matroska_command(ffmpeg_path, subtitle_filename, input_format="srt"):
-    """Package one subtitle track in Matroska for the opt-in FFplay test."""
-    return [
-        ffmpeg_path, "-hide_banner", "-loglevel", "warning", "-nostdin",
-        "-f", input_format, "-i", subtitle_filename,
-        "-map", "0:0", "-c:s", "srt", "-metadata:s:s:0", "language=eng",
-        "-f", "matroska", "pipe:1",
-    ]
+    """Package one subtitle track in Matroska for the legacy field test."""
+    return build_subtitles_matroska_command(
+        ffmpeg_path, [(subtitle_filename, input_format, "English")]
+    )
+
+
+def build_subtitles_matroska_command(ffmpeg_path, subtitle_inputs):
+    """Package up to three server-local text tracks into an opaque Matroska sidecar."""
+    subtitle_inputs = tuple(subtitle_inputs)[:3]
+    if not subtitle_inputs:
+        raise ValueError("At least one subtitle track is required")
+    command = [ffmpeg_path, "-hide_banner", "-loglevel", "warning", "-nostdin"]
+    for filename, input_format, _title in subtitle_inputs:
+        command.extend(["-f", input_format, "-i", filename])
+    for index, (_filename, _input_format, title) in enumerate(subtitle_inputs):
+        command.extend(
+            ["-map", f"{index}:0", "-metadata:s:s:%d" % index, "language=eng",
+             "-metadata:s:s:%d" % index, "title=" + str(title)[:80]]
+        )
+    command.extend(["-c:s", "srt", "-f", "matroska", "pipe:1"])
+    return command

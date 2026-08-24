@@ -1272,6 +1272,41 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(self.server.active_transcodes, 0)
         self.assertEqual(list(self.server.transcode_dir.iterdir()), [])
 
+    def test_matroska_subtitle_mode_bounds_tracks_and_hides_upstream_url(self):
+        stream_id = "matroska-subtitle-stream"
+        upstream_url = "https://cdn.example/matroska.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id, "name": "Matroska test", "url": upstream_url
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {"status": "confirmed", "container": "mp4", "video_codec": "h264",
+             "audio_codec": "aac", "width": 640, "height": 360},
+        )
+        for index in range(4):
+            subtitle_id = f"matroska-{index}"
+            self.server.subtitle_cache[subtitle_id] = {
+                "id": subtitle_id, "name": f"English {index}", "lang": "eng",
+                "item_type": "movie", "item_id": "tt0000001",
+                "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+            }
+        self.server.ffmpeg_path = "test-ffmpeg"
+        self.server.matroska_subtitles_enabled = True
+        _, play = self.post_json(
+            "/api/play",
+            {"type": "movie", "id": "tt0000001", "stream_id": stream_id,
+             "subtitle_id": "matroska-0", "matroska_subtitles": True},
+        )
+        self.assertTrue(play["transcoded"])
+        self.assertTrue(play["matroska_subtitles"])
+        self.assertEqual(len(play["subtitle_tracks"]), 3)
+        self.assertIn("/subtitle-pack/", play["subtitle_pack_url"])
+        self.assertNotIn(upstream_url, json.dumps(play))
+        session, expired = self.server.play_sessions.get(play["session_id"])
+        self.assertFalse(expired)
+        self.assertTrue(session["matroska_subtitles"])
+        self.assertEqual(len(session["matroska_tracks"]), 3)
+
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"
         opus_path = self.server.media_dir / "compat-h264-opus.mkv"

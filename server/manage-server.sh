@@ -17,7 +17,8 @@ usage() {
     "  --ffprobe PATH" \
     "  --ffmpeg PATH" \
     "  --local-media-root PATH" \
-    "  --enable-field-test"
+    "  --enable-field-test" \
+    "  --enable-matroska-subtitles"
 }
 
 ACTION="${1:-status}"
@@ -48,6 +49,7 @@ FFPROBE_PATH="${POCKETSTREMIO_FFPROBE:-}"
 FFMPEG_PATH="${POCKETSTREMIO_FFMPEG:-}"
 LOCAL_MEDIA_ROOT="${POCKETSTREMIO_LOCAL_MEDIA_ROOT:-}"
 ENABLE_FIELD_TEST="${POCKETSTREMIO_ENABLE_FIELD_TEST:-0}"
+ENABLE_MATROSKA_SUBTITLES="${POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES:-0}"
 PYTHON="${POCKETSTREMIO_PYTHON:-}"
 
 while [ "$#" -gt 0 ]; do
@@ -65,6 +67,7 @@ while [ "$#" -gt 0 ]; do
     --ffmpeg) FFMPEG_PATH="$2"; shift 2 ;;
     --local-media-root) LOCAL_MEDIA_ROOT="$2"; shift 2 ;;
     --enable-field-test) ENABLE_FIELD_TEST=1; shift ;;
+    --enable-matroska-subtitles) ENABLE_MATROSKA_SUBTITLES=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
@@ -85,6 +88,10 @@ fi
 case "$ENABLE_FIELD_TEST" in
   0|1) ;;
   *) printf '%s\n' "POCKETSTREMIO_ENABLE_FIELD_TEST must be 0 or 1" >&2; exit 2 ;;
+esac
+case "$ENABLE_MATROSKA_SUBTITLES" in
+  0|1) ;;
+  *) printf '%s\n' "POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES must be 0 or 1" >&2; exit 2 ;;
 esac
 case "$DISABLE_DISCOVERY" in
   0|1) ;;
@@ -160,6 +167,9 @@ start_server() {
   fi
   if [ "$ENABLE_FIELD_TEST" = "1" ]; then
     set -- "$@" --enable-field-test
+  fi
+  if [ "$ENABLE_MATROSKA_SUBTITLES" = "1" ]; then
+    set -- "$@" --enable-matroska-subtitles
   fi
   if [ "$DISABLE_DISCOVERY" = "1" ]; then
     set -- "$@" --disable-discovery

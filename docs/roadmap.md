@@ -667,7 +667,7 @@ cleans up every server and device process without exposing upstream tokens.
 
 ### 21. Device Settings and Playback Preferences
 
-**Status: Next**
+**Status: Planned (reprioritized for selectable Matroska subtitles)**
 
 The user-prioritized server-connectivity slice is implemented for split-host
 development. The home screen reports connected, offline, or unconfigured
@@ -748,7 +748,30 @@ Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue
 Watching item can be removed without marking unrelated media complete.
 
-### 22. Offline Downloads
+### 22. Selectable Matroska Subtitles
+
+**Status: Next**
+
+Burn-in remains the confirmed bounded fallback, but it fixes one subtitle choice
+for an entire run. Build on the physically proven app-local candidate player to
+offer a bounded set of release-matched English text tracks in a converted
+Matroska response, so the user can cycle tracks with R1 during playback.
+
+- Keep source URLs, subtitle URLs, account tokens, and FFmpeg inputs entirely
+  on the PSS host through the opaque relay.
+- Package no more than three server-normalized text tracks, with explicit track
+  labels and deterministic ordering; reject image-only subtitle formats.
+- Use the app-local 640x480 SDL candidate only for this mode and retain the
+  normal MPEG-TS burn-in path as automatic fallback on setup failure.
+- Preserve compatible audio conversion, downscaling, readiness-based progress,
+  Menu cleanup, and bounded resource use.
+- Do not change OnionOS files or the production MPEG-TS fallback.
+
+Acceptance criterion: a real account-backed stream opens with multiple English
+Matroska tracks, R1 visibly cycles through them and off, audio/video remains
+smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.
+
+### 23. Offline Downloads
 
 **Status: Planned**
 
