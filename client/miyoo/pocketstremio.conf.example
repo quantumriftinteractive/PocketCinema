@@ -10,6 +10,7 @@ AUTO_FIRST=0
 # 2.0 is +6 dB and may clip unusually loud sources.
 AUDIO_GAIN=2.0
 # Experimental app-local Matroska subtitle tracks. When both this and the PSS
-# mode are enabled, select one English subtitle, then use R1 during playback to
-# cycle up to three packaged English tracks and off. MPEG-TS burn-in remains 0.
+# mode are enabled, PSS selects up to three English text tracks automatically;
+# use R1 during playback to cycle them and off. Setup failure returns to the
+# normal subtitle selector and unchanged MPEG-TS burn-in path.
 POCKETSTREMIO_MATROSKA_SUBTITLES=0

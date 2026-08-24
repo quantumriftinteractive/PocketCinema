@@ -31,7 +31,7 @@ INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 APP_LOCAL_PLAYER="${POCKETSTREMIO_APP_LOCAL_PLAYER:-1}"
 FIELD_TEST="${POCKETSTREMIO_SUBTITLE_FIELD_TEST:-0}"
-MATROSKA_SUBTITLES="${POCKETSTREMIO_MATROSKA_SUBTITLES:-0}"
+MATROSKA_SUBTITLES="${POCKETSTREMIO_MATROSKA_SUBTITLES:-}"
 if [ -f "$BASE_DIR/config/ffplay-field-test.mode" ]; then
   FIELD_TEST=1
   rm -f "$BASE_DIR/config/ffplay-field-test.mode"
@@ -46,12 +46,6 @@ if [ -f "$BASE_DIR/config/ffplay-display-surface-test.mode" ]; then
   rm -f "$BASE_DIR/config/ffplay-display-surface-test.mode"
 fi
 CANDIDATE_PLAYER=0
-# The app-local player owns a fixed 640x480 SDL surface.  This prevents the
-# normal Onion FFplay path from stretching correctly encoded letterboxed video.
-if [ "$APP_LOCAL_PLAYER" = "1" ] || [ "$FIELD_TEST" = "1" ] || [ "$DISPLAY_SURFACE_TEST" = "1" ]; then
-  CANDIDATE_PLAYER=1
-  FFPLAY="$BASE_DIR/experiments/ffplay/bin/ffplay"
-fi
 FIELD_TEST_LIB_DIR="$BASE_DIR/experiments/ffplay/lib"
 FIELD_TEST_SUBTITLE_FILE=""
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
@@ -90,6 +84,9 @@ load_config() {
       DEFAULT_QUERY) [ -n "$DEFAULT_QUERY" ] || DEFAULT_QUERY="$config_value" ;;
       AUTO_FIRST) [ -n "$AUTO_FIRST" ] || AUTO_FIRST="$config_value" ;;
       AUDIO_GAIN) [ -n "$AUDIO_GAIN" ] || AUDIO_GAIN="$config_value" ;;
+      POCKETSTREMIO_MATROSKA_SUBTITLES)
+        [ -n "$MATROSKA_SUBTITLES" ] || MATROSKA_SUBTITLES="$config_value"
+        ;;
       *) CONFIG_ERROR="Unknown setting: $config_key" ;;
     esac
   done <"$CONFIG_FILE"
@@ -99,6 +96,7 @@ load_config
 AUTO_FIRST="${AUTO_FIRST:-0}"
 DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
 AUDIO_GAIN="${AUDIO_GAIN:-2.0}"
+MATROSKA_SUBTITLES="${MATROSKA_SUBTITLES:-0}"
 case "$SERVER_BASE" in
   http://*|https://*) ;;
   '') SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="No PocketStremio server configured" ;;
@@ -120,6 +118,19 @@ case "$APP_LOCAL_PLAYER" in
   0|1) ;;
   *) CONFIG_ERROR="POCKETSTREMIO_APP_LOCAL_PLAYER must be 0 or 1" ;;
 esac
+case "$MATROSKA_SUBTITLES" in
+  0|1) ;;
+  *) CONFIG_ERROR="POCKETSTREMIO_MATROSKA_SUBTITLES must be 0 or 1" ;;
+esac
+
+# The app-local player owns a fixed 640x480 SDL surface.  This prevents the
+# normal Onion FFplay path from stretching correctly encoded letterboxed video.
+# Selectable Matroska subtitles always require this track-aware candidate.
+if [ "$APP_LOCAL_PLAYER" = "1" ] || [ "$FIELD_TEST" = "1" ] \
+  || [ "$DISPLAY_SURFACE_TEST" = "1" ] || [ "$MATROSKA_SUBTITLES" = "1" ]; then
+  CANDIDATE_PLAYER=1
+  FFPLAY="$BASE_DIR/experiments/ffplay/bin/ffplay"
+fi
 
 cleanup() {
   stop_loading
@@ -1522,13 +1533,54 @@ streams_flow() {
     break
   done
 
-  if ! play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id" "$audio_stream_index"; then
+  play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" \
+    "$stream_id" "$subtitle_id" "$audio_stream_index"
+  play_selected_rc=$?
+  if [ "$play_selected_rc" -eq 10 ]; then
+    return 10
+  fi
+  if [ "$play_selected_rc" -ne 0 ]; then
     FAILED_STREAM_IDS="${FAILED_STREAM_IDS}|${stream_id}|"
     STREAM_RETRY_SUBTITLE_ID="$subtitle_id"
     log "stream failed; returning to filtered picker stream_id=$stream_id"
     return 11
   fi
   return 0
+}
+
+fallback_matroska_playback() {
+  fallback_reason="$1"
+  fallback_type="$2"
+  fallback_id="$3"
+  fallback_title="$4"
+  fallback_year="$5"
+  fallback_resume_seconds="$6"
+  fallback_stream_id="$7"
+  fallback_audio_stream_index="${8:-0}"
+
+  stop_loading
+  rm -f "$FIELD_TEST_SUBTITLE_FILE"
+  FIELD_TEST_SUBTITLE_FILE=""
+  log "matroska setup fallback reason=$fallback_reason stream_id=$fallback_stream_id"
+  fallback_subtitle_id=$(select_subtitle "$fallback_type" "$fallback_id" \
+    "$fallback_stream_id")
+  if [ "$fallback_subtitle_id" = "back" ]; then
+    log "matroska setup fallback canceled"
+    return 10
+  fi
+
+  log "matroska setup fallback selected normal subtitle_id=$fallback_subtitle_id"
+  fallback_previous_mode="$MATROSKA_SUBTITLES"
+  fallback_previous_field_test="$FIELD_TEST"
+  MATROSKA_SUBTITLES=0
+  FIELD_TEST=0
+  play_selected_stream "$fallback_type" "$fallback_id" "$fallback_title" \
+    "$fallback_year" "$fallback_resume_seconds" "$fallback_stream_id" \
+    "$fallback_subtitle_id" "$fallback_audio_stream_index"
+  fallback_rc=$?
+  MATROSKA_SUBTITLES="$fallback_previous_mode"
+  FIELD_TEST="$fallback_previous_field_test"
+  return "$fallback_rc"
 }
 
 play_selected_stream() {
@@ -1540,6 +1592,12 @@ play_selected_stream() {
   stream_id="$6"
   subtitle_id="$7"
   audio_stream_index="${8:-0}"
+  if [ "$MATROSKA_SUBTITLES" = "1" ] \
+    && { [ "$CANDIDATE_PLAYER" != "1" ] || [ ! -x "$FFPLAY" ]; }; then
+    log "matroska candidate unavailable"
+    message "PocketStremio" "Selectable subtitle player is unavailable"
+    return 1
+  fi
   if [ "$MATROSKA_SUBTITLES" = "1" ]; then
     subtitle_id=none
     start_loading "PocketStremio" "Preparing video and selectable subtitles..."
@@ -1547,17 +1605,17 @@ play_selected_stream() {
       >/tmp/pocketstremio-subtitles.json
     subtitle_lookup_rc=$?
     if [ "$subtitle_lookup_rc" -ne 0 ]; then
-      stop_loading
       log "matroska subtitle discovery failed"
-      message "PocketStremio" "Could not load selectable subtitles"
-      return 1
+      fallback_matroska_playback "subtitle-discovery" "$type" "$id" "$title" \
+        "$year" "$resume_seconds" "$stream_id" "$audio_stream_index"
+      return $?
     fi
     subtitle_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-subtitles.json)
     if [ "$subtitle_count" -le 0 ] 2>/dev/null; then
       stop_loading
       subtitle_error=$("$JQ" -r '.unavailable_reason // "No supported English subtitles are available"' \
         /tmp/pocketstremio-subtitles.json 2>/dev/null)
-      log "matroska subtitle discovery returned no supported tracks"
+      log "matroska subtitle discovery returned no supported tracks message=$subtitle_error"
       message "PocketStremio" "$subtitle_error"
       return 1
     fi
@@ -1576,6 +1634,18 @@ play_selected_stream() {
   fi
   play_url_value=$("$JQ" -r '.url // ""' /tmp/pocketstremio-play.json)
   if [ -z "$play_url_value" ]; then
+    play_error_code=$("$JQ" -r '.error // ""' /tmp/pocketstremio-play.json 2>/dev/null)
+    if [ "$MATROSKA_SUBTITLES" = "1" ]; then
+      case "$play_error_code" in
+        invalid_subtitle_mode|subtitle_not_found|subtitles_unavailable)
+          log "matroska playback setup rejected error=$play_error_code"
+          fallback_matroska_playback "server-$play_error_code" "$type" "$id" \
+            "$title" "$year" "$resume_seconds" "$stream_id" \
+            "$audio_stream_index"
+          return $?
+          ;;
+      esac
+    fi
     stop_loading
     play_error=$("$JQ" -r '.message // "Playback setup failed"' /tmp/pocketstremio-play.json 2>/dev/null)
     [ -n "$play_error" ] || play_error="PSS returned an invalid playback response"
@@ -1593,10 +1663,10 @@ play_selected_stream() {
   fi
   server_matroska_subtitles=$("$JQ" -r '.matroska_subtitles // false' /tmp/pocketstremio-play.json)
   if [ "$MATROSKA_SUBTITLES" = "1" ] && [ "$server_matroska_subtitles" != "true" ]; then
-    stop_loading
     log "matroska subtitles rejected because server mode is disabled"
-    message "PocketStremio" "Matroska subtitles are disabled on this PSS"
-    return 1
+    fallback_matroska_playback "server-mode-disabled" "$type" "$id" "$title" \
+      "$year" "$resume_seconds" "$stream_id" "$audio_stream_index"
+    return $?
   fi
   duration_seconds=$("$JQ" -r '(.duration_seconds // 0) | floor' /tmp/pocketstremio-play.json)
   compatibility_status=$("$JQ" -r '.compatibility.status // "unknown"' /tmp/pocketstremio-play.json)
@@ -1625,18 +1695,20 @@ play_selected_stream() {
       rm -f "$FIELD_TEST_SUBTITLE_FILE"
       FIELD_TEST_SUBTITLE_FILE=""
       if [ "$MATROSKA_SUBTITLES" = "1" ]; then
-        stop_loading
-        message "PocketStremio" "Could not prepare selectable subtitles"
-        return 1
+        fallback_matroska_playback "subtitle-package-download" "$type" "$id" \
+          "$title" "$year" "$resume_seconds" "$stream_id" \
+          "$audio_stream_index"
+        return $?
       fi
     elif [ ! -r "$FIELD_TEST_SUBTITLE_FILE" ] || [ ! -s "$FIELD_TEST_SUBTITLE_FILE" ]; then
       log "field-test subtitle handoff invalid path=$FIELD_TEST_SUBTITLE_FILE"
       rm -f "$FIELD_TEST_SUBTITLE_FILE"
       FIELD_TEST_SUBTITLE_FILE=""
       if [ "$MATROSKA_SUBTITLES" = "1" ]; then
-        stop_loading
-        message "PocketStremio" "PSS returned an empty subtitle package"
-        return 1
+        fallback_matroska_playback "subtitle-package-empty" "$type" "$id" \
+          "$title" "$year" "$resume_seconds" "$stream_id" \
+          "$audio_stream_index"
+        return $?
       fi
     else
       field_test_subtitle_bytes=$(wc -c <"$FIELD_TEST_SUBTITLE_FILE" 2>/dev/null | tr -d ' ')

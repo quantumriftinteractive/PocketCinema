@@ -781,10 +781,28 @@ active PSS conversions, and left no FFplay/client helpers, stay-awake marker,
 info-panel marker, or temporary subtitle package on the Miyoo.
 
 This confirms the no-picker, bounded-track, R1-notice, and cleanup checkpoint.
-Milestone 22 remains **Next** because automatic fallback to the production
-MPEG-TS burn-in path on Matroska setup failure is not yet implemented, and the
-latest multi-track run did not explicitly confirm smooth, synchronized audio
-and video.
+The client now bounds Matroska setup failure by returning to the existing
+normal subtitle selector and retrying with Matroska and field-test modes off;
+the app-local 640x480 presentation remains active so the fallback does not
+reintroduce Onion FFplay's physically reproduced aspect-ratio defect, and the
+production MPEG-TS burn-in implementation itself is unchanged. Discovery,
+mode-negotiation, and subtitle-package failures take this fallback, while a
+missing candidate or genuine no-supported-English result displays a useful
+error. Canceling the fallback returns normally without hiding an otherwise
+valid stream. A forced missing-candidate run confirmed the selector, burn-in,
+61 valid watched seconds, progress saving, and cleanup, but also reproduced the
+Onion player aspect defect; it is diagnostic evidence, not fallback acceptance.
+The corrected fallback was then physically exercised from Apps by connecting to
+a PSS with Matroska mode disabled. The normal picker selected the deterministic
+test subtitle, whose only cue runs from 0.5 to 4.5 seconds, and the unchanged
+production converter emitted 640x268 H.264/AAC MPEG-TS. The app-local player
+logged a centered `640x268` rectangle at `0,106` on its 640x480 surface, and the
+user reported that the result did not look stretched and that the subtitle
+appeared near the beginning. Two runs recorded 26 and 5 valid watched seconds,
+returned status 0, saved progress, and left no playback helper or active
+conversion. Milestone 22 remains **Next** only because the latest
+real multi-track run did not explicitly confirm smooth, synchronized audio and
+video.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains

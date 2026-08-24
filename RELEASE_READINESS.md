@@ -6,12 +6,24 @@ for a conservative v1.0 release; it is not a claim that v1.0 is currently
 ready.
 
 Current assessment: **not release-ready**. The normal PocketStremio vertical
-slice is substantially physically confirmed, but Milestone 20 remains in
-progress and its full acceptance criteria are not complete.
-The app-local FFplay/libass experiment now renders embedded text and has a
-track-aware rebuild. Apps-context testing confirmed upright, bottom-positioned
-text and visible R1 switching. It remains isolated and must not replace the
-working burn-in production path until the remaining release gates pass.
+slice and Milestone 20 bounded subtitle/downscaling path are physically
+confirmed. The remaining release work includes fresh-install regression,
+packaging and licensing review, and a deliberate decision about whether the
+still-active Milestone 22 selectable-Matroska mode is included in v1.0.
+The opt-in app-local FFplay/libass path now opens a real account stream without
+a redundant subtitle picker, packages three English text tracks, cycles them
+and off with R1, displays a one-second track notice, and cleans up after Menu
+exit. Automatic fallback into the unchanged production MPEG-TS burn-in flow is
+physically confirmed from Apps after a server-mode negotiation failure. The
+normal subtitle picker selected the test subtitle, the production converter
+burned its 0.5-second cue into a 640x268 stream, and the app-local player
+presented it centered at `0,106`; the user reported that it did not look
+stretched. Two runs saved 26 and 5 valid watched seconds and exited cleanly. A
+separate forced missing-candidate diagnostic reached the same burn-in flow but
+showed that Onion FFplay visibly distorts the correctly encoded output. The
+latest real multi-track run still did not explicitly record smooth,
+synchronized audio/video, so Milestone 22 remains **Next** rather than
+Confirmed.
 
 ## What v1.0 requires
 
@@ -38,8 +50,17 @@ working burn-in production path until the remaining release gates pass.
 
 ### Release gates
 
-- All acceptance criteria for Milestone 20 are physically verified and recorded
-  in `docs/bounded-transcoding.md` and `docs/roadmap.md`.
+- Keep the physically confirmed Milestone 20 acceptance evidence aligned in
+  `docs/bounded-transcoding.md` and `docs/roadmap.md`; do not regress its
+  production MPEG-TS burn-in fallback.
+- If selectable Matroska subtitles ship in v1.0, complete and record every
+  Milestone 22 acceptance criterion, including the fallback and synchronized
+  A/V checks. Otherwise keep the mode disabled and omit its experimental
+  player artifacts from the release.
+- Resolve the current app-local-player packaging dependency explicitly: either
+  ship a physically accepted, reproducible binary with its source/configuration
+  and notices, or change the release configuration to a verified player that
+  is actually present on a fresh installation.
 - A fresh-SD test passes with a clean account or explicitly documented no-account
   mode.
 - A normal direct-play movie, a series episode, a converted subtitle case, and
@@ -48,8 +69,9 @@ working burn-in production path until the remaining release gates pass.
   playback; this is now physically confirmed. Persistent language preferences
   remain outside the current release gate.
 - R1/R2 behavior is documented from the deployed builds. The current candidate
-  physically confirmed upright/bottom-positioned text and visible R1
-  transitions; R2 did not trigger that candidate.
+  physically confirmed all three R1 track transitions, off, return to the first
+  track, and one-second notices. R2 did not trigger the earlier candidate and
+  is not the selectable-subtitle control.
 - Server unit tests, Python compilation, shell parsing, PowerShell parsing, and
   selector reproducibility checks pass.
 - No private configuration, account key, Tailscale state, upstream URL, token,
@@ -70,7 +92,6 @@ expanded:
 - offline downloads;
 - torrent ingestion, P2P handling, or local torrent management;
 - server discovery and automatic hostname discovery;
-- replacing the confirmed burn-in path with dynamic embedded subtitle switching;
 - an integrated FFplay pause menu;
 - support for arbitrary codecs, HDR, HEVC, AV1, multichannel audio, encrypted
   HLS, fragmented MP4 HLS, or unmeasured containers;
@@ -150,6 +171,9 @@ acceptance criteria before implementation.
       synchronization and cleanup.
 - [ ] If the selected source has multiple audio tracks, verify the displayed
       FFprobe labels and choose the intended track before converted playback.
+- [ ] If selectable Matroska subtitles are included, cycle all packaged tracks
+      and off, then force one setup failure and confirm automatic return to the
+      normal subtitle/burn-in flow without stale state.
 - [ ] Test a bad server address and confirm a specific error followed by clean
       return to the UI.
 - [ ] Reboot, reopen Apps, and confirm no stale process, panel, marker, or
@@ -236,9 +260,18 @@ separately reviewed authentication and transport design.
   RAM. New resident processes and image-heavy UI features are risky.
 - The Onion FFplay baseline has no built-in `subtitles` filter and cannot render
   external SRT directly.
-- The app-local FFplay experiment is not production-integrated. Its fixture
-  test confirms orientation and dynamic R1 switching, but long playback,
-  resource use, and release integration remain unconfirmed.
+- The app-local selectable-Matroska path is opt-in and integrated, with a
+  physically confirmed real-stream no-picker flow, three-track R1 cycling,
+  one-second notices, readiness-based progress, Menu cleanup, and zero active
+  conversions after exit. Its automatic setup fallback is also physically
+  confirmed from Apps for a server-mode negotiation failure: the normal picker
+  and production burn-in path were used, the app-local player preserved the
+  640x268 aspect ratio, and both runs saved readiness-based progress. The latest
+  real multi-track run did not explicitly confirm smooth, synchronized A/V.
+- A forced missing-candidate fallback proved normal subtitle selection,
+  production burn-in, progress, and cleanup, but Onion FFplay visibly stretched
+  a correctly encoded 640x268, 160:67 stream. Missing app-local player artifacts
+  must therefore fail clearly; they are not an acceptable release fallback.
 - The converted MPEG-TS path is nonseekable; D-pad seeking remains restricted.
 - Resume positions are approximate and exclude startup/A-button pause time but
   do not model every buffering or seek interval.
@@ -322,11 +355,10 @@ confirm every version actually shipped and include the applicable notices.
 ## Current release decision
 
 **Do not publish v1.0 yet.** The working burn-in/downscaling path remains the
-safe production fallback. The isolated subtitle experiment is physically
-confirmed for orientation and R1 switching, but resource use, long playback,
-Menu cleanup, subtitle acceptance, long playback, and production integration
-still require release-level review. Converted multi-audio track selection is
-now physically confirmed and documented, but does not close those remaining
-Milestone 20 gates.
-Update Milestone 20 and its evidence document together when all acceptance
-criteria are complete.
+safe production fallback, and Milestone 20 is no longer an open release blocker.
+Milestone 22's corrected automatic fallback is physically confirmed; it remains
+open until a real multi-track run explicitly confirms smooth, synchronized A/V.
+A v1.0 that excludes selectable Matroska must keep the option disabled and omit
+the experimental player artifacts. Fresh-SD onboarding, final movie/episode/
+converted regressions, reproducible release artifacts, third-party notices, and
+the privacy review must still pass before publishing.
