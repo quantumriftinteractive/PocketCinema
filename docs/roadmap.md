@@ -514,8 +514,7 @@ account-addon playback flow.
 
 ### 20. Bounded English Subtitles and Downscaling
 
-**Status: In Progress (acceptance pending; temporarily paused for the
-user-prioritized host-portability slice in Milestone 21)**
+**Status: Confirmed**
 
 External subtitles cannot render on the target FFplay build, and physically
 tested 720p and 1080p sources exceed reliable direct-play behavior. Add one
@@ -586,8 +585,8 @@ cue timestamps 0--4 and 6--10 after an 8-second simulated resume shift.
 Apps-context logs confirmed libass, the bundled font, audio, video readiness,
 subtitle-filter initialization, and clean completion. This confirms the
 shifted Matroska rendering path. Exact first-frame visual timing is not
-machine-observable in FFplay logs, so the full Milestone 20 acceptance remains
-open despite the later controlled account-wrapper run below.
+machine-observable in FFplay logs, so the full Milestone 20 acceptance remained
+open at that point despite the later controlled account-wrapper run below.
 
 A known-good account release match is now recorded for *Spider-Man: No Way
 Home*: `Torrentio RD - 720P BluRay x265 HEVC PSA` with
@@ -608,7 +607,7 @@ deployed candidate matched the local rebuild byte-for-byte. Clearing its SDL
 surface removed stale top-of-screen PocketStremio pixels but not the bottom
 artifact. The remaining investigation is ordered around candidate SDL versus
 Miyoo SDL, display geometry, and other candidate build/runtime differences.
-Milestone 20 remains In Progress and is not Confirmed.
+At this checkpoint, Milestone 20 remained In Progress and was not Confirmed.
 
 The first runtime comparison also forced the candidate to use Miyoo's system
 SDL instead of its bundled SDL library; the bottom artifact remained with no
@@ -643,6 +642,18 @@ same correctly encoded stream, isolating the defect to normal-player surface
 presentation. The initially reported candidate A/V concern was a quiet,
 non-English source track rather than a synchronization failure. This does not
 change the production MPEG-TS fallback or complete Milestone 20.
+
+The final Apps-context acceptance run selected the known release-matched English
+subtitle for the previously stuttering 720p *Invincible* S1E4 account stream.
+It reached video readiness in 10 seconds, played for 1,128 valid unpaused
+seconds, and the user confirmed smooth, synchronized A/V. The bounded output
+was 640x360 H.264 with AAC stereo. FFmpeg used 94,164--111,676 kB RSS and 153
+CPU seconds across the run. The corrected Miyoo FFplay monitor recorded
+1,168--17,048 kB RSS, zero process swap, at least 36,704 kB MemAvailable, and
+at least 129,212 kB SwapFree. Menu exit left zero active PSS conversions and
+no FFplay, stay-awake, subtitle, pause, or FFplay-log temporary state. Earlier
+Apps-context evidence confirmed the account-addon movie English burn-in path;
+the server tests and the device-facing logs preserve opaque URLs and tokens.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 

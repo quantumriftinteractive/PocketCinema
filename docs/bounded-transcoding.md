@@ -90,8 +90,8 @@ bounded to 32 KiB, and URL-bearing FFmpeg diagnostics are omitted from logs.
 The app-local resource monitor recognizes both Onion's normal FFplay path and
 the opt-in candidate path, labels each sample accordingly, and records only
 device memory plus the active player process. It does not inspect a networking
-provider. This prepares the remaining duration/resource run without changing
-either playback path or treating the candidate as production.
+provider. It is bounded to three hours and 256 KiB, and samples only the
+FFplay child rather than its small launcher subshell.
 
 ## Subtitle Clock Correction
 
@@ -333,16 +333,23 @@ specific preflight message, and the source was absent after reopening the
 stream list. This is filtering/error-handling evidence only; the production
 converter geometry was not changed.
 
-## Pending Device Confirmation
+## Final Device Acceptance
 
-- sustained playback with the known-good Spider-Man release/subtitle pair,
-  checking subtitle and audio synchronization near both ends of the run;
-- smooth downscaled playback of the previously stuttering 720p *Invincible*
-  episode for the chosen acceptance duration;
-- startup time, gaming-PC CPU/RAM, Miyoo RAM/swap, and smoothness measurements
-  during those runs;
-- Menu-button exit followed by confirmation that FFmpeg, FFplay, selector,
-  relay, and temporary subtitle state are all cleaned up.
+The final acceptance run used the previously stuttering account-backed
+*Invincible* S1E4 720p AMZN WEB-DL stream with its selected matching English
+subtitle. It reached video readiness in 10 seconds and ran for 1,128 valid
+unpaused seconds. The user confirmed that video and audio remained smooth and
+synchronized. The bounded conversion emitted 640x360 H.264 and AAC stereo.
+
+The Windows PSS FFmpeg monitor recorded 94,164--111,676 kB RSS and 153 CPU
+seconds over the run. The corrected Miyoo FFplay monitor captured 221 samples:
+1,168--17,048 kB RSS, zero process swap, minimum MemAvailable of 36,704 kB,
+and minimum SwapFree of 129,212 kB. Menu exit returned `/api/status` to zero
+active conversions and left no FFplay, stay-awake, subtitle, pause, or FFplay
+log temporary state. The prior Apps-context account-movie run had already
+confirmed burned-in English subtitle rendering. Server tests and this opaque
+device flow kept upstream URLs and account tokens out of APIs, logs, process
+arguments, and git.
 
 ## Protocol References
 
