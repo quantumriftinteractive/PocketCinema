@@ -9,7 +9,7 @@ Current assessment: **not release-ready**. The normal PocketStremio vertical
 slice and Milestone 20 bounded subtitle/downscaling path are physically
 confirmed. The remaining release work includes fresh-install regression,
 packaging and licensing review, and a deliberate decision about whether the
-still-active Milestone 22 selectable-Matroska mode is included in v1.0.
+confirmed Milestone 22 selectable-Matroska mode is included in v1.0.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
@@ -20,10 +20,11 @@ burned its 0.5-second cue into a 640x268 stream, and the app-local player
 presented it centered at `0,106`; the user reported that it did not look
 stretched. Two runs saved 26 and 5 valid watched seconds and exited cleanly. A
 separate forced missing-candidate diagnostic reached the same burn-in flow but
-showed that Onion FFplay visibly distorts the correctly encoded output. The
-latest real multi-track run still did not explicitly record smooth,
-synchronized audio/video, so Milestone 22 remains **Next** rather than
-Confirmed.
+showed that Onion FFplay visibly distorts the correctly encoded output. A final
+110-second real-account run explicitly confirmed smooth, synchronized video,
+audio, and subtitles, bounded resource use, status-0 Menu exit, progress
+saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
+**Confirmed**.
 
 ## What v1.0 requires
 
@@ -53,10 +54,9 @@ Confirmed.
 - Keep the physically confirmed Milestone 20 acceptance evidence aligned in
   `docs/bounded-transcoding.md` and `docs/roadmap.md`; do not regress its
   production MPEG-TS burn-in fallback.
-- If selectable Matroska subtitles ship in v1.0, complete and record every
-  Milestone 22 acceptance criterion, including the fallback and synchronized
-  A/V checks. Otherwise keep the mode disabled and omit its experimental
-  player artifacts from the release.
+- Milestone 22's selectable-Matroska acceptance criteria, including fallback
+  and synchronized A/V, are physically confirmed. If the feature does not ship
+  in v1.0, keep the mode disabled and omit its experimental player artifacts.
 - Resolve the current app-local-player packaging dependency explicitly: either
   ship a physically accepted, reproducible binary with its source/configuration
   and notices, or change the release configuration to a verified player that
@@ -267,7 +267,10 @@ separately reviewed authentication and transport design.
   confirmed from Apps for a server-mode negotiation failure: the normal picker
   and production burn-in path were used, the app-local player preserved the
   640x268 aspect ratio, and both runs saved readiness-based progress. The latest
-  real multi-track run did not explicitly confirm smooth, synchronized A/V.
+  real multi-track run then explicitly confirmed smooth synchronized video,
+  audio, and subtitles for 110 valid watched seconds. FFplay used at most
+  20,304 kB RSS with zero process swap, Menu exit returned status 0, progress
+  advanced from 766 to 876 seconds, and all PSS/Miyoo playback state cleaned up.
 - A forced missing-candidate fallback proved normal subtitle selection,
   production burn-in, progress, and cleanup, but Onion FFplay visibly stretched
   a correctly encoded 640x268, 160:67 stream. Missing app-local player artifacts
@@ -356,9 +359,9 @@ confirm every version actually shipped and include the applicable notices.
 
 **Do not publish v1.0 yet.** The working burn-in/downscaling path remains the
 safe production fallback, and Milestone 20 is no longer an open release blocker.
-Milestone 22's corrected automatic fallback is physically confirmed; it remains
-open until a real multi-track run explicitly confirms smooth, synchronized A/V.
-A v1.0 that excludes selectable Matroska must keep the option disabled and omit
-the experimental player artifacts. Fresh-SD onboarding, final movie/episode/
-converted regressions, reproducible release artifacts, third-party notices, and
-the privacy review must still pass before publishing.
+Milestone 22's selectable-Matroska path and corrected automatic fallback are
+physically confirmed. A v1.0 that excludes selectable Matroska must keep the
+option disabled and omit the experimental player artifacts. Fresh-SD
+onboarding, final movie/episode/converted regressions, reproducible release
+artifacts, third-party notices, and the privacy review must still pass before
+publishing.

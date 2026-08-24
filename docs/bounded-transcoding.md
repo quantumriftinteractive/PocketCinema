@@ -5,9 +5,9 @@
 Implemented on the gaming PC and deployed to the Miyoo client. Automated and
 desktop-side account-stream checks pass. Apps-context subtitle rendering,
 resume clock correction, pause accounting, and one synchronized episode track
-are physically confirmed. Experimental multi-track switching is also physically
-confirmed, while the milestone's sustained playback, synchronization, audio,
-cleanup, and resource acceptance tests remain pending.
+are physically confirmed. The bounded selectable-Matroska path is also
+physically confirmed for multi-track switching, synchronized A/V/subtitles,
+automatic burn-in fallback, cleanup, and resource use.
 
 ## Device Evidence
 
@@ -353,11 +353,35 @@ release. Earlier Apps-context testing had already verified a synchronized
 manually selected English track, so together the evidence satisfies the
 milestone acceptance criteria.
 
-## Follow-up Subtitle Selection Work
+## Confirmed Selectable Matroska Result
 
-- Improve practical subtitle selection with a measured Matroska multi-track
-  path that permits controller switching without changing the production
-  MPEG-TS burn-in fallback.
+The integrated account-backed path automatically selected three deterministic
+English text tracks without showing the redundant burn-in picker. During the
+first full checkpoint, R1 visibly cycled through all three tracks, off, and
+back to the first track; the one-second top-right notices appeared and expired
+as designed. That run recorded 68 valid watched seconds, status-0 Menu exit,
+progress saving, zero active PSS conversions, and complete Miyoo cleanup.
+
+Automatic setup fallback was then physically tested with Matroska mode disabled
+on PSS. The client returned to the normal subtitle selector and unchanged
+MPEG-TS burn-in conversion while retaining the app-local 640x480 presentation.
+The 640x268 output was centered at `0,106`; the user reported correct proportions
+and the expected subtitle near its 0.5-second cue. Two status-0 runs saved 26
+and 5 valid watched seconds and cleaned up. A separate forced missing-candidate
+diagnostic established why Onion FFplay is not an acceptable fallback: it
+visibly stretched that same correctly encoded geometry.
+
+The final real-account run packaged three English SubRip tracks with 640x268
+H.264 video and AAC stereo. The user explicitly confirmed that video, audio,
+and subtitles were smooth and synchronized. It recorded 110 valid watched
+seconds and advanced progress from 766 to 876 seconds. Across 2,414 FFplay
+samples, the mean absolute A/V delta was 0.015 seconds. Miyoo FFplay measured
+3,784--20,304 kB RSS, zero process swap, and minimum MemAvailable of 45,940 kB;
+Mac FFmpeg measured 23,056--122,912 kB RSS and at most 40.8 percent CPU. Menu
+exit returned status 0 and left no conversion, bridge, FFplay/client helper,
+stay-awake or info-panel marker, or temporary subtitle package. The cumulative
+evidence confirms selectable Matroska subtitles without modifying OnionOS or
+the production MPEG-TS burn-in fallback.
 
 ## Protocol References
 

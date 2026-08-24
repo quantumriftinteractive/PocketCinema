@@ -667,7 +667,7 @@ cleans up every server and device process without exposing upstream tokens.
 
 ### 21. Device Settings and Playback Preferences
 
-**Status: Planned (reprioritized for selectable Matroska subtitles)**
+**Status: Next**
 
 The user-prioritized server-connectivity slice is implemented for split-host
 development. The home screen reports connected, offline, or unconfigured
@@ -750,7 +750,7 @@ Watching item can be removed without marking unrelated media complete.
 
 ### 22. Selectable Matroska Subtitles
 
-**Status: Next**
+**Status: Confirmed**
 
 Burn-in remains the confirmed bounded fallback, but it fixes one subtitle choice
 for an entire run. Build on the physically proven app-local candidate player to
@@ -800,9 +800,18 @@ logged a centered `640x268` rectangle at `0,106` on its 640x480 surface, and the
 user reported that the result did not look stretched and that the subtitle
 appeared near the beginning. Two runs recorded 26 and 5 valid watched seconds,
 returned status 0, saved progress, and left no playback helper or active
-conversion. Milestone 22 remains **Next** only because the latest
-real multi-track run did not explicitly confirm smooth, synchronized audio and
-video.
+conversion. The final real-account Apps-context run packaged three English
+SubRip tracks with H.264/AAC in a 640x268 Matroska response. The user explicitly
+confirmed that video, audio, and subtitles remained smooth and synchronized.
+FFplay recorded 110 valid watched seconds, returned status 0, and advanced
+progress from 766 to 876 seconds. Across 2,414 playback samples its mean
+absolute A/V delta was 0.015 seconds. Miyoo FFplay used 3,784--20,304 kB RSS
+with zero process swap and at least 45,940 kB MemAvailable; Mac FFmpeg used
+23,056--122,912 kB RSS with a measured peak of 40.8 percent CPU. Menu exit left
+no PSS conversion or bridge, FFplay/client helper, stay-awake or info-panel
+marker, or temporary subtitle package. Together with the earlier logged R1
+transitions through all three tracks, off, and back to the first track, this
+satisfies the acceptance criterion.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
