@@ -333,23 +333,30 @@ specific preflight message, and the source was absent after reopening the
 stream list. This is filtering/error-handling evidence only; the production
 converter geometry was not changed.
 
-## Final Device Acceptance
+## Latest Duration and Resource Run
 
-The final acceptance run used the previously stuttering account-backed
-*Invincible* S1E4 720p AMZN WEB-DL stream with its selected matching English
-subtitle. It reached video readiness in 10 seconds and ran for 1,128 valid
-unpaused seconds. The user confirmed that video and audio remained smooth and
-synchronized. The bounded conversion emitted 640x360 H.264 and AAC stereo.
+The latest run used the previously stuttering account-backed *Invincible* S1E4
+720p AMZN WEB-DL stream with an English subtitle selected for burn-in. It
+reached video readiness in 10 seconds and ran for 1,128 valid unpaused seconds.
+The user confirmed that video and audio remained smooth and synchronized. The
+bounded conversion emitted 640x360 H.264 and AAC stereo.
 
 The Windows PSS FFmpeg monitor recorded 94,164--111,676 kB RSS and 153 CPU
 seconds over the run. The corrected Miyoo FFplay monitor captured 221 samples:
 1,168--17,048 kB RSS, zero process swap, minimum MemAvailable of 36,704 kB,
 and minimum SwapFree of 129,212 kB. Menu exit returned `/api/status` to zero
 active conversions and left no FFplay, stay-awake, subtitle, pause, or FFplay
-log temporary state. The prior Apps-context account-movie run had already
-confirmed burned-in English subtitle rendering. Server tests and this opaque
-device flow kept upstream URLs and account tokens out of APIs, logs, process
-arguments, and git.
+log temporary state. The user clarified after the run that its burn-in subtitle
+did not match the stream in sync. It is therefore resource, cleanup,
+downscaling, and A/V evidence—not matching-subtitle acceptance evidence.
+
+## Remaining Device Confirmation
+
+- physically verify a release-synchronized English subtitle in the production
+  burn-in path, or complete a measured Matroska multi-track path that permits
+  controller selection without changing the production MPEG-TS fallback;
+- repeat any affected end-to-end acceptance check with that verified subtitle
+  before marking this milestone confirmed.
 
 ## Protocol References
 

@@ -43,7 +43,7 @@ Architectural boundaries:
 
 ### 1. Device and OnionOS Runtime
 
-**Status: Confirmed**
+**Status: In Progress (subtitle synchronization acceptance pending)**
 
 - ARMv7 hardware and available memory were measured.
 - OnionOS app layout, launch context, framebuffer, VT, and audio behavior were
@@ -643,17 +643,19 @@ presentation. The initially reported candidate A/V concern was a quiet,
 non-English source track rather than a synchronization failure. This does not
 change the production MPEG-TS fallback or complete Milestone 20.
 
-The final Apps-context acceptance run selected the known release-matched English
-subtitle for the previously stuttering 720p *Invincible* S1E4 account stream.
-It reached video readiness in 10 seconds, played for 1,128 valid unpaused
-seconds, and the user confirmed smooth, synchronized A/V. The bounded output
-was 640x360 H.264 with AAC stereo. FFmpeg used 94,164--111,676 kB RSS and 153
-CPU seconds across the run. The corrected Miyoo FFplay monitor recorded
-1,168--17,048 kB RSS, zero process swap, at least 36,704 kB MemAvailable, and
-at least 129,212 kB SwapFree. Menu exit left zero active PSS conversions and
-no FFplay, stay-awake, subtitle, pause, or FFplay-log temporary state. Earlier
-Apps-context evidence confirmed the account-addon movie English burn-in path;
-the server tests and the device-facing logs preserve opaque URLs and tokens.
+The latest Apps-context duration/resource run used a 720p *Invincible* S1E4
+account stream with an English subtitle selected for burn-in. It reached video
+readiness in 10 seconds, played for 1,128 valid unpaused seconds, and the user
+confirmed smooth, synchronized A/V. The bounded output was 640x360 H.264 with
+AAC stereo. FFmpeg used 94,164--111,676 kB RSS and 153 CPU seconds across the
+run. The corrected Miyoo FFplay monitor recorded 1,168--17,048 kB RSS, zero
+process swap, at least 36,704 kB MemAvailable, and at least 129,212 kB
+SwapFree. Menu exit left zero active PSS conversions and no FFplay, stay-awake,
+subtitle, pause, or FFplay-log temporary state. The user later clarified that
+the burn-in subtitle in this duration run was not release-synchronized, so it
+is not subtitle-sync acceptance evidence. The milestone remains open pending a
+fresh physically verified matching subtitle path; the server tests and
+device-facing logs continue to preserve opaque URLs and tokens.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 
