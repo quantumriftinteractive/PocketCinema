@@ -1,0 +1,151 @@
+diff --git a/ffplay.c b/ffplay.c
+index d9b0dd4..ab8c50d 100644
+--- a/ffplay.c
++++ b/ffplay.c
+@@ -280,6 +280,9 @@ typedef struct VideoState {
+ #endif
+
+     int last_video_stream, last_audio_stream, last_subtitle_stream;
++    int subtitle_notice_active;
++    int subtitle_notice_serial;
++    int64_t subtitle_notice_until;
+
+     SDL_cond *continue_read_thread;
+ } VideoState;
+@@ -288,6 +291,7 @@ typedef struct VideoState {
+ static AVInputFormat *file_iformat;
+ static const char *input_filename;
+ static const char *subtitle_filter_file;
++static const char *subtitle_notice_font;
+ static const char *window_title;
+ static int fs_screen_width;
+ static int fs_screen_height;
+@@ -1810,8 +1814,10 @@ static int configure_video_filters(AVFilterGraph *graph, VideoState *is, const c
+     char buffersrc_args[256];
+     int ret;
+     int subtitle_si = -1;
++    int subtitle_count = 0;
+     int i;
+     char subtitle_args[2048];
++    char subtitle_notice[64];
+     char filtergraph_buf[4096];
+     const char *filtergraph = vfilters;
+     AVFilterContext *filt_src = NULL, *filt_out = NULL, *last_filter = NULL;
+@@ -1888,24 +1894,44 @@ static int configure_video_filters(AVFilterGraph *graph, VideoState *is, const c
+     }
+
+     if (subtitle_filter_file && is->subtitle_stream >= 0) {
+-        for (i = 0; i <= is->subtitle_stream; i++) {
+-            if (is->ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE)
+-                subtitle_si++;
++        for (i = 0; i < (int)is->ic->nb_streams; i++) {
++            if (is->ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE) {
++                subtitle_count++;
++                if (i <= is->subtitle_stream)
++                    subtitle_si++;
++            }
+         }
+         if (subtitle_si >= 0)
+             snprintf(subtitle_args, sizeof(subtitle_args),
+                      "filename=%s:si=%d", subtitle_filter_file, subtitle_si);
+     }
+
++    filtergraph_buf[0] = '\0';
+     if (subtitle_si >= 0) {
+-        if (vfilters && *vfilters)
+-            snprintf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s,%s",
+-                     subtitle_args, vfilters);
++        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s",
++                    subtitle_args);
++    }
++    if (subtitle_filter_file && subtitle_notice_font &&
++        is->subtitle_notice_active) {
++        if (is->subtitle_stream < 0)
++            av_strlcpy(subtitle_notice, "Subtitles off", sizeof(subtitle_notice));
+         else
+-            snprintf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s",
+-                     subtitle_args);
++            snprintf(subtitle_notice, sizeof(subtitle_notice), "Subtitles %d/%d",
++                     subtitle_si + 1, subtitle_count);
++        if (*filtergraph_buf)
++            av_strlcat(filtergraph_buf, ",", sizeof(filtergraph_buf));
++        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
++                    "drawtext=fontfile=%s:text='%s':fontcolor=white:fontsize=20:"
++                    "borderw=2:bordercolor=black:x=w-tw-12:y=12",
++                    subtitle_notice_font, subtitle_notice);
++    }
++    if (vfilters && *vfilters) {
++        if (*filtergraph_buf)
++            av_strlcat(filtergraph_buf, ",", sizeof(filtergraph_buf));
++        av_strlcat(filtergraph_buf, vfilters, sizeof(filtergraph_buf));
++    }
++    if (*filtergraph_buf)
+         filtergraph = filtergraph_buf;
+-    }
+
+     if ((ret = configure_filtergraph(graph, filtergraph, filt_src, last_filter)) < 0)
+         goto fail;
+@@ -2014,6 +2040,7 @@ static int video_thread(void *arg)
+     enum AVPixelFormat last_format = -2;
+     int last_serial = -1;
+     int last_subtitle_stream = -2;
++    int last_subtitle_notice_serial = -1;
+     int last_vfilter_idx = 0;
+ #endif
+
+@@ -2030,11 +2057,17 @@ static int video_thread(void *arg)
+             continue;
+
+ #if CONFIG_AVFILTER
++        if (is->subtitle_notice_active &&
++            av_gettime_relative() >= is->subtitle_notice_until) {
++            is->subtitle_notice_active = 0;
++            is->subtitle_notice_serial++;
++        }
+         if (   last_w != frame->width
+             || last_h != frame->height
+             || last_format != frame->format
+             || last_serial != serial
+             || last_subtitle_stream != is->subtitle_stream
++            || last_subtitle_notice_serial != is->subtitle_notice_serial
+             || last_vfilter_idx != is->vfilter_idx) {
+             av_log(NULL, AV_LOG_DEBUG,
+                    "Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
+@@ -2058,6 +2091,7 @@ static int video_thread(void *arg)
+             last_format = frame->format;
+             last_serial = serial;
+             last_subtitle_stream = is->subtitle_stream;
++            last_subtitle_notice_serial = is->subtitle_notice_serial;
+             last_vfilter_idx = is->vfilter_idx;
+             frame_rate = filt_out->inputs[0]->frame_rate;
+         }
+@@ -3253,6 +3287,13 @@ static void toggle_full_screen(VideoState *is)
+     video_open(is, 1, NULL);
+ }
+
++static void show_subtitle_notice(VideoState *is)
++{
++    is->subtitle_notice_active = 1;
++    is->subtitle_notice_until = av_gettime_relative() + 1000000;
++    is->subtitle_notice_serial++;
++}
++
+ static void toggle_audio_display(VideoState *is)
+ {
+     int bgcolor = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
+@@ -3362,6 +3403,7 @@ static void event_loop(VideoState *cur_stream)
+                 break;
+             case SDLK_t:
+                 stream_cycle_channel(cur_stream, AVMEDIA_TYPE_SUBTITLE);
++                show_subtitle_notice(cur_stream);
+                 break;
+             case SDLK_w:
+ #if CONFIG_AVFILTER
+@@ -3581,6 +3623,7 @@ static void opt_input_file(void *optctx, const char *filename)
+         filename = "pipe:";
+     input_filename = filename;
+     subtitle_filter_file = getenv("POCKETSTREMIO_SUBTITLE_FILE");
++    subtitle_notice_font = getenv("POCKETSTREMIO_DEFAULT_FONT");
+ }
+
+ static int opt_codec(void *optctx, const char *opt, const char *arg)

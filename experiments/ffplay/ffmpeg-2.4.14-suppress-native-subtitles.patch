@@ -1,0 +1,10 @@
+--- a/ffplay.c
++++ b/ffplay.c
+@@ -849,6 +849,6 @@ static void video_image_display(VideoState *is)
+
+     vp = &is->pictq[(is->pictq_rindex + is->pictq_rindex_shown) % VIDEO_PICTURE_QUEUE_SIZE];
+     if (vp->bmp) {
+-        if (is->subtitle_st) {
++        if (is->subtitle_st && !subtitle_filter_file) {
+             if (is->subpq_size > 0) {
+                 sp = &is->subpq[is->subpq_rindex];

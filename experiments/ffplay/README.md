@@ -31,3 +31,15 @@ Then capture:
 /mnt/SDCARD/App/Tailscale/scripts/resource.sh
 tail -n 80 /mnt/SDCARD/App/PocketStremio/experiments/logs/ffplay-network.log
 ```
+
+## App-local candidate patches
+
+The selectable-Matroska candidate is an app-local FFplay 2.4.14 build. Apply
+`ffmpeg-2.4.14-suppress-native-subtitles.patch` after the track-aware patch,
+then apply `ffmpeg-2.4.14-subtitle-notice.patch`. Its build must enable the
+existing `drawtext` filter in addition to the documented subtitle, scale,
+orientation, format, and audio filters. The notice uses the already bundled
+font, appears in the top-right corner for one second after R1, and does not
+affect the OnionOS FFplay or production MPEG-TS fallback.
+FFmpeg 2.4 also requires `--enable-libfreetype`; the app-local pkg-config shim
+exposes the headers and library already present in the staged Miyoo sysroot.

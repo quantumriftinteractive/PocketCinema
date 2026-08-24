@@ -767,6 +767,25 @@ Matroska response, so the user can cycle tracks with R1 during playback.
   Menu cleanup, and bounded resource use.
 - Do not change OnionOS files or the production MPEG-TS fallback.
 
+The normal-flow checkpoint now skips the redundant burn-in subtitle picker in
+Matroska mode. The client displays one continuous preparation status while PSS
+discovers English tracks, and PSS packages the first three deterministic
+matches automatically. A real account-backed playback completed this no-picker
+flow successfully on the Miyoo. The app-local candidate now also has a bounded
+top-right R1 notice (`Subtitles 1/3` through `3/3`, or `Subtitles off`) that is
+removed after one second. Its physical display and expiry are confirmed: the
+user reported that it worked as expected, while the device log recorded all
+three track transitions, off, and back to the first track during 68 valid
+watched seconds. Menu exit returned FFplay status 0, saved progress, left zero
+active PSS conversions, and left no FFplay/client helpers, stay-awake marker,
+info-panel marker, or temporary subtitle package on the Miyoo.
+
+This confirms the no-picker, bounded-track, R1-notice, and cleanup checkpoint.
+Milestone 22 remains **Next** because automatic fallback to the production
+MPEG-TS burn-in path on Matroska setup failure is not yet implemented, and the
+latest multi-track run did not explicitly confirm smooth, synchronized audio
+and video.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.

@@ -1295,7 +1295,7 @@ class PocketStremioServerTest(unittest.TestCase):
         _, play = self.post_json(
             "/api/play",
             {"type": "movie", "id": "tt0000001", "stream_id": stream_id,
-             "subtitle_id": "matroska-0", "matroska_subtitles": True},
+             "subtitle_id": "none", "matroska_subtitles": True},
         )
         self.assertTrue(play["transcoded"])
         self.assertTrue(play["matroska_subtitles"])
@@ -1306,6 +1306,41 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertFalse(expired)
         self.assertTrue(session["matroska_subtitles"])
         self.assertEqual(len(session["matroska_tracks"]), 3)
+        self.assertEqual(
+            [track["id"] for track in session["matroska_tracks"]],
+            ["matroska-0", "matroska-1", "matroska-2"],
+        )
+        self.assertEqual(
+            session["subtitle_path"],
+            str(self.server.fixture_dir / "test-subtitle.srt"),
+        )
+
+    def test_matroska_subtitle_mode_reports_when_no_english_tracks_exist(self):
+        stream_id = "matroska-no-subtitles"
+        upstream_url = "https://cdn.example/no-subtitles.mp4"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id, "name": "No subtitles", "url": upstream_url
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {"status": "confirmed", "container": "mp4", "video_codec": "h264",
+             "audio_codec": "aac", "width": 640, "height": 360},
+        )
+        self.server.subtitle_cache["spanish-only"] = {
+            "id": "spanish-only", "name": "Spanish", "lang": "spa",
+            "item_type": "movie", "item_id": "tt0000002",
+            "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+        }
+        self.server.ffmpeg_path = "test-ffmpeg"
+        self.server.matroska_subtitles_enabled = True
+        status, error = self.post_json_error(
+            "/api/play",
+            {"type": "movie", "id": "tt0000002", "stream_id": stream_id,
+             "subtitle_id": "none", "matroska_subtitles": True},
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(error["error"], "subtitles_unavailable")
+        self.assertIn("English subtitles", error["message"])
 
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"

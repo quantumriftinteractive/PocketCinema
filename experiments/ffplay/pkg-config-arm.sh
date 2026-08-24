@@ -4,6 +4,10 @@
 # beside the FFplay experiment because the Windows build host has no native
 # pkg-config executable.
 
+FFPLAY_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+FFPLAY_REPO_ROOT=$(CDPATH= cd -- "$FFPLAY_SCRIPT_DIR/../.." && pwd)
+FFPLAY_SYSROOT="$FFPLAY_REPO_ROOT/.tmp/toolchain/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot"
+
 case " $* " in
   *" --exists "*sdl*|*" --exists"*sdl*)
     exit 0
@@ -25,6 +29,21 @@ case " $* " in
     ;;
   *" --libs "*libass*|*" --libs"*libass*)
     printf '%s\n' '-L/usr/lib -lass -lfontconfig -lfreetype -lfribidi -lharfbuzz -lexpat -luuid -lglib-2.0 -lpcre -lpng16 -lbz2 -lz -lm -pthread'
+    exit 0
+    ;;
+  *" --exists "*freetype2*|*" --exists"*freetype2*)
+    exit 0
+    ;;
+  *" --modversion "*freetype2*|*" --modversion"*freetype2*)
+    printf '2.10.4\n'
+    exit 0
+    ;;
+  *" --cflags "*freetype2*|*" --cflags"*freetype2*)
+    printf '%s\n' "-I$FFPLAY_SYSROOT/usr/include/freetype2"
+    exit 0
+    ;;
+  *" --libs "*freetype2*|*" --libs"*freetype2*)
+    printf '%s\n' "-L$FFPLAY_SYSROOT/usr/lib -lfreetype"
     exit 0
     ;;
   *" --cflags "*sdl*|*" --cflags"*sdl*)

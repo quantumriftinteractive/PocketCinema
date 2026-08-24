@@ -1014,29 +1014,40 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 return
         matroska_tracks = []
         if matroska_subtitles:
-            if not subtitle:
-                self.write_json(
-                    {"error": "subtitle_required", "message": "Choose an English subtitle first"},
-                    status=409,
-                )
-                return
-            if subtitle.get("item_type") != payload.get("type") or subtitle.get(
-                "item_id"
-            ) != payload.get("id"):
-                self.write_json({"error": "subtitle_mismatch"}, status=409)
-                return
-            matroska_tracks.append(subtitle)
+            if subtitle:
+                if subtitle.get("item_type") != payload.get("type") or subtitle.get(
+                    "item_id"
+                ) != payload.get("id"):
+                    self.write_json({"error": "subtitle_mismatch"}, status=409)
+                    return
+                matroska_tracks.append(subtitle)
             for candidate in self.server.subtitle_cache.values():
                 if len(matroska_tracks) >= 3:
                     break
                 if (
-                    candidate.get("id") == subtitle.get("id")
+                    candidate.get("id") in {
+                        track.get("id") for track in matroska_tracks
+                    }
                     or candidate.get("item_type") != payload.get("type")
                     or candidate.get("item_id") != payload.get("id")
-                    or candidate.get("lang") not in {"eng", "en"}
+                    or str(candidate.get("lang") or "").lower()
+                    not in {"eng", "en", "english"}
                 ):
                     continue
                 matroska_tracks.append(candidate)
+            if not matroska_tracks:
+                self.write_json(
+                    {
+                        "error": "subtitles_unavailable",
+                        "message": "No supported English subtitles are available",
+                    },
+                    status=409,
+                )
+                return
+            # The first deterministic candidate supplies the existing
+            # conversion/session fields. It is muxed as a selectable track;
+            # this mode never burns it into the video.
+            subtitle = matroska_tracks[0]
 
         start_seconds = nonnegative_int(payload.get("resume_seconds"))
         transcode = bool(subtitle) or transcoding.needs_downscale(compatibility)

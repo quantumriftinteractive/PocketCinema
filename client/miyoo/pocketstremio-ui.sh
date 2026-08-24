@@ -429,7 +429,13 @@ play_url() {
   cd "$SYS_DIR" || return 1
   playback_started=$(date +%s)
   video_filter="hflip,vflip"
-  [ -n "$subtitle_file" ] && video_filter="subtitles=$subtitle_file,hflip,vflip"
+  # The app-local candidate inserts the selected Matroska track through
+  # POCKETSTREMIO_SUBTITLE_FILE so R1 can rebuild it with a new `si`.  Adding
+  # the same filter here would render every cue twice.  Onion FFplay has no
+  # such candidate hook, so the normal burn-in path remains unchanged.
+  if [ -n "$subtitle_file" ] && [ "$CANDIDATE_PLAYER" != "1" ]; then
+    video_filter="subtitles=$subtitle_file,hflip,vflip"
+  fi
   seek_target="$absolute_start_seconds"
   current_url="$url"
   first_ready=1
@@ -1503,6 +1509,9 @@ streams_flow() {
     if [ "$FIELD_TEST" = "1" ]; then
       subtitle_id=none
       log "field-test bypassed subtitle selection"
+    elif [ "$MATROSKA_SUBTITLES" = "1" ]; then
+      subtitle_id=none
+      log "matroska mode bypassed subtitle selection"
     elif [ -n "$preferred_subtitle_id" ]; then
       subtitle_id="$preferred_subtitle_id"
       log "reused subtitle selection after playback failure subtitle_id=$subtitle_id"
@@ -1531,11 +1540,35 @@ play_selected_stream() {
   stream_id="$6"
   subtitle_id="$7"
   audio_stream_index="${8:-0}"
-  start_loading "PocketStremio" "Checking compatibility..."
+  if [ "$MATROSKA_SUBTITLES" = "1" ]; then
+    subtitle_id=none
+    start_loading "PocketStremio" "Preparing video and selectable subtitles..."
+    api_get "/api/subtitles/$type/$id?stream_id=$stream_id&all=1" \
+      >/tmp/pocketstremio-subtitles.json
+    subtitle_lookup_rc=$?
+    if [ "$subtitle_lookup_rc" -ne 0 ]; then
+      stop_loading
+      log "matroska subtitle discovery failed"
+      message "PocketStremio" "Could not load selectable subtitles"
+      return 1
+    fi
+    subtitle_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-subtitles.json)
+    if [ "$subtitle_count" -le 0 ] 2>/dev/null; then
+      stop_loading
+      subtitle_error=$("$JQ" -r '.unavailable_reason // "No supported English subtitles are available"' \
+        /tmp/pocketstremio-subtitles.json 2>/dev/null)
+      log "matroska subtitle discovery returned no supported tracks"
+      message "PocketStremio" "$subtitle_error"
+      return 1
+    fi
+    log "matroska subtitle discovery cached tracks=$subtitle_count"
+  else
+    start_loading "PocketStremio" "Checking compatibility..."
+  fi
   api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" "$audio_stream_index" >/tmp/pocketstremio-play.json
   play_setup_rc=$?
-  stop_loading
   if [ "$play_setup_rc" -ne 0 ]; then
+    stop_loading
     play_error=$(playback_setup_error "$play_setup_rc")
     log "playback setup transport failure rc=$play_setup_rc reason=$play_error"
     message "PocketStremio" "$play_error"
@@ -1543,6 +1576,7 @@ play_selected_stream() {
   fi
   play_url_value=$("$JQ" -r '.url // ""' /tmp/pocketstremio-play.json)
   if [ -z "$play_url_value" ]; then
+    stop_loading
     play_error=$("$JQ" -r '.message // "Playback setup failed"' /tmp/pocketstremio-play.json 2>/dev/null)
     [ -n "$play_error" ] || play_error="PSS returned an invalid playback response"
     log "playback setup rejected message=$play_error"
@@ -1552,12 +1586,14 @@ play_selected_stream() {
   save_last_play "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id" "$audio_stream_index"
   server_field_test=$("$JQ" -r '.field_test // false' /tmp/pocketstremio-play.json)
   if [ "$FIELD_TEST" = "1" ] && [ "$server_field_test" != "true" ]; then
+    stop_loading
     log "field-test rejected because server mode is disabled"
     message "PocketStremio" "Subtitle field test is disabled on the server"
     return 1
   fi
   server_matroska_subtitles=$("$JQ" -r '.matroska_subtitles // false' /tmp/pocketstremio-play.json)
   if [ "$MATROSKA_SUBTITLES" = "1" ] && [ "$server_matroska_subtitles" != "true" ]; then
+    stop_loading
     log "matroska subtitles rejected because server mode is disabled"
     message "PocketStremio" "Matroska subtitles are disabled on this PSS"
     return 1
@@ -1574,8 +1610,8 @@ play_selected_stream() {
   log "playback conversion=$transcoded subtitle_id=${subtitle_id:-none} server_seek=$server_seek_applied"
 
   FIELD_TEST_SUBTITLE_FILE=""
-  if { [ "$FIELD_TEST" = "1" ] || [ "$MATROSKA_SUBTITLES" = "1" ]; } \
-    && [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
+  if { [ "$FIELD_TEST" = "1" ] && [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; } \
+    || [ "$MATROSKA_SUBTITLES" = "1" ]; then
     FIELD_TEST_SUBTITLE_FILE="$BASE_DIR/experiments/ffplay/.field-test-subtitle-$$.mkv"
     subtitle_pack_url="$SERVER_BASE/subtitle/$subtitle_id?format=matroska&offset_seconds=$resume_seconds"
     if [ "$MATROSKA_SUBTITLES" = "1" ]; then
@@ -1588,10 +1624,20 @@ play_selected_stream() {
       log "field-test subtitle download failed"
       rm -f "$FIELD_TEST_SUBTITLE_FILE"
       FIELD_TEST_SUBTITLE_FILE=""
+      if [ "$MATROSKA_SUBTITLES" = "1" ]; then
+        stop_loading
+        message "PocketStremio" "Could not prepare selectable subtitles"
+        return 1
+      fi
     elif [ ! -r "$FIELD_TEST_SUBTITLE_FILE" ] || [ ! -s "$FIELD_TEST_SUBTITLE_FILE" ]; then
       log "field-test subtitle handoff invalid path=$FIELD_TEST_SUBTITLE_FILE"
       rm -f "$FIELD_TEST_SUBTITLE_FILE"
       FIELD_TEST_SUBTITLE_FILE=""
+      if [ "$MATROSKA_SUBTITLES" = "1" ]; then
+        stop_loading
+        message "PocketStremio" "PSS returned an empty subtitle package"
+        return 1
+      fi
     else
       field_test_subtitle_bytes=$(wc -c <"$FIELD_TEST_SUBTITLE_FILE" 2>/dev/null | tr -d ' ')
       log "field-test subtitle handoff ready bytes=$field_test_subtitle_bytes"
@@ -1599,7 +1645,10 @@ play_selected_stream() {
   fi
 
   log "playback url received"
-  start_loading "PocketStremio" "Starting video..."
+  if [ "$MATROSKA_SUBTITLES" != "1" ]; then
+    stop_loading
+    start_loading "PocketStremio" "Starting video..."
+  fi
   playback_result=0
   nonseekable_mode=0
   [ "$FIELD_TEST" = "1" ] && nonseekable_mode=1
