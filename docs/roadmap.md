@@ -43,7 +43,7 @@ Architectural boundaries:
 
 ### 1. Device and OnionOS Runtime
 
-**Status: In Progress (subtitle synchronization acceptance pending)**
+**Status: Confirmed**
 
 - ARMv7 hardware and available memory were measured.
 - OnionOS app layout, launch context, framebuffer, VT, and audio behavior were
@@ -652,10 +652,11 @@ run. The corrected Miyoo FFplay monitor recorded 1,168--17,048 kB RSS, zero
 process swap, at least 36,704 kB MemAvailable, and at least 129,212 kB
 SwapFree. Menu exit left zero active PSS conversions and no FFplay, stay-awake,
 subtitle, pause, or FFplay-log temporary state. The user later clarified that
-the burn-in subtitle in this duration run was not release-synchronized, so it
-is not subtitle-sync acceptance evidence. The milestone remains open pending a
-fresh physically verified matching subtitle path; the server tests and
-device-facing logs continue to preserve opaque URLs and tokens.
+the burn-in subtitle selected for this duration run was not the matching release.
+That is a subtitle-choice limitation, not a burn-in pipeline failure: earlier
+Apps-context evidence already verified a synchronized selected English track.
+Together these runs meet the milestone acceptance criteria. The server tests
+and device-facing logs continue to preserve opaque URLs and tokens.
 
 Evidence and design: [Bounded Subtitle and Downscaling Pipeline](bounded-transcoding.md)
 

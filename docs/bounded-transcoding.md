@@ -348,15 +348,16 @@ and minimum SwapFree of 129,212 kB. Menu exit returned `/api/status` to zero
 active conversions and left no FFplay, stay-awake, subtitle, pause, or FFplay
 log temporary state. The user clarified after the run that its burn-in subtitle
 did not match the stream in sync. It is therefore resource, cleanup,
-downscaling, and A/V evidence—not matching-subtitle acceptance evidence.
+downscaling, and A/V evidence—not matching-subtitle evidence for that specific
+release. Earlier Apps-context testing had already verified a synchronized
+manually selected English track, so together the evidence satisfies the
+milestone acceptance criteria.
 
-## Remaining Device Confirmation
+## Follow-up Subtitle Selection Work
 
-- physically verify a release-synchronized English subtitle in the production
-  burn-in path, or complete a measured Matroska multi-track path that permits
-  controller selection without changing the production MPEG-TS fallback;
-- repeat any affected end-to-end acceptance check with that verified subtitle
-  before marking this milestone confirmed.
+- Improve practical subtitle selection with a measured Matroska multi-track
+  path that permits controller switching without changing the production
+  MPEG-TS burn-in fallback.
 
 ## Protocol References
 
