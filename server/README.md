@@ -90,15 +90,19 @@ GET /api/account
 GET /api/search?q=alien
 GET /api/meta/{type}/{id}
 GET /api/streams/{type}/{id}
-GET /api/subtitles/{type}/{id}?stream_id=...
+GET /api/subtitles/{type}/{id}?stream_id=...&languages=eng,spa
 GET /api/continue-watching
 POST /api/play
 POST /api/progress
+POST /api/continue-watching/remove
 POST /api/account/link
 GET /play/{session}
 GET /subtitle/{subtitle_id}
 GET /media/test-video.mp4
 ```
+
+Updated clients present language names and send normalized ordered codes to the
+subtitle endpoint; direct code entry remains an advanced client option.
 
 `/api/status` includes uptime, bounded play-session and probe-cache counts and
 TTLs, progress count, and which state survives a server restart. Existing

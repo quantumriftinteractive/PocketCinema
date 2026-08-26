@@ -41,157 +41,36 @@ priority.
 - Do not add torrent ingestion, transcoding, subtitle, progress, poster, or
   full-UI scope unless the roadmap and user request explicitly call for it.
 
-## Current Working Baseline
+## Source of Truth / State Ownership
 
-The physically confirmed flow is:
+`PROJECT_STATE.md` owns the current operational and production state of
+PocketStremio, including the active milestone, confirmed behavior, invariants,
+experimental work, regressions, and development handoff. Do not duplicate
+detailed current-state narratives in `AGENTS.md`.
 
-```text
-Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
-Apps -> PocketStremio -> Continue Watching -> Resume -> stream -> FFplay
-Apps -> PocketStremio -> series -> season -> episode -> Play -> stream -> FFplay
-```
+`AGENTS.md` defines how Codex must work: stable architecture boundaries,
+implementation constraints, verification requirements, and repository
+conventions. When implementation status changes, update `PROJECT_STATE.md`, the
+roadmap, and the relevant evidence or release document as required. Change
+`AGENTS.md` only when a permanent development rule changes.
 
-Both the hosted Big Buck Bunny regression fixture and the public-domain *Night
-of the Living Dead* stream have been physically played from the OnionOS Apps
-context. The latter is confirmed through both the localhost open-media addon and
-the allowlisted Stremio Service Local Files backend. It confirmed H.264
-Constrained Baseline 320x240 video, AAC stereo audio initialization, Menu-button
-exit, progress saving, and cleanup.
+## Current Architecture Baseline
 
-The real *Beverly Hillbillies* S1E1 path is also physically confirmed through
-search, season and episode browsing, playback, Continue Watching, Resume, and
-Play from Start. Resume advanced a saved 44-second position to 69 seconds after
-25 measured playback seconds. Play from Start used a zero seek and replaced the
-saved position with only post-readiness playback time. B returned from the
-pre-playback action menu and Menu exited FFplay cleanly.
-
-The server uses gaming-PC `ffprobe` during `/api/play` to classify media. The
-measured H.264/AAC MP4 and VP8/Vorbis WebM envelopes at up to 640x360 and 30
-fps are confirmed. Opus audio is rejected before FFplay. Treat other advertised
-FFplay demuxers and decoders as candidates until Apps-context measurements are
-documented.
-
-Continue Watching persists on the gaming PC and resume uses FFplay `-ss` with
-an approximate wall-clock-derived position. The target FFplay build does not
-include the `subtitles` video filter; do not expose an external subtitle option
-unless a remux/burn-in path or another compatible player has been implemented
-and measured.
-
-Current network and service boundaries:
+Do not infer feature status, milestone status, release scope, or latest physical
+test results from this file. Read `PROJECT_STATE.md` first, then the roadmap,
+release-readiness document, and relevant evidence.
 
 ```text
 Miyoo shell/SDL client
   -> direct HTTP or configured generic HTTP proxy
-  -> PocketStremio server 100.85.171.67:8755
-  -> Cinemeta and server-side stream sources
-  -> loopback-accessed, firewall-contained Stremio Service 127.0.0.1:11470
+  -> PocketStremio server (PSS host)
+  -> metadata, addon, compatibility, conversion, and media services
 ```
 
-Stremio Service 4.20.8 listens beyond loopback even though PocketStremio uses
-only `127.0.0.1`. The gaming PC therefore has an enabled inbound Windows
-Firewall block for TCP `11470-11474` and `12470`. Preserve that rule and verify
-remote denial after service or firewall changes.
-
-The confirmed Local Files backend accepts only `file://` results under an
-explicit server-side allowlist. Do not expose local paths, broaden the allowlist
-to general user media directories, or accept torrent identifiers from this
-backend.
-
-The hosted Big Buck Bunny video is a deterministic regression fixture, not a
-general stream resolver.
-
-The server has a read-only Stremio account addon adapter. Account linking uses
-the official temporary browser approval flow and stores only the auth key in the
-ignored PSS-host file `server/config/stremio_account.json`. Link each PSS host
-separately; never print, copy between hosts, commit, or deploy that file. Account
-addon transports and stream URLs remain server-side. Direct HTTPS media returned
-by the user's configured account addons is permitted even when debrid-labeled;
-P2P identifiers, external-player, local/private-address, and non-HTTP results
-are rejected. The legal ERT News account result is physically confirmed through
-the bounded server-side HLS-to-MPEG-TS bridge. Do not expose
-upstream playlists or segment URLs, broaden the bridge beyond unencrypted
-MPEG-TS without tests, or describe the bridge as transcoding.
-
-Milestone 17 bridge hardening has deterministic coverage for sliding media
-sequences, segment deduplication, bounded transient playlist and segment
-retries, sanitized persistent failure, and downstream disconnect cleanup.
-`/api/status` reports only the active bridge count. The 30-minute Apps-context
-playback and final movie and episode physical regressions remain pending; do not
-mark Milestone 17 confirmed without them.
-
-Milestone 18 direct account playback is physically confirmed for Torrentio RD:
-*Alien* (1979) used H.264 Main 640x272 with AAC, and *Grimm* S1E1 used H.264
-High 852x480 with AAC stereo. Both had visible video and audible audio. The
-episode also confirmed pause tracking, Menu exit, and progress saving. Account
-display text must remain whitespace-collapsed because embedded newlines become
-separate SDL selector values.
-
-The bounded active-PSS-host subtitle/downscaling pipeline in
-`docs/bounded-transcoding.md`. The first slice is English subtitle burn-in plus
-conditional 640x360 downscaling. Feed FFmpeg through an opaque loopback relay so
-account media tokens never appear in Miyoo APIs, logs, or FFmpeg process
-arguments. A 720p *Invincible* episode is physically watchable but drops frames
-and stutters substantially; do not classify 720p as direct-play compatible.
-The converted MPEG-TS path physically rendered English subtitles, and the
-manually selected GGWP subtitle for *Invincible* S1E4 was confirmed
-synchronized. Resume progress advanced from 80 to 94 and then 94 to 130 seconds
-by the measured valid playback intervals. Burned-in subtitles cannot switch in
-FFplay. Multi-track Matroska is a capability-checked but physically unconfirmed
-candidate; preserve the working burn-in fallback until its Apps-context test
-passes.
-
-Server-mediated Stremio account binding is physically confirmed. The Miyoo
-receives only an official short approval link, renders it locally as QR, and
-polls after A; the retrieval code and auth key stay on the active PSS host. A
-linked account cannot be replaced or removed through the remote API. Tailscale's home
-screen QR for the admin machines page is also physically confirmed without
-changing the working node identity.
-
-Series browsing is physically confirmed with the local two-season
-`PocketStremio Test Series` fixture. Its generated 30-second H.264/AAC media is
-ignored by git and reproducible through
-`experiments/ffplay/generate-series-av-sync-fixture.ps1`. Real-series playback
-through an addon remains unconfirmed.
-
-Operational resilience is physically confirmed for an unreachable PSS. The
-Apps-context client now opens its menu immediately, updates the first row from
-connecting to offline without a black startup screen, and routes that row to
-Settings. The earlier fail-and-exit path also left no stale UI, selector,
-FFplay, infoPanel, or temporary playback state. The server runs under the
-platform lifecycle manager; play sessions are ephemeral across a restart while
-the bounded probe cache and Continue Watching state persist.
-One later converted playback failure was isolated to a transient subtitle or
-conversion-startup `502`: the same stream worked without subtitles, the
-subtitle endpoint worked independently, and the same pair worked on retry.
-The client preserves one bounded previous UI log and displays sanitized failure
-categories. Stage-specific subtitle and conversion messages are implemented but
-remain pending physical failure tests.
-Manual PSS entry is physically confirmed: when Wi-Fi peer isolation prevented
-UDP discovery, the controller keyboard accepted the routed Mac PSS address,
-validated it, saved only `SERVER_BASE`, and returned to the connected menu.
-
-Transport independence is physically confirmed. `SERVER_BASE` is explicit,
-`PROXY` is optional, and PocketStremio does not manage or inspect Tailscale.
-Both direct loopback and configured-proxy requests passed on the Miyoo, followed
-by a normal Apps-context selector and B exit. The authenticated legacy state was
-later copied into the deployed standalone `/mnt/SDCARD/App/Tailscale/` app with
-the original retained as rollback. Controller-driven status/IP display,
-autostart toggle, two disable/enable cycles, proxy recovery, B exit, and reboot
-autostart are physically confirmed. PocketStremio remains only a proxy consumer.
-
-Real series playback is physically confirmed with *The Beverly Hillbillies*
-S1E1 `tt0055662:1:1`. Cinemeta supplies nine seasons; the localhost open-media
-addon maps that exact episode to a public-domain Internet Archive H.264/AAC
-320x240 derivative. Apps-context playback, audio initialization, Menu exit,
-44-second progress saving, and cleanup are confirmed. Real episode metadata must
-continue to be derived generically from parent series metadata.
-
-Account-backed Live TV is physically confirmed with ERT News. The Apps-context
-flow reached video readiness in four seconds, played smooth 640x360 H.264 High
-video with AAC stereo audio, and exited with Menu after 29 valid watched
-seconds. During playback FFplay used 28,440 kB RSS with no process swap;
-MemAvailable was 31,688 kB. Direct rewritten-HLS playback stalls on the target
-FFplay, so preserve the server-side continuous MPEG-TS handoff.
+The Miyoo owns controller interaction, compact JSON parsing, and playback
+launch. The PSS host owns metadata, stream resolution, compatibility checks,
+conversion, private credentials, upstream transports, and server-side state.
+The app remains transport-agnostic and does not manage the network provider.
 
 ## Repository Layout
 
@@ -287,6 +166,12 @@ overwrite it. Environment variables take precedence over app-local config.
   explicitly versioned and deployed with the client.
 - Keep private upstream URLs server-side. `/api/streams` returns opaque stream
   IDs and `/api/play` creates a PocketStremio play URL.
+- Keep account addon transports, credentials, and media URLs server-side. Only
+  safe direct HTTP(S) results are eligible; reject P2P, external-player,
+  local/private-address, credential-bearing, and unsafe results.
+- Keep the Stremio Local Files backend restricted to its explicit server-side
+  `file://` allowlist. Never expose local paths or broaden that allowlist to
+  general user media directories.
 - Continue forwarding HTTP Range semantics required by FFplay.
 - Keep HLS playlists and child URLs server-side. The device-facing HLS path must
   remain a bounded unencrypted MPEG-TS bridge unless a replacement is physically
@@ -297,7 +182,40 @@ overwrite it. Environment variables take precedence over app-local config.
 - Use `server/manage-server.ps1` for normal background lifecycle operations and
   `server/start-server.ps1` only when an attached foreground process is useful.
 
+### Playback / FFplay
+
+- Treat direct-play compatibility as a measured envelope. H.264/AAC and the
+  confirmed VP8/Vorbis profile are safe only within their documented bounds;
+  other advertised demuxers and decoders remain candidates until measured in
+  the OnionOS Apps context.
+- Reject Opus before FFplay unless a separately measured compatible path exists.
+  Do not present 720p/1080p sources as assumed direct-play media; downscale
+  when the measured target path requires it.
+- The stock OnionOS FFplay build has no usable `subtitles` video filter and
+  cannot render external SRT directly. Use a measured server-side burn-in or
+  measured app-local player path, with the normal MPEG-TS burn-in path retained
+  as the safe fallback where applicable.
+- Count watched time from SDL video readiness, exclude startup and unverified
+  pause intervals, and suppress progress updates when pause tracking fails.
+- During playback the Miyoo Menu button exits FFplay. B is frame-step on the
+  target build; B/back is the selector navigation control.
+- Preserve cleanup on success, cancellation, FFplay failure, and Menu exit:
+  no stale player, helper, conversion, bridge, panel, marker, or temporary
+  subtitle state may remain.
+
 ## OnionOS Execution Context
+
+### Miyoo SSH Access
+
+- The Miyoo SSH user is `root`. Modern OpenSSH clients require the legacy MAC
+  algorithm explicitly:
+  `ssh -o MACs=hmac-sha1 root@<MIYOO_IP>`.
+- For file transfers, use:
+  `scp -o MACs=hmac-sha1 <source> root@<MIYOO_IP>:<destination>`.
+- A default SSH failure is not evidence that the Miyoo is unreachable until
+  the connection has been retried with `-o MACs=hmac-sha1`.
+- Do not modify OnionOS core SSH configuration to avoid this compatibility
+  option.
 
 - Framebuffer and audio behavior cannot be proven over SSH. FFplay and SDL apps
   launched over SSH can block at `VT_WAITACTIVE` or fail to open `/dev/dsp`.
@@ -311,6 +229,22 @@ overwrite it. Environment variables take precedence over app-local config.
   `-vf "hflip,vflip"`.
 - Do not describe B as the FFplay exit control. The physically confirmed
   playback exit control is the Miyoo Menu button.
+
+### Miyoo Deployment Authentication
+
+The development Miyoo uses the confirmed interactive root SSH login with a blank password.
+
+A blank-password prompt is not a deployment blocker.
+
+When scripts/deploy-miyoo.ps1 requires SSH/SCP authentication, run it interactively and complete the blank-password prompt as required.
+
+Do not abandon the repeatable deployment path merely because authentication is interactive.
+
+Do not replace scripts/deploy-miyoo.ps1 with ad-hoc manual SCP when the deployment script supports the required deployment.
+
+If the deployment script itself actually fails after authentication, report the concrete command/error. Do not infer failure merely from the presence of an interactive password prompt.
+
+When product/client changes require physical Miyoo validation, deploy the changed tracked files using the normal deployment script before asking the user to test from Apps.
 
 ## Verification
 
@@ -341,6 +275,12 @@ runtime/state, and OnionOS files. Use
 `scripts/build-miyoo-selector.ps1 -VerifyCommitted` for the documented
 reproducible selector check.
 
+When tracked Miyoo client changes require Apps-context physical testing,
+deployment with `scripts/deploy-miyoo.ps1` is part of test preparation and must
+be performed automatically unless the user explicitly declines deployment.
+Interactive blank-password SSH authentication is expected and is not a reason
+to skip deployment.
+
 ## Documentation and Milestones
 
 - `docs/roadmap.md` is authoritative for status and sequencing.
@@ -361,3 +301,83 @@ reproducible selector check.
 - Review staged changes for private URLs and tokens before pushing.
 - Use focused commits that describe the completed milestone or fix.
 - Push only after local checks pass and the worktree contains the intended files.
+
+## Mandatory Session Bootstrap
+
+Before coding, every Codex session MUST:
+
+1. Read `PROJECT_STATE.md`.
+2. Check the current branch and local `HEAD`.
+3. Check working-tree cleanliness and inspect all existing changes; never
+   overwrite dirty files without understanding whether the changes are
+   intentional.
+4. Compare the local branch with its configured remote branch and determine
+   whether it is behind, ahead, diverged, or not remotely verifiable.
+5. If a task requires Miyoo access, verify SSH using the documented legacy MAC
+   option before reporting the device unreachable.
+6. Read the active milestone in `docs/roadmap.md`.
+7. Read relevant gates in `RELEASE_READINESS.md`.
+8. Read the evidence document relevant to the feature being modified.
+9. Inspect recent feature history with `git log`, `git show`, `git blame`, or
+   `git diff` as appropriate.
+10. Compare the current code and tests with the physically confirmed production
+    behavior before modifying the feature.
+
+### Document precedence and conflicts
+
+Use this precedence unless repository evidence establishes a better structure:
+
+1. `PROJECT_STATE.md` — current operational truth, production invariants, and
+   handoff.
+2. Current code and tests — implementation reality, which may contain a
+   regression.
+3. `docs/roadmap.md` — milestone sequencing and official status.
+4. `RELEASE_READINESS.md` — release gates and scope.
+5. Latest feature/milestone evidence — physical validation and test history.
+6. Older evidence and historical docs — historical reference only.
+
+Current code does not automatically override a physically confirmed invariant.
+If `PROJECT_STATE.md`, code, roadmap, release readiness, evidence, or recent
+history disagree, STOP before changing code and report:
+
+```text
+STATE CONFLICT DETECTED
+
+Feature:
+Current code behavior:
+PROJECT_STATE behavior:
+Roadmap status:
+Latest evidence:
+Relevant recent commits:
+
+Assessment:
+```
+
+Do not silently choose the most convenient source. A physically confirmed
+feature that later disappears is a regression, not a simplification. For an
+existing feature, record the latest implementation, relevant commit, physical
+behavior, invariant, and whether current code matches before editing. Restore
+confirmed behavior when it has regressed while preserving newer valid work.
+
+### Promotion and handoff rules
+
+Experimental work becomes production only when implementation, automated
+checks, required physical Miyoo tests, evidence, roadmap, and
+`PROJECT_STATE.md` are updated, and all related changes are committed together.
+Every meaningful session must update `PROJECT_STATE.md`'s Development Handoff.
+
+Use these terms precisely: Implemented means code exists; Tested means
+automated or non-device validation exists; Physically Confirmed means observed
+working on the actual Miyoo Mini Plus; Production means accepted baseline
+behavior; Experimental means not yet accepted as baseline; Regressed means
+previously confirmed production behavior is missing or broken; Deferred means
+intentionally inactive work.
+
+Use `scripts/dev-status.ps1` on Windows or `scripts/dev-status.sh` on macOS
+for the read-only synchronization check. A stale, dirty, diverged, or
+unverified checkout must be reported before development proceeds. These
+scripts never pull, rebase, reset, or stash.
+
+### Conversation context is non-authoritative.
+
+Previous Codex chat conclusions, summaries, assumptions, and remembered implementation state must never override the current repository bootstrap. When repository instructions or PROJECT_STATE.md change, every session must re-read them and discard conflicting conversational assumptions.

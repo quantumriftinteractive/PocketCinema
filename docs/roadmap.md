@@ -743,6 +743,57 @@ track picker appeared and the selected audio played correctly. This confirms
 audio-track selection for converted playback, but does not complete the wider
 Milestone 20 acceptance criteria.
 
+Ordered language preferences are implemented with a controller-friendly
+language-name catalog rather than fixed presets or code-first entry. No
+language is preselected. Users add up to five named languages in priority order,
+can change an existing language's priority with its current position marked by
+`*`, can remove entries, and retain custom 2- or 3-letter source-code entry as
+an advanced escape hatch. Audio and subtitle orders are stored
+separately in the app-local config with explicit fallbacks: ask, first verified
+track, or stop for audio; ask or no subtitles for external subtitles. Empty
+preferences preserve the existing per-playback pickers. PSS canonicalizes
+common language aliases, keeps the subtitle API English-only for older clients,
+and accepts at most five requested languages from updated clients. Automated
+coverage confirms canonical audio tags and deterministic requested subtitle
+ordering. Apps-context settings saved Japanese, English, and Greek audio order
+and English and Greek subtitle order; a later app launch loaded those values,
+confirming persistence. Subtitle-priority application remains pending physical
+confirmation.
+
+Saved audio order is also applied before stream selection. The client chooses
+the highest-priority saved language that exists in the currently playable,
+verified stream set, filters providers and releases to that language, and then
+selects its matching track ordinal. This prevents an untagged dub from silently
+winning while a verified preferred-language source remains available. Stream
+details show audio languages by name. If the confirmed selectable-Matroska mode
+cannot be prepared, its normal fallback remains burned in and fixed during
+playback; the fallback startup panel states that R1 cannot switch that path.
+Apps-context testing confirmed the new audio filtering with *My Hero Academia*
+S1E1. The selected AIOStreams 1280x720 source exposed eight audio tracks:
+Spanish, French, German, Italian, Portuguese, Polish, Hungarian, and Japanese.
+The saved Japanese-first preference selected ordinal 7, and the user confirmed
+Japanese audio. FFplay exited cleanly after 19 valid watched seconds; PSS then
+reported zero active conversions and bridges, and the Miyoo retained no player,
+client helper, infoPanel, or temporary playback state.
+
+The same run also regression-checked confirmed Milestone 22 after restoring the
+client and PSS Matroska mode flags. PSS packaged three selectable subtitle
+tracks, and the user pressed R1 and visibly reached the `Subtitles 2/3` notice.
+This confirms that the reported fixed-subtitle behavior was disabled
+configuration, not a loss of the established switching capability.
+
+Continue Watching now binds X to removal of the highlighted row while A keeps
+the normal open and resume flow. X opens a controller confirmation before PSS
+deletes only the selected type-and-ID key through a bounded JSON endpoint and
+persists the remaining entries. The selector preserves stdout as the selected
+row and reports X through an app-local temporary action file. Automated server
+coverage confirms targeted, idempotent removal and rejects incomplete
+identities. Apps-context testing confirmed X as SDL key 304, the confirmation
+screen, removal of three individually highlighted movie and episode rows, and
+the refreshed list. The PSS list fell from 10 entries to 7 with only those IDs
+absent. B then returned normally and app exit left no selector, FFplay,
+infoPanel, or temporary removal-action state behind.
+
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue
@@ -781,6 +832,15 @@ active PSS conversions, and left no FFplay/client helpers, stay-awake marker,
 info-panel marker, or temporary subtitle package on the Miyoo.
 
 This confirms the no-picker, bounded-track, R1-notice, and cleanup checkpoint.
+
+The subsequent working-tree implementation generalizes the packaging bound to
+up to three tracks for each of five ordered preferred languages (15 tracks
+maximum), preserves per-track language metadata, and passes the existing
+Milestone 21 language preferences through Matroska setup. The app-local FFplay,
+runtime libraries, font configuration, and font asset are now included by the
+normal Miyoo deployment script. Automated server and packaging tests cover the
+six-track case; the three-track English Apps-context run above remains the
+minimum physical confirmation until a multi-language run is completed.
 The client now bounds Matroska setup failure by returning to the existing
 normal subtitle selector and retrying with Matroska and field-test modes off;
 the app-local 640x480 presentation remains active so the fallback does not

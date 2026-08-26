@@ -9,10 +9,16 @@
 - browses normalized series seasons and episodes with the SDL selector;
 - launches FFplay in the working OnionOS framebuffer/audio context.
 - offers Search and Continue Watching from a lightweight home menu;
+- removes a highlighted Continue Watching item with X after controller
+  confirmation, while A keeps the normal open/resume flow;
+- builds ordered audio/subtitle preferences from a controller-friendly language
+  name picker, with custom codes available only as an advanced option;
 - links and reports a Stremio account through a local QR screen while keeping
   the auth key on the gaming PC;
 - selects external subtitles through the server when FFplay advertises the
   `subtitles` filter;
+- uses the confirmed app-local Matroska mode to package up to three selectable
+  subtitle tracks and cycle them with R1, with burn-in as setup fallback;
 - resumes saved items with FFplay `-ss` and reports approximate progress.
 - shows persistent OnionOS loading panels during stream discovery and server-side
   media compatibility inspection.

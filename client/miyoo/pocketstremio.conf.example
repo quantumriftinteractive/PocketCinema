@@ -9,8 +9,17 @@ AUTO_FIRST=0
 # App-local decoded-audio gain for normal Onion FFplay playback (1 to 2).
 # 2.0 is +6 dB and may clip unusually loud sources.
 AUDIO_GAIN=2.0
-# Experimental app-local Matroska subtitle tracks. When both this and the PSS
-# mode are enabled, PSS selects up to three English text tracks automatically;
-# use R1 during playback to cycle them and off. Setup failure returns to the
-# normal subtitle selector and unchanged MPEG-TS burn-in path.
+# Optional ordered language codes stored by the Settings language-name picker.
+# Leave empty to keep the existing per-playback picker. Custom 2- or 3-letter
+# source codes can also be entered through the Advanced settings option. Audio
+# fallback is ask, first, or stop. Subtitle fallback is ask or none.
+AUDIO_LANGUAGES=
+AUDIO_FALLBACK=ask
+SUBTITLE_LANGUAGES=
+SUBTITLE_FALLBACK=ask
+# Selectable app-local Matroska subtitle tracks. PSS selects up to this many
+# tracks per preferred language (bounded to 3); use
+# R1 during playback to cycle them and off. Setup failure returns to the normal
+# subtitle selector and unchanged MPEG-TS burn-in path.
+MAX_SUBTITLES_PER_LANGUAGE=3
 POCKETSTREMIO_MATROSKA_SUBTITLES=0
