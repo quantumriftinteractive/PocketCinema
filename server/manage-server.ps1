@@ -14,7 +14,8 @@ param(
   [string]$FFprobePath = "",
   [string]$FFmpegPath = "",
   [switch]$EnableFieldTest,
-  [switch]$EnableMatroskaSubtitles
+  [switch]$EnableMatroskaSubtitles,
+  [switch]$DisableMatroskaSubtitles
 )
 
 $ErrorActionPreference = "Stop"
@@ -112,7 +113,7 @@ function Start-ManagedServer {
   if ($EnableFieldTest) {
     $arguments += "--enable-field-test"
   }
-  if ($EnableMatroskaSubtitles) {
+  if (-not $DisableMatroskaSubtitles -and $env:POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES -ne "0") {
     $arguments += "--enable-matroska-subtitles"
   }
   if ($DisableDiscovery) {

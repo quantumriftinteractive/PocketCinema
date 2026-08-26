@@ -7,7 +7,8 @@ param(
   [int]$OpenMediaAddonPort = 8756,
   [string]$FFprobePath = "",
   [string]$FFmpegPath = "",
-  [switch]$EnableFieldTest
+  [switch]$EnableFieldTest,
+  [switch]$DisableMatroskaSubtitles
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,6 +42,9 @@ $arguments = @(
 )
 if ($EnableFieldTest) {
   $arguments += "--enable-field-test"
+}
+if (-not $DisableMatroskaSubtitles -and $env:POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES -ne "0") {
+  $arguments += "--enable-matroska-subtitles"
 }
 if ($StremioLocalMediaRoot) {
   $arguments += @("--stremio-local-media-root", $StremioLocalMediaRoot)

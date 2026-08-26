@@ -18,6 +18,19 @@ DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-}"
 AUDIO_GAIN="${POCKETSTREMIO_AUDIO_GAIN:-}"
 AUDIO_GAIN_ENV_OVERRIDE=0
 [ -n "${POCKETSTREMIO_AUDIO_GAIN:-}" ] && AUDIO_GAIN_ENV_OVERRIDE=1
+AUDIO_LANGUAGES="${POCKETSTREMIO_AUDIO_LANGUAGES:-}"
+AUDIO_FALLBACK="${POCKETSTREMIO_AUDIO_FALLBACK:-}"
+AUDIO_LANGUAGE_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_AUDIO_LANGUAGES:-}" ] && AUDIO_LANGUAGE_ENV_OVERRIDE=1
+[ -n "${POCKETSTREMIO_AUDIO_FALLBACK:-}" ] && AUDIO_LANGUAGE_ENV_OVERRIDE=1
+SUBTITLE_LANGUAGES="${POCKETSTREMIO_SUBTITLE_LANGUAGES:-}"
+SUBTITLE_FALLBACK="${POCKETSTREMIO_SUBTITLE_FALLBACK:-}"
+MAX_SUBTITLES_PER_LANGUAGE="${POCKETSTREMIO_MAX_SUBTITLES_PER_LANGUAGE:-}"
+MAX_SUBTITLES_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_MAX_SUBTITLES_PER_LANGUAGE:-}" ] && MAX_SUBTITLES_ENV_OVERRIDE=1
+SUBTITLE_LANGUAGE_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_SUBTITLE_LANGUAGES:-}" ] && SUBTITLE_LANGUAGE_ENV_OVERRIDE=1
+[ -n "${POCKETSTREMIO_SUBTITLE_FALLBACK:-}" ] && SUBTITLE_LANGUAGE_ENV_OVERRIDE=1
 CURL="$SYS_DIR/bin/curl"
 JQ="$SYS_DIR/bin/jq"
 KBINPUT="$SYS_DIR/bin/kbinput"
@@ -46,7 +59,8 @@ if [ -f "$BASE_DIR/config/ffplay-display-surface-test.mode" ]; then
   rm -f "$BASE_DIR/config/ffplay-display-surface-test.mode"
 fi
 CANDIDATE_PLAYER=0
-FIELD_TEST_LIB_DIR="$BASE_DIR/experiments/ffplay/lib"
+FIELD_TEST_DIR="$BASE_DIR/experiments/ffplay"
+FIELD_TEST_LIB_DIR="$FIELD_TEST_DIR/lib"
 FIELD_TEST_SUBTITLE_FILE=""
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
@@ -84,6 +98,17 @@ load_config() {
       DEFAULT_QUERY) [ -n "$DEFAULT_QUERY" ] || DEFAULT_QUERY="$config_value" ;;
       AUTO_FIRST) [ -n "$AUTO_FIRST" ] || AUTO_FIRST="$config_value" ;;
       AUDIO_GAIN) [ -n "$AUDIO_GAIN" ] || AUDIO_GAIN="$config_value" ;;
+      AUDIO_LANGUAGES) [ -n "$AUDIO_LANGUAGES" ] || AUDIO_LANGUAGES="$config_value" ;;
+      AUDIO_FALLBACK) [ -n "$AUDIO_FALLBACK" ] || AUDIO_FALLBACK="$config_value" ;;
+      SUBTITLE_LANGUAGES)
+        [ -n "$SUBTITLE_LANGUAGES" ] || SUBTITLE_LANGUAGES="$config_value"
+        ;;
+      SUBTITLE_FALLBACK)
+        [ -n "$SUBTITLE_FALLBACK" ] || SUBTITLE_FALLBACK="$config_value"
+        ;;
+      MAX_SUBTITLES_PER_LANGUAGE)
+        [ -n "$MAX_SUBTITLES_PER_LANGUAGE" ] || MAX_SUBTITLES_PER_LANGUAGE="$config_value"
+        ;;
       POCKETSTREMIO_MATROSKA_SUBTITLES)
         [ -n "$MATROSKA_SUBTITLES" ] || MATROSKA_SUBTITLES="$config_value"
         ;;
@@ -92,10 +117,28 @@ load_config() {
   done <"$CONFIG_FILE"
 }
 
+valid_language_order() {
+  language_order="$1"
+  [ -z "$language_order" ] && return 0
+  printf '%s\n' "$language_order" | awk -F, '
+    NF < 1 || NF > 5 { exit 1 }
+    {
+      for (i = 1; i <= NF; i++) {
+        if (length($i) < 2 || length($i) > 3 || $i !~ /^[a-z]+$/ || seen[$i]++) {
+          exit 1
+        }
+      }
+    }
+  '
+}
+
 load_config
 AUTO_FIRST="${AUTO_FIRST:-0}"
 DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
 AUDIO_GAIN="${AUDIO_GAIN:-2.0}"
+AUDIO_FALLBACK="${AUDIO_FALLBACK:-ask}"
+SUBTITLE_FALLBACK="${SUBTITLE_FALLBACK:-ask}"
+MAX_SUBTITLES_PER_LANGUAGE="${MAX_SUBTITLES_PER_LANGUAGE:-3}"
 MATROSKA_SUBTITLES="${MATROSKA_SUBTITLES:-0}"
 case "$SERVER_BASE" in
   http://*|https://*) ;;
@@ -113,6 +156,24 @@ esac
 case "$AUDIO_GAIN" in
   1|1.0|1.25|1.5|1.75|2|2.0) ;;
   *) CONFIG_ERROR="AUDIO_GAIN must be 1, 1.25, 1.5, 1.75, or 2" ;;
+esac
+if ! valid_language_order "$AUDIO_LANGUAGES"; then
+  CONFIG_ERROR="AUDIO_LANGUAGES must contain up to five unique 2-3 letter codes"
+fi
+case "$AUDIO_FALLBACK" in
+  ask|first|stop) ;;
+  *) CONFIG_ERROR="AUDIO_FALLBACK must be ask, first, or stop" ;;
+esac
+if ! valid_language_order "$SUBTITLE_LANGUAGES"; then
+  CONFIG_ERROR="SUBTITLE_LANGUAGES must contain up to five unique 2-3 letter codes"
+fi
+case "$SUBTITLE_FALLBACK" in
+  ask|none) ;;
+  *) CONFIG_ERROR="SUBTITLE_FALLBACK must be ask or none" ;;
+esac
+case "$MAX_SUBTITLES_PER_LANGUAGE" in
+  1|2|3) ;;
+  *) CONFIG_ERROR="MAX_SUBTITLES_PER_LANGUAGE must be 1, 2, or 3" ;;
 esac
 case "$APP_LOCAL_PLAYER" in
   0|1) ;;
@@ -155,6 +216,14 @@ cleanup() {
     /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv \
     /tmp/pocketstremio-discovery-status.json \
     /tmp/pocketstremio-settings.tsv \
+    /tmp/pocketstremio-continue-action \
+    /tmp/pocketstremio-remove-confirm.tsv \
+    /tmp/pocketstremio-language-action.tsv \
+    /tmp/pocketstremio-language-catalog.tsv \
+    /tmp/pocketstremio-language-choices.tsv \
+    /tmp/pocketstremio-language-order.tsv \
+    /tmp/pocketstremio-language-fallback.tsv \
+    /tmp/pocketstremio-max-subtitles.tsv \
     "$SERVER_STATUS_FILE" "$SERVER_STATUS_JSON" \
     /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
@@ -254,8 +323,10 @@ api_post_play() {
     --argjson audio_stream_index "$audio_stream_index" \
     --argjson field_test "$([ "$FIELD_TEST" = "1" ] && printf 1 || printf 0)" \
     --argjson matroska_subtitles "$([ "$MATROSKA_SUBTITLES" = "1" ] && printf 1 || printf 0)" \
+    --arg subtitle_languages "$SUBTITLE_LANGUAGES" \
+    --argjson max_subtitles_per_language "$MAX_SUBTITLES_PER_LANGUAGE" \
     --argjson resume_seconds "$resume_seconds" \
-    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,field_test:($field_test == 1),matroska_subtitles:($matroska_subtitles == 1),resume_seconds:$resume_seconds}')
+    '{type:$type,id:$id,stream_id:$stream_id,subtitle_id:$subtitle_id,audio_stream_index:$audio_stream_index,field_test:($field_test == 1),matroska_subtitles:($matroska_subtitles == 1),subtitle_languages:(if $subtitle_languages == "" then [] else ($subtitle_languages | split(",")) end),max_subtitles_per_language:$max_subtitles_per_language,resume_seconds:$resume_seconds}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -sS --max-time 60 -H 'Content-Type: application/json' -d "$body" "$SERVER_BASE/api/play" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -315,6 +386,21 @@ api_post_progress() {
   if [ "$http_rc" -ne 0 ]; then
     http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
     log "api post progress failed rc=$http_rc detail=$http_detail"
+  fi
+  return "$http_rc"
+}
+
+api_post_continue_remove() {
+  type="$1"
+  id="$2"
+  body=$("$JQ" -nc --arg type "$type" --arg id "$id" '{type:$type,id:$id}')
+  rm -f "$HTTP_ERROR_FILE"
+  curl_request -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" \
+    "$SERVER_BASE/api/continue-watching/remove" 2>"$HTTP_ERROR_FILE"
+  http_rc=$?
+  if [ "$http_rc" -ne 0 ]; then
+    http_detail=$(tail -c 240 "$HTTP_ERROR_FILE" 2>/dev/null | tr '\r\n' '  ')
+    log "continue watching remove failed type=$type id=$id rc=$http_rc detail=$http_detail"
   fi
   return "$http_rc"
 }
@@ -386,10 +472,10 @@ run_ffplay() (
     audio_args=""
     export LD_LIBRARY_PATH="$FIELD_TEST_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     playback_preload="$PADSP:$MIYOO_DIR/lib/libSDL-1.2.so.0"
-    export FONTCONFIG_PATH="$FIELD_TEST_LIB_DIR"
-    export FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
-    export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_LIB_DIR/fonts.conf"
-    export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_LIB_DIR/fonts/DejaVuSans.ttf"
+    export FONTCONFIG_PATH="$FIELD_TEST_DIR"
+    export FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
+    export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
+    export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_DIR/fonts/PocketStremio.ttf"
     export POCKETSTREMIO_ASPECT_MODE="$aspect_mode"
     if [ -n "$FIELD_TEST_SUBTITLE_FILE" ]; then
       export POCKETSTREMIO_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
@@ -597,6 +683,11 @@ play_url() {
 select_from_file() {
   title="$1"
   file="$2"
+  bottom="${3:-Up/Down move  A select  B back}"
+  x_action_file="${4:-}"
+  if [ -n "$x_action_file" ]; then
+    rm -f "$x_action_file"
+  fi
   log "select title=$title waiting for input debounce"
   sleep 1
   if [ -x "$SDL_SELECTOR" ]; then
@@ -604,11 +695,13 @@ select_from_file() {
       selected=$(POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" cut -f1 "$file" | \
         POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" \
         POCKETSTREMIO_DYNAMIC_FIRST_ITEM_FILE="$SERVER_STATUS_FILE" \
-        "$SDL_SELECTOR" "$title" "Up/Down move  A select  B back")
+        POCKETSTREMIO_SELECTOR_X_ACTION_FILE="$x_action_file" \
+        "$SDL_SELECTOR" "$title" "$bottom")
     else
       selected=$(POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" cut -f1 "$file" | \
         POCKETSTREMIO_SELECTOR_LOG="$LOG_FILE" \
-        "$SDL_SELECTOR" "$title" "Up/Down move  A select  B back")
+        POCKETSTREMIO_SELECTOR_X_ACTION_FILE="$x_action_file" \
+        "$SDL_SELECTOR" "$title" "$bottom")
     fi
     rc=$?
     log "sdl selector rc=$rc"
@@ -794,6 +887,56 @@ save_audio_gain() {
   chmod 644 "$CONFIG_FILE"
 }
 
+save_max_subtitles_per_language() {
+  new_max_subtitles="$1"
+  config_temp="$CONFIG_FILE.tmp"
+  mkdir -p "$BASE_DIR/config"
+  if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.bak" || return 1
+  fi
+  awk -v max_subtitles="$new_max_subtitles" '
+    BEGIN { replaced = 0 }
+    /^MAX_SUBTITLES_PER_LANGUAGE=/ {
+      if (!replaced) {
+        print "MAX_SUBTITLES_PER_LANGUAGE=" max_subtitles
+        replaced = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!replaced) print "MAX_SUBTITLES_PER_LANGUAGE=" max_subtitles
+    }
+  ' "$CONFIG_FILE" 2>/dev/null >"$config_temp" || {
+    printf 'MAX_SUBTITLES_PER_LANGUAGE=%s\n' "$new_max_subtitles" >"$config_temp" || return 1
+  }
+  mv "$config_temp" "$CONFIG_FILE" || return 1
+  chmod 644 "$CONFIG_FILE"
+}
+
+max_subtitles_per_language_flow() {
+  printf '1 track per language\t1\n2 tracks per language\t2\n3 tracks per language\t3\nBack\tback\n' \
+    >/tmp/pocketstremio-max-subtitles.tsv
+  selected_max=$(select_from_file "Matroska subtitle tracks (current $MAX_SUBTITLES_PER_LANGUAGE)" \
+    /tmp/pocketstremio-max-subtitles.tsv)
+  [ -n "$selected_max" ] || return 0
+  tab=$(printf '\t')
+  max_line=$(grep -F "$selected_max$tab" /tmp/pocketstremio-max-subtitles.tsv | head -n 1)
+  new_max_subtitles=$(printf '%s' "$max_line" | cut -f2)
+  [ "$new_max_subtitles" = "back" ] && return 0
+  if ! save_max_subtitles_per_language "$new_max_subtitles"; then
+    message "PocketStremio Settings" "Could not save subtitle track limit"
+    return 1
+  fi
+  if [ "$MAX_SUBTITLES_ENV_OVERRIDE" -eq 1 ]; then
+    message "PocketStremio Settings" "Saved. Environment override remains active."
+    return 0
+  fi
+  MAX_SUBTITLES_PER_LANGUAGE="$new_max_subtitles"
+  log "saved Matroska subtitle track limit=$MAX_SUBTITLES_PER_LANGUAGE"
+  message "PocketStremio Settings" "Matroska subtitles set to $MAX_SUBTITLES_PER_LANGUAGE per language"
+}
+
 audio_gain_flow() {
   printf '100%% (normal)\t1\n125%%\t1.25\n150%%\t1.5\n175%%\t1.75\n200%% (louder)\t2\nBack\tback\n' \
     >/tmp/pocketstremio-audio-gain.tsv
@@ -814,6 +957,428 @@ audio_gain_flow() {
   AUDIO_GAIN="$new_audio_gain"
   log "saved audio gain=$AUDIO_GAIN"
   message "PocketStremio Settings" "Audio gain set to ${AUDIO_GAIN}x for the next video"
+}
+
+save_language_preferences() {
+  language_kind="$1"
+  new_languages="$2"
+  new_fallback="$3"
+  case "$language_kind" in
+    audio)
+      languages_key=AUDIO_LANGUAGES
+      fallback_key=AUDIO_FALLBACK
+      ;;
+    subtitle)
+      languages_key=SUBTITLE_LANGUAGES
+      fallback_key=SUBTITLE_FALLBACK
+      ;;
+    *) return 1 ;;
+  esac
+  config_temp="$CONFIG_FILE.tmp"
+  mkdir -p "$BASE_DIR/config"
+  if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.bak" || return 1
+  fi
+  awk -v languages_key="$languages_key" -v languages="$new_languages" \
+      -v fallback_key="$fallback_key" -v fallback="$new_fallback" '
+    BEGIN { replaced_languages = 0; replaced_fallback = 0 }
+    index($0, languages_key "=") == 1 {
+      if (!replaced_languages) {
+        print languages_key "=" languages
+        replaced_languages = 1
+      }
+      next
+    }
+    index($0, fallback_key "=") == 1 {
+      if (!replaced_fallback) {
+        print fallback_key "=" fallback
+        replaced_fallback = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!replaced_languages) print languages_key "=" languages
+      if (!replaced_fallback) print fallback_key "=" fallback
+    }
+  ' "$CONFIG_FILE" 2>/dev/null >"$config_temp" || {
+    printf '%s=%s\n%s=%s\n' "$languages_key" "$new_languages" \
+      "$fallback_key" "$new_fallback" >"$config_temp" || return 1
+  }
+  mv "$config_temp" "$CONFIG_FILE" || return 1
+  chmod 644 "$CONFIG_FILE"
+}
+
+normalize_language_order() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | \
+    sed 's/[[:space:];][[:space:];]*/,/g; s/,,*/,/g; s/^,//; s/,$//'
+}
+
+write_language_catalog() {
+  cat > /tmp/pocketstremio-language-catalog.tsv <<'EOF'
+Afrikaans	afr
+Albanian	sqi
+Arabic	ara
+Armenian	hye
+Azerbaijani	aze
+Basque	eus
+Belarusian	bel
+Bengali	ben
+Bosnian	bos
+Bulgarian	bul
+Catalan	cat
+Chinese	zho
+Croatian	hrv
+Czech	ces
+Danish	dan
+Dutch	nld
+English	eng
+Estonian	est
+Filipino	fil
+Finnish	fin
+French	fra
+Georgian	kat
+German	deu
+Greek	ell
+Hebrew	heb
+Hindi	hin
+Hungarian	hun
+Icelandic	isl
+Indonesian	ind
+Italian	ita
+Japanese	jpn
+Korean	kor
+Latvian	lav
+Lithuanian	lit
+Macedonian	mkd
+Malay	msa
+Malayalam	mal
+Marathi	mar
+Norwegian	nor
+Persian	fas
+Polish	pol
+Portuguese	por
+Romanian	ron
+Russian	rus
+Serbian	srp
+Slovak	slk
+Slovenian	slv
+Spanish	spa
+Swahili	swa
+Swedish	swe
+Tamil	tam
+Telugu	tel
+Thai	tha
+Turkish	tur
+Ukrainian	ukr
+Urdu	urd
+Vietnamese	vie
+Welsh	cym
+EOF
+}
+
+language_order_names() {
+  order="$1"
+  write_language_catalog
+  awk -F '\t' -v order="$order" '
+    { names[$2] = $1 }
+    END {
+      count = split(order, codes, ",")
+      for (i = 1; i <= count; i++) {
+        if (i > 1) printf " > "
+        if (codes[i] == "und") printf "Unverified"
+        else printf "%s", (codes[i] in names ? names[codes[i]] : codes[i])
+      }
+      print ""
+    }
+  ' /tmp/pocketstremio-language-catalog.tsv
+}
+
+language_fallback_label() {
+  case "$1:$2" in
+    audio:ask) printf 'Ask when unavailable' ;;
+    audio:first) printf 'Use first verified track' ;;
+    audio:stop) printf 'Stop and report' ;;
+    subtitle:ask) printf 'Ask when unavailable' ;;
+    subtitle:none) printf 'Use no subtitles' ;;
+    *) printf '%s' "$2" ;;
+  esac
+}
+
+reorder_language_order() {
+  reorder_order="$1"
+  reorder_selected="$2"
+  reorder_target="$3"
+  printf '%s\n' "$reorder_order" | awk -F, \
+    -v selected="$reorder_selected" -v target="$reorder_target" '
+    {
+      count = split($0, codes, ",")
+      output = ""
+      position = 0
+      for (i = 1; i <= count; i++) {
+        if (codes[i] == selected) continue
+        position++
+        if (position == target) {
+          if (output != "") output = output ","
+          output = output selected
+        }
+        if (output != "") output = output ","
+        output = output codes[i]
+      }
+      if (position < target) {
+        if (output != "") output = output ","
+        output = output selected
+      }
+      print output
+    }
+  '
+}
+
+change_language_priority_flow() {
+  priority_kind="$1"
+  priority_order="$2"
+  priority_name="$3"
+  while :; do
+    write_language_catalog
+    awk -F '\t' -v order="$priority_order" '
+      BEGIN { count = split(order, codes, ",") }
+      { names[$2] = $1 }
+      END {
+        for (i = 1; i <= count; i++) {
+          name = (codes[i] in names ? names[codes[i]] : codes[i])
+          printf "%s\t%s\n", i ". " name, codes[i]
+        }
+        print "Done\tdone"
+      }
+    ' /tmp/pocketstremio-language-catalog.tsv \
+      >/tmp/pocketstremio-language-choices.tsv
+    selected_language=$(select_from_file "Change $priority_name order" \
+      /tmp/pocketstremio-language-choices.tsv)
+    [ -n "$selected_language" ] || return 0
+    [ "$selected_language" = "Done" ] && return 0
+    tab=$(printf '\t')
+    selected_line=$(grep -F "$selected_language$tab" \
+      /tmp/pocketstremio-language-choices.tsv | head -n 1)
+    selected_code=$(printf '%s' "$selected_line" | cut -f2)
+    [ -n "$selected_code" ] || continue
+    current_position=$(printf '%s\n' "$priority_order" | awk -F, \
+      -v selected="$selected_code" '{ for (i = 1; i <= NF; i++) if ($i == selected) print i }')
+    printf '%s\n' "$priority_order" | awk -F, \
+      -v current="$current_position" '
+      {
+        count = NF
+        for (i = 1; i <= count; i++) {
+          if (i == current) printf "* Priority %d (current)\t%d\n", i, i
+          else printf "Priority %d\t%d\n", i, i
+        }
+      }
+    ' >/tmp/pocketstremio-language-order.tsv
+    selected_target=$(select_from_file "Place $selected_language" \
+      /tmp/pocketstremio-language-order.tsv)
+    [ -n "$selected_target" ] || continue
+    target_line=$(grep -F "$selected_target$tab" \
+      /tmp/pocketstremio-language-order.tsv | head -n 1)
+    target_position=$(printf '%s' "$target_line" | cut -f2)
+    case "$target_position" in
+      1|2|3|4|5) ;;
+      *) continue ;;
+    esac
+    new_priority_order=$(reorder_language_order "$priority_order" \
+      "$selected_code" "$target_position")
+    save_active_language_preferences "$priority_kind" "$new_priority_order" \
+      "$current_fallback" || return 1
+    priority_order="$new_priority_order"
+  done
+}
+
+save_active_language_preferences() {
+  active_kind="$1"
+  active_languages="$2"
+  active_fallback="$3"
+  if ! save_language_preferences "$active_kind" "$active_languages" "$active_fallback"; then
+    message "PocketStremio Settings" "Could not save language preference"
+    return 1
+  fi
+  if [ "$active_kind" = "audio" ]; then
+    if [ "$AUDIO_LANGUAGE_ENV_OVERRIDE" -eq 1 ]; then
+      message "PocketStremio Settings" "Saved. Environment override remains active."
+      return 0
+    fi
+    AUDIO_LANGUAGES="$active_languages"
+    AUDIO_FALLBACK="$active_fallback"
+    log "saved audio languages=${AUDIO_LANGUAGES:-manual} fallback=$AUDIO_FALLBACK"
+  else
+    if [ "$SUBTITLE_LANGUAGE_ENV_OVERRIDE" -eq 1 ]; then
+      message "PocketStremio Settings" "Saved. Environment override remains active."
+      return 0
+    fi
+    SUBTITLE_LANGUAGES="$active_languages"
+    SUBTITLE_FALLBACK="$active_fallback"
+    log "saved subtitle languages=${SUBTITLE_LANGUAGES:-manual} fallback=$SUBTITLE_FALLBACK"
+  fi
+}
+
+language_preference_flow() {
+  language_kind="$1"
+  while :; do
+    case "$language_kind" in
+      audio)
+        current_languages="$AUDIO_LANGUAGES"
+        current_fallback="$AUDIO_FALLBACK"
+        preference_name=Audio
+        keyboard_title="Advanced audio codes"
+        ;;
+      subtitle)
+        current_languages="$SUBTITLE_LANGUAGES"
+        current_fallback="$SUBTITLE_FALLBACK"
+        preference_name=Subtitles
+        keyboard_title="Advanced subtitle codes"
+        ;;
+      *) return 1 ;;
+    esac
+    if [ -n "$current_languages" ]; then
+      language_count=$(printf '%s\n' "$current_languages" | awk -F, '{print NF}')
+      preference_title="$preference_name: $language_count selected"
+    else
+      language_count=0
+      preference_title="$preference_name: manual"
+    fi
+    fallback_label=$(language_fallback_label "$language_kind" "$current_fallback")
+    printf 'Change priority order\tchange\nAdd language\tadd\n' \
+      >/tmp/pocketstremio-language-action.tsv
+    if [ "$language_count" -gt 0 ]; then
+      printf 'Remove language\tremove\n' >>/tmp/pocketstremio-language-action.tsv
+    fi
+    printf 'Fallback: %s\tfallback\nManual each playback\tmanual\nAdvanced: enter codes\tadvanced\nBack\tback\n' \
+      "$fallback_label" >>/tmp/pocketstremio-language-action.tsv
+    preference_action=$(select_from_file "$preference_title" \
+      /tmp/pocketstremio-language-action.tsv)
+    case "$preference_action" in
+      "Change priority order")
+        if [ -z "$current_languages" ]; then
+          message "$preference_name languages" "Add languages before changing priority"
+        else
+          change_language_priority_flow "$language_kind" "$current_languages" \
+            "$preference_name"
+        fi
+        ;;
+      "Add language")
+        if [ "$language_count" -ge 5 ]; then
+          message "$preference_name languages" "Five languages are already selected"
+          continue
+        fi
+        write_language_catalog
+        awk -F '\t' -v order="$current_languages" '
+          BEGIN {
+            count = split(order, codes, ",")
+            for (i = 1; i <= count; i++) selected[codes[i]] = 1
+          }
+          !($2 in selected) { print }
+        ' /tmp/pocketstremio-language-catalog.tsv \
+          >/tmp/pocketstremio-language-choices.tsv
+        selected_language=$(select_from_file "Add $preference_name language" \
+          /tmp/pocketstremio-language-choices.tsv)
+        [ -n "$selected_language" ] || continue
+        tab=$(printf '\t')
+        selected_line=$(grep -F "$selected_language$tab" \
+          /tmp/pocketstremio-language-choices.tsv | head -n 1)
+        selected_code=$(printf '%s' "$selected_line" | cut -f2)
+        [ -n "$selected_code" ] || continue
+        if [ -n "$current_languages" ]; then
+          new_languages="$current_languages,$selected_code"
+        else
+          new_languages="$selected_code"
+        fi
+        save_active_language_preferences "$language_kind" "$new_languages" \
+          "$current_fallback" || return 1
+        ;;
+      "Remove language")
+        write_language_catalog
+        awk -F '\t' -v order="$current_languages" '
+          { names[$2] = $1 }
+          END {
+            count = split(order, codes, ",")
+            for (i = 1; i <= count; i++) {
+              name = (codes[i] in names ? names[codes[i]] : codes[i])
+              print i ". " name "\t" codes[i]
+            }
+          }
+        ' /tmp/pocketstremio-language-catalog.tsv \
+          >/tmp/pocketstremio-language-choices.tsv
+        selected_language=$(select_from_file "Remove $preference_name language" \
+          /tmp/pocketstremio-language-choices.tsv)
+        [ -n "$selected_language" ] || continue
+        tab=$(printf '\t')
+        selected_line=$(grep -F "$selected_language$tab" \
+          /tmp/pocketstremio-language-choices.tsv | head -n 1)
+        selected_code=$(printf '%s' "$selected_line" | cut -f2)
+        [ -n "$selected_code" ] || continue
+        new_languages=$(printf '%s\n' "$current_languages" | \
+          awk -F, -v removed="$selected_code" '
+            {
+              separator = ""
+              for (i = 1; i <= NF; i++) {
+                if ($i != removed) {
+                  printf "%s%s", separator, $i
+                  separator = ","
+                }
+              }
+              print ""
+            }
+          ')
+        save_active_language_preferences "$language_kind" "$new_languages" \
+          "$current_fallback" || return 1
+        ;;
+      "Fallback:"*)
+        if [ "$language_kind" = "audio" ]; then
+          printf 'Ask when unavailable\task\nUse first verified track\tfirst\nStop and report\tstop\nBack\tback\n' \
+            >/tmp/pocketstremio-language-fallback.tsv
+        else
+          printf 'Ask when unavailable\task\nUse no subtitles\tnone\nBack\tback\n' \
+            >/tmp/pocketstremio-language-fallback.tsv
+        fi
+        selected_fallback=$(select_from_file "$preference_name fallback" \
+          /tmp/pocketstremio-language-fallback.tsv)
+        [ -n "$selected_fallback" ] || continue
+        tab=$(printf '\t')
+        fallback_line=$(grep -F "$selected_fallback$tab" \
+          /tmp/pocketstremio-language-fallback.tsv | head -n 1)
+        new_fallback=$(printf '%s' "$fallback_line" | cut -f2)
+        [ "$new_fallback" = "back" ] && continue
+        case "$language_kind:$new_fallback" in
+          audio:ask|audio:first|audio:stop|subtitle:ask|subtitle:none) ;;
+          *) continue ;;
+        esac
+        save_active_language_preferences "$language_kind" "$current_languages" \
+          "$new_fallback" || return 1
+        ;;
+      "Manual each playback")
+        save_active_language_preferences "$language_kind" "" ask || return 1
+        message "$preference_name languages" "Manual selection restored"
+        ;;
+      "Advanced: enter codes")
+        raw_languages=$(read_keyboard "$current_languages" "$keyboard_title")
+        [ -n "$raw_languages" ] || continue
+        new_languages=$(normalize_language_order "$raw_languages")
+        if ! valid_language_order "$new_languages"; then
+          message "PocketStremio Settings" \
+            "Use up to five unique 2-3 letter codes, separated by commas"
+          continue
+        fi
+        save_active_language_preferences "$language_kind" "$new_languages" \
+          "$current_fallback" || return 1
+        ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+audio_language_flow() {
+  language_preference_flow audio
+}
+
+subtitle_language_flow() {
+  language_preference_flow subtitle
 }
 
 activate_server_base() {
@@ -931,12 +1496,16 @@ enter_server_manually() {
 
 settings_flow() {
   while :; do
-    printf 'Scan for PSS\nEnter Manually\nAudio gain\nBack\n' >/tmp/pocketstremio-settings.tsv
+    printf 'Scan for PSS\nEnter Manually\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
+      >/tmp/pocketstremio-settings.tsv
     settings_action=$(select_from_file "Settings" /tmp/pocketstremio-settings.tsv)
     case "$settings_action" in
       "Scan for PSS") scan_for_pss ;;
       "Enter Manually") enter_server_manually ;;
       "Audio gain") audio_gain_flow ;;
+      "Audio languages") audio_language_flow ;;
+      "Subtitle languages") subtitle_language_flow ;;
+      "Matroska subtitle limit") max_subtitles_per_language_flow ;;
       *) return 0 ;;
     esac
   done
@@ -1110,32 +1679,57 @@ account_flow() {
 }
 
 continue_watching_flow() {
-  if ! api_get "/api/continue-watching" >/tmp/pocketstremio-continue.json; then
-    message "PocketStremio" "Continue Watching unavailable"
-    return 1
-  fi
-  count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-continue.json)
-  if [ "$count" = "0" ]; then
-    message "PocketStremio" "Nothing to continue"
-    return 0
-  fi
+  continue_action_file=/tmp/pocketstremio-continue-action
+  while :; do
+    if ! api_get "/api/continue-watching" >/tmp/pocketstremio-continue.json; then
+      message "PocketStremio" "Continue Watching unavailable"
+      return 1
+    fi
+    count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-continue.json)
+    if [ "$count" = "0" ]; then
+      message "PocketStremio" "Nothing to continue"
+      return 0
+    fi
 
-  "$JQ" -r '.items[] | "\(.title) (\(.year // "????")) - \((.position_seconds / 60) | floor)m \((.position_seconds % 60) | floor)s\t\(.type)\t\(.id)\t\(.title)\t\(.year // "")\t\(.position_seconds // 0)"' /tmp/pocketstremio-continue.json >/tmp/pocketstremio-continue.tsv
-  selected=$(select_from_file "Continue Watching" /tmp/pocketstremio-continue.tsv)
-  [ -z "$selected" ] && return 0
-  line=$(grep -F "$selected	" /tmp/pocketstremio-continue.tsv | head -n 1)
-  if [ -z "$line" ]; then
-    log "continue selection did not match selected=$selected"
-    message "PocketStremio" "Selection failed"
-    return 1
-  fi
-  type=$(printf '%s' "$line" | cut -f2)
-  id=$(printf '%s' "$line" | cut -f3)
-  title=$(printf '%s' "$line" | cut -f4)
-  year=$(printf '%s' "$line" | cut -f5)
-  resume_seconds=$(printf '%s' "$line" | cut -f6)
-  log "continue selected type=$type id=$id position_seconds=$resume_seconds"
-  media_flow "$type" "$id" "$title" "$year" "$resume_seconds"
+    "$JQ" -r '.items[] | "\(.title) (\(.year // "????")) - \((.position_seconds / 60) | floor)m \((.position_seconds % 60) | floor)s\t\(.type)\t\(.id)\t\(.title)\t\(.year // "")\t\(.position_seconds // 0)"' /tmp/pocketstremio-continue.json >/tmp/pocketstremio-continue.tsv
+    selected=$(select_from_file "Continue Watching" /tmp/pocketstremio-continue.tsv \
+      "Up/Down move  A open  X remove  B back" "$continue_action_file")
+    [ -z "$selected" ] && return 0
+    line=$(grep -F "$selected	" /tmp/pocketstremio-continue.tsv | head -n 1)
+    if [ -z "$line" ]; then
+      log "continue selection did not match selected=$selected"
+      message "PocketStremio" "Selection failed"
+      return 1
+    fi
+    type=$(printf '%s' "$line" | cut -f2)
+    id=$(printf '%s' "$line" | cut -f3)
+    title=$(printf '%s' "$line" | cut -f4)
+    year=$(printf '%s' "$line" | cut -f5)
+    resume_seconds=$(printf '%s' "$line" | cut -f6)
+
+    continue_action=$(head -n 1 "$continue_action_file" 2>/dev/null | tr -d '\r\n')
+    rm -f "$continue_action_file"
+    if [ "$continue_action" = "x" ]; then
+      printf 'Remove\tremove\nCancel\tcancel\n' >/tmp/pocketstremio-remove-confirm.tsv
+      remove_choice=$(select_from_file "Remove $title?" /tmp/pocketstremio-remove-confirm.tsv \
+        "A confirm  B cancel")
+      if [ "$remove_choice" != "Remove" ]; then
+        log "continue watching remove canceled type=$type id=$id"
+        continue
+      fi
+      if api_post_continue_remove "$type" "$id" >/dev/null; then
+        log "continue watching removed type=$type id=$id"
+        message "Continue Watching" "Removed"
+        continue
+      fi
+      message "Continue Watching" "Could not remove item"
+      return 1
+    fi
+
+    log "continue selected type=$type id=$id position_seconds=$resume_seconds"
+    media_flow "$type" "$id" "$title" "$year" "$resume_seconds"
+    return $?
+  done
 }
 
 quick_resume_flow() {
@@ -1415,6 +2009,34 @@ select_audio_track() {
   track_count=$("$JQ" -r --arg id "$stream_id" '
     [.items[] | select(.id == $id) | (.compatibility.audio_tracks // [])[]] | length
   ' /tmp/pocketstremio-streams.json)
+  if [ -n "$AUDIO_LANGUAGES" ]; then
+    preferred_index=$("$JQ" -r --arg id "$stream_id" \
+      --arg preferences "$AUDIO_LANGUAGES" '
+      ($preferences | split(",") | map(ascii_downcase)) as $preferred |
+      [.items[] | select(.id == $id) | (.compatibility.audio_tracks // [])[]] as $tracks |
+      [range(0; $preferred | length) as $rank |
+        $tracks[] | select((.language // "" | ascii_downcase) == $preferred[$rank]) |
+        {rank:$rank, ordinal:.ordinal}] |
+      sort_by(.rank, .ordinal) | (.[0].ordinal // "")
+    ' /tmp/pocketstremio-streams.json)
+    if [ -n "$preferred_index" ]; then
+      log "preferred audio selected stream_id=$stream_id index=$preferred_index languages=$AUDIO_LANGUAGES"
+      printf '%s' "$preferred_index"
+      return 0
+    fi
+    case "$AUDIO_FALLBACK" in
+      first)
+        log "preferred audio unavailable; using first verified track stream_id=$stream_id"
+        printf '0'
+        return 0
+        ;;
+      stop)
+        log "preferred audio unavailable stream_id=$stream_id languages=$AUDIO_LANGUAGES"
+        printf 'unavailable'
+        return 0
+        ;;
+    esac
+  fi
   case "$track_count" in
     ''|0|1) printf '0'; return 0 ;;
   esac
@@ -1450,22 +2072,61 @@ streams_flow() {
   source_filter=""
   audio_filter=""
   if [ "${POCKETSTREMIO_DRY_RUN:-0}" != "1" ]; then
+    if [ -n "$AUDIO_LANGUAGES" ]; then
+      audio_filter=$("$JQ" -r --arg preferences "$AUDIO_LANGUAGES" \
+        --arg failed_ids "$FAILED_STREAM_IDS" '
+        ($preferences | split(",") | map(ascii_downcase)) as $preferred |
+        [.items[] | select(.playable == true) | . as $stream
+          | select(($failed_ids | contains("|" + $stream.id + "|")) | not)
+          | (.compatibility.audio_languages // [])[] | ascii_downcase] as $available |
+        [$preferred[] as $language
+          | select($available | index($language)) | $language] |
+        (.[0] // "")
+      ' /tmp/pocketstremio-streams.json)
+      if [ -n "$audio_filter" ]; then
+        audio_filter_name=$(language_order_names "$audio_filter")
+        log "using saved audio language=$audio_filter_name code=$audio_filter order=$AUDIO_LANGUAGES"
+      else
+        case "$AUDIO_FALLBACK" in
+          stop)
+            preferred_names=$(language_order_names "$AUDIO_LANGUAGES")
+            log "no stream matches saved audio order=$AUDIO_LANGUAGES"
+            message "PocketStremio" "No playable stream has verified $preferred_names audio"
+            return 0
+            ;;
+          first)
+            log "no stream matches saved audio order; allowing first verified track"
+            ;;
+          ask)
+            log "no stream matches saved audio order; asking for available language"
+            ;;
+        esac
+      fi
+    fi
+
     printf 'All sources\tall\n' > /tmp/pocketstremio-source-filters.tsv
-    "$JQ" -r '.items[] | select(.playable == true) | (.source_label // .name) + "\t" + (.source_label // .name)' \
+    "$JQ" -r --arg failed_ids "$FAILED_STREAM_IDS" --arg audio_filter "$audio_filter" '
+      .items[] | select(.playable == true) | . as $stream
+      | select(($failed_ids | contains("|" + $stream.id + "|")) | not)
+      | select(($audio_filter == "") or (($stream.compatibility.audio_languages // []) | map(ascii_downcase) | any(. == ($audio_filter | ascii_downcase))))
+      | (.source_label // .name) + "\t" + (.source_label // .name)
+    ' \
       /tmp/pocketstremio-streams.json | sort -u >> /tmp/pocketstremio-source-filters.tsv
     selected_source=$(select_from_file "Stream source" /tmp/pocketstremio-source-filters.tsv)
     if [ -n "$selected_source" ] && [ "$selected_source" != "All sources" ]; then
       source_filter="$selected_source"
     fi
 
-    printf 'All audio languages\t\n' > /tmp/pocketstremio-audio-filters.tsv
-    "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[]' \
-      /tmp/pocketstremio-streams.json | sort -u | while IFS= read -r language; do
-        [ -n "$language" ] && printf '%s (verified)\t%s\n' "$language" "$language"
-      done >> /tmp/pocketstremio-audio-filters.tsv
-    selected_audio=$(select_from_file "Audio language (verified tags)" /tmp/pocketstremio-audio-filters.tsv)
-    if [ -n "$selected_audio" ]; then
-      audio_filter=$(grep -F "$selected_audio	" /tmp/pocketstremio-audio-filters.tsv | head -n 1 | cut -f2)
+    if [ -z "$AUDIO_LANGUAGES" ] || { [ -z "$audio_filter" ] && [ "$AUDIO_FALLBACK" = "ask" ]; }; then
+      printf 'All audio languages\t\n' > /tmp/pocketstremio-audio-filters.tsv
+      "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[]' \
+        /tmp/pocketstremio-streams.json | sort -u | while IFS= read -r language; do
+          [ -n "$language" ] && printf '%s (verified)\t%s\n' "$language" "$language"
+        done >> /tmp/pocketstremio-audio-filters.tsv
+      selected_audio=$(select_from_file "Audio language (verified tags)" /tmp/pocketstremio-audio-filters.tsv)
+      if [ -n "$selected_audio" ]; then
+        audio_filter=$(grep -F "$selected_audio	" /tmp/pocketstremio-audio-filters.tsv | head -n 1 | cut -f2)
+      fi
     fi
   fi
 
@@ -1500,13 +2161,24 @@ streams_flow() {
     stream_id=$(printf '%s' "$line" | cut -f2)
     log "selected stream_id=$stream_id name=$selected"
 
+    stream_audio_codes=$("$JQ" -r --arg id "$stream_id" '
+      [.items[] | select(.id == $id) | (.compatibility.audio_languages // [])[]]
+      | join(",")
+    ' /tmp/pocketstremio-streams.json)
+    if [ -n "$stream_audio_codes" ]; then
+      stream_audio_names=$(language_order_names "$stream_audio_codes" | cut -c 1-52)
+    else
+      stream_audio_names="Unverified"
+    fi
     "$JQ" -r --arg id "$stream_id" '.items[] | select(.id == $id) |
       ("Source: " + (.source_label // .name)),
       ("Release: " + ((.release_label // "not provided") | .[0:42])),
       ("Media: " + ((.compatibility.width // "?")|tostring) + "x" + ((.compatibility.height // "?")|tostring) + " " + (.compatibility.video_codec // "?") + "/" + (.compatibility.audio_codec // "?")),
-      ("Mode: " + ((.playback_mode // "check") | ascii_upcase)),
-      "Use this stream"' /tmp/pocketstremio-streams.json |
+      ("Mode: " + ((.playback_mode // "check") | ascii_upcase))' /tmp/pocketstremio-streams.json |
       while IFS= read -r detail; do printf '%s\t%s\n' "$detail" "$detail"; done >/tmp/pocketstremio-stream-details.tsv
+    printf 'Audio: %s\tAudio: %s\nUse this stream\tUse this stream\n' \
+      "$stream_audio_names" "$stream_audio_names" \
+      >>/tmp/pocketstremio-stream-details.tsv
     while :; do
       detail_choice=$(select_from_file "Stream Details" /tmp/pocketstremio-stream-details.tsv)
       [ "$detail_choice" = "Use this stream" ] && break
@@ -1515,6 +2187,10 @@ streams_flow() {
     [ "$detail_choice" = "Use this stream" ] || continue
     audio_stream_index=$(select_audio_track "$stream_id")
     [ "$audio_stream_index" = "back" ] && continue
+    if [ "$audio_stream_index" = "unavailable" ]; then
+      message "PocketStremio" "Preferred audio language is unavailable"
+      continue
+    fi
     log "selected audio_stream_index=$audio_stream_index"
 
     if [ "$FIELD_TEST" = "1" ]; then
@@ -1601,7 +2277,9 @@ play_selected_stream() {
   if [ "$MATROSKA_SUBTITLES" = "1" ]; then
     subtitle_id=none
     start_loading "PocketStremio" "Preparing video and selectable subtitles..."
-    api_get "/api/subtitles/$type/$id?stream_id=$stream_id&all=1" \
+    subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id&all=1&max_per_language=$MAX_SUBTITLES_PER_LANGUAGE"
+    [ -n "$SUBTITLE_LANGUAGES" ] && subtitle_query="$subtitle_query&languages=$SUBTITLE_LANGUAGES"
+    api_get "$subtitle_query" \
       >/tmp/pocketstremio-subtitles.json
     subtitle_lookup_rc=$?
     if [ "$subtitle_lookup_rc" -ne 0 ]; then
@@ -1613,11 +2291,12 @@ play_selected_stream() {
     subtitle_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-subtitles.json)
     if [ "$subtitle_count" -le 0 ] 2>/dev/null; then
       stop_loading
-      subtitle_error=$("$JQ" -r '.unavailable_reason // "No supported English subtitles are available"' \
+      subtitle_error=$("$JQ" -r '.unavailable_reason // "No preferred-language subtitles are available"' \
         /tmp/pocketstremio-subtitles.json 2>/dev/null)
       log "matroska subtitle discovery returned no supported tracks message=$subtitle_error"
-      message "PocketStremio" "$subtitle_error"
-      return 1
+      fallback_matroska_playback "no-preferred-subtitles" "$type" "$id" "$title" \
+        "$year" "$resume_seconds" "$stream_id" "$audio_stream_index"
+      return $?
     fi
     log "matroska subtitle discovery cached tracks=$subtitle_count"
   else
@@ -1719,7 +2398,12 @@ play_selected_stream() {
   log "playback url received"
   if [ "$MATROSKA_SUBTITLES" != "1" ]; then
     stop_loading
-    start_loading "PocketStremio" "Starting video..."
+    if [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
+      start_loading "PocketStremio" \
+        "Starting video... Subtitles are fixed; R1 switching is unavailable."
+    else
+      start_loading "PocketStremio" "Starting video..."
+    fi
   fi
   playback_result=0
   nonseekable_mode=0
@@ -1760,6 +2444,9 @@ select_subtitle() {
   subtitle_all=0
   while :; do
     subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id"
+    if [ -n "$SUBTITLE_LANGUAGES" ]; then
+      subtitle_query="$subtitle_query&languages=$SUBTITLE_LANGUAGES"
+    fi
     [ "$subtitle_all" = "1" ] && subtitle_query="$subtitle_query&all=1"
     start_loading "PocketStremio" "Loading subtitles..."
     api_get "$subtitle_query" >/tmp/pocketstremio-subtitles.json
@@ -1777,6 +2464,22 @@ select_subtitle() {
       printf '%s' "none"
       return 0
     fi
+    if [ -n "$SUBTITLE_LANGUAGES" ] && [ "$subtitle_all" = "0" ]; then
+      if [ "$count" -gt 0 ] 2>/dev/null; then
+        subtitle_id=$("$JQ" -r '.items[0].id // "none"' \
+          /tmp/pocketstremio-subtitles.json)
+        subtitle_lang=$("$JQ" -r '.items[0].lang // ""' \
+          /tmp/pocketstremio-subtitles.json)
+        log "preferred subtitle selected id=$subtitle_id language=$subtitle_lang order=$SUBTITLE_LANGUAGES"
+        printf '%s' "$subtitle_id"
+        return 0
+      fi
+      if [ "$SUBTITLE_FALLBACK" = "none" ]; then
+        log "preferred subtitle unavailable; using none order=$SUBTITLE_LANGUAGES"
+        printf '%s' "none"
+        return 0
+      fi
+    fi
     if [ "$count" = "0" ] && [ "$other_count" = "0" ]; then
       printf '%s' "none"
       return 0
@@ -1785,7 +2488,11 @@ select_subtitle() {
     printf 'No subtitles\tnone\n' >/tmp/pocketstremio-subtitles.tsv
     "$JQ" -r '.items[] | "\(.name) [\(.lang)]\t\(.id)"' /tmp/pocketstremio-subtitles.json >>/tmp/pocketstremio-subtitles.tsv
     if [ "$subtitle_all" != "1" ] && [ "$other_count" -gt 0 ]; then
-      printf 'Show other English subtitles\tmore\n' >>/tmp/pocketstremio-subtitles.tsv
+      if [ -n "$SUBTITLE_LANGUAGES" ]; then
+        printf 'Show other preferred subtitles\tmore\n' >>/tmp/pocketstremio-subtitles.tsv
+      else
+        printf 'Show other English subtitles\tmore\n' >>/tmp/pocketstremio-subtitles.tsv
+      fi
     fi
     selected=$(select_from_file "Select Subtitles" /tmp/pocketstremio-subtitles.tsv)
     if [ -z "$selected" ]; then
@@ -1811,6 +2518,7 @@ else
   transport="direct"
 fi
 log "PocketStremio UI start server=$SERVER_BASE transport=$transport"
+log "preferences audio=${AUDIO_LANGUAGES:-manual}/$AUDIO_FALLBACK subtitles=${SUBTITLE_LANGUAGES:-manual}/$SUBTITLE_FALLBACK matroska_max=$MAX_SUBTITLES_PER_LANGUAGE"
 if [ -n "$CONFIG_ERROR" ]; then
   log "configuration error=$CONFIG_ERROR"
   message "PocketStremio" "$CONFIG_ERROR"

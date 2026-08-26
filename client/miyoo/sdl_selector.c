@@ -81,6 +81,17 @@ static void log_msg(const char *path, const char *msg) {
     fclose(f);
 }
 
+static int write_action(const char *path, const char *action) {
+    FILE *f;
+    int ok;
+    if (!path || !*path || !action || !*action) return 0;
+    f = fopen(path, "w");
+    if (!f) return 0;
+    ok = fprintf(f, "%s\n", action) >= 0;
+    if (fclose(f) != 0) ok = 0;
+    return ok;
+}
+
 static void rect(SDL_Surface *screen, int x, int y, int w, int h, Uint32 color) {
     SDL_Rect r = {screen->w - x - w, screen->h - y - h, w, h};
     SDL_FillRect(screen, &r, color);
@@ -235,6 +246,7 @@ int main(int argc, char **argv) {
     const char *log_path = getenv("POCKETSTREMIO_SELECTOR_LOG");
     const char *dynamic_first_item_path =
         getenv("POCKETSTREMIO_DYNAMIC_FIRST_ITEM_FILE");
+    const char *x_action_path = getenv("POCKETSTREMIO_SELECTOR_X_ACTION_FILE");
     char *items[MAX_ITEMS];
     char line[MAX_LINE];
     char qr_text[MAX_QR_TEXT];
@@ -286,6 +298,7 @@ int main(int argc, char **argv) {
     int selected = 0;
     int done = 0;
     int rc = 1;
+    const char *result_action = "cancel";
     Uint32 last_dynamic_check = 0;
     if (!qr_mode) {
         update_dynamic_first_item(items, count, dynamic_first_item_path);
@@ -333,17 +346,30 @@ int main(int argc, char **argv) {
                 }
             } else if (key == SDLK_SPACE || key == SDLK_RETURN || key == SDLK_LALT) {
                 rc = 0;
+                result_action = qr_mode ? "refresh" : "select";
                 done = 1;
+            } else if (!qr_mode && key == SDLK_LSHIFT &&
+                       x_action_path && *x_action_path) {
+                if (write_action(x_action_path, "x")) {
+                    rc = 0;
+                    result_action = "x";
+                    done = 1;
+                } else {
+                    log_msg(log_path, "sdl-selector could not write X action");
+                }
             } else if (key == SDLK_LCTRL || key == SDLK_ESCAPE || key == SDLK_BACKSPACE) {
                 rc = 1;
+                result_action = "cancel";
                 done = 1;
             }
         }
     }
 
     char buf[160];
-    snprintf(buf, sizeof(buf), "sdl-selector exit rc=%d selected_index=%d selected_value=%s",
-             rc, selected, rc == 0 ? (qr_mode ? "refresh" : items[selected]) : "");
+    snprintf(buf, sizeof(buf),
+             "sdl-selector exit rc=%d action=%s selected_index=%d selected_value=%s",
+             rc, result_action, selected,
+             rc == 0 ? (qr_mode ? "refresh" : items[selected]) : "");
     log_msg(log_path, buf);
 
     SDL_Quit();

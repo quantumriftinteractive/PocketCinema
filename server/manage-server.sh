@@ -19,6 +19,7 @@ usage() {
     "  --local-media-root PATH" \
     "  --enable-field-test" \
     "  --enable-matroska-subtitles"
+    "  --disable-matroska-subtitles"
 }
 
 ACTION="${1:-status}"
@@ -49,7 +50,7 @@ FFPROBE_PATH="${POCKETSTREMIO_FFPROBE:-}"
 FFMPEG_PATH="${POCKETSTREMIO_FFMPEG:-}"
 LOCAL_MEDIA_ROOT="${POCKETSTREMIO_LOCAL_MEDIA_ROOT:-}"
 ENABLE_FIELD_TEST="${POCKETSTREMIO_ENABLE_FIELD_TEST:-0}"
-ENABLE_MATROSKA_SUBTITLES="${POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES:-0}"
+ENABLE_MATROSKA_SUBTITLES="${POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES:-1}"
 PYTHON="${POCKETSTREMIO_PYTHON:-}"
 
 while [ "$#" -gt 0 ]; do
@@ -68,6 +69,7 @@ while [ "$#" -gt 0 ]; do
     --local-media-root) LOCAL_MEDIA_ROOT="$2"; shift 2 ;;
     --enable-field-test) ENABLE_FIELD_TEST=1; shift ;;
     --enable-matroska-subtitles) ENABLE_MATROSKA_SUBTITLES=1; shift ;;
+    --disable-matroska-subtitles) ENABLE_MATROSKA_SUBTITLES=0; shift ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac

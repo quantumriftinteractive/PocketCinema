@@ -1340,7 +1340,82 @@ class PocketStremioServerTest(unittest.TestCase):
         )
         self.assertEqual(status, 409)
         self.assertEqual(error["error"], "subtitles_unavailable")
-        self.assertIn("English subtitles", error["message"])
+        self.assertIn("preferred-language subtitles", error["message"])
+
+    def test_matroska_subtitle_mode_selects_bounded_preferred_language_tracks(self):
+        stream_id = "matroska-multi-language-stream"
+        upstream_url = "https://cdn.example/multi-language.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id, "name": "Multi-language", "url": upstream_url
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {"status": "confirmed", "container": "mp4", "video_codec": "h264",
+             "audio_codec": "aac", "width": 640, "height": 360},
+        )
+        for language in ("eng", "ell"):
+            for index in range(4):
+                subtitle_id = f"{language}-{index}"
+                self.server.subtitle_cache[subtitle_id] = {
+                    "id": subtitle_id, "name": f"{language} {index}", "lang": language,
+                    "item_type": "movie", "item_id": "tt0000003",
+                    "local_path": str(self.server.fixture_dir / "test-subtitle.srt"),
+                }
+        self.server.ffmpeg_path = "test-ffmpeg"
+        self.server.matroska_subtitles_enabled = True
+        _, play = self.post_json(
+            "/api/play",
+            {"type": "movie", "id": "tt0000003", "stream_id": stream_id,
+             "subtitle_id": "none", "matroska_subtitles": True,
+             "subtitle_languages": ["ell", "eng"],
+             "max_subtitles_per_language": 2},
+        )
+        self.assertEqual(
+            [(track["lang"], track["id"]) for track in play["subtitle_tracks"]],
+            [("ell", "ell-0"), ("ell", "ell-1"), ("eng", "eng-0"), ("eng", "eng-1")],
+        )
+        self.assertNotIn(upstream_url, json.dumps(play))
+
+        transport = b"\x1a\x45\xdf\xa3" + b"matroska-subtitle-pack"
+
+        class FakeProcess:
+            def __init__(self):
+                self.stdout = io.BytesIO(transport)
+                self.stderr = io.BytesIO()
+
+            def poll(self):
+                return 0
+
+            def wait(self, timeout=None):
+                del timeout
+                return 0
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        with mock.patch.object(
+            pocket.subprocess, "Popen", return_value=FakeProcess()
+        ):
+            with urllib.request.urlopen(play["subtitle_pack_url"], timeout=5) as response:
+                self.assertEqual(response.headers["Content-Type"], "video/x-matroska")
+                self.assertEqual(response.read(), transport)
+        self.assertEqual(list(self.server.transcode_dir.iterdir()), [])
+
+    def test_matroska_subtitle_packaging_supports_six_tracks_and_languages(self):
+        command = transcoding.build_subtitles_matroska_command(
+            "ffmpeg",
+            [(f"{language}-{index}.srt", "srt", f"{language} {index}", language)
+             for language in ("eng", "ell") for index in range(3)],
+        )
+        serialized = " ".join(command)
+        self.assertEqual(command.count("-map"), 6)
+        self.assertIn("language=eng", serialized)
+        self.assertIn("language=ell", serialized)
+        self.assertIn("ell-2.srt", command)
+        self.assertNotIn("https://", serialized)
 
     def test_optional_compatibility_fixtures_are_allowlisted_and_opaque(self):
         vp8_path = self.server.media_dir / "compat-vp8-vorbis.webm"
@@ -1404,6 +1479,70 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertNotIn("url", subtitle)
         self.assertEqual(
             self.server.subtitle_cache[subtitle["id"]]["url"], upstream_url
+        )
+
+    def test_subtitle_languages_are_bounded_normalized_and_ordered(self):
+        self.server.stream_addons = [
+            {
+                "name": "Test subtitles",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+        with mock.patch.object(
+            pocket,
+            "fetch_json",
+            return_value={
+                "subtitles": [
+                    {
+                        "url": "https://cdn.example/japanese.srt",
+                        "lang": "ja-JP",
+                        "name": "Japanese",
+                    },
+                    {
+                        "url": "https://cdn.example/english.srt",
+                        "lang": "en-US",
+                        "name": "English",
+                    },
+                    {
+                        "url": "https://cdn.example/spanish.srt",
+                        "lang": "es",
+                        "name": "Spanish",
+                    },
+                    {
+                        "url": "https://cdn.example/greek.srt",
+                        "lang": "gre",
+                        "name": "Greek",
+                    },
+                ]
+            },
+        ):
+            _, preferred = self.get_json(
+                "/api/subtitles/movie/tt0078748?all=1&languages=jpn,spa,eng"
+            )
+            _, default = self.get_json("/api/subtitles/movie/tt0078748?all=1")
+        self.assertEqual(
+            [subtitle["lang"] for subtitle in preferred["items"]],
+            ["jpn", "spa", "eng"],
+        )
+        self.assertEqual(
+            [subtitle["lang"] for subtitle in default["items"]], ["eng"]
+        )
+
+    def test_language_aliases_cover_name_picker_catalog_conventions(self):
+        aliases = {
+            "tr-TR": "tur",
+            "ja-JP": "jpn",
+            "de": "deu",
+            "fre": "fra",
+            "chi": "zho",
+            "pt-BR": "por",
+        }
+        self.assertEqual(
+            {
+                raw: playback_compatibility.normalize_language_tag(raw)
+                for raw in aliases
+            },
+            aliases,
         )
 
     def test_subtitle_default_filters_weak_matches_with_explicit_fallback(self):
@@ -1871,14 +2010,14 @@ segments.ts
                     "codec_name": "aac",
                     "sample_rate": "48000",
                     "channels": 2,
-                    "tags": {"language": "eng", "title": "English"},
+                    "tags": {"language": "en-US", "title": "English"},
                 },
                 {
                     "codec_type": "audio",
                     "codec_name": "aac",
                     "sample_rate": "48000",
                     "channels": 2,
-                    "tags": {"language": "spa", "title": "Spanish"},
+                    "tags": {"language": "es", "title": "Spanish"},
                 },
             ],
         }
@@ -2073,6 +2212,53 @@ segments.ts
         self.assertFalse(completed["saved"])
         _, listing = self.get_json("/api/continue-watching")
         self.assertEqual(listing["count"], 0)
+
+    def test_continue_watching_removes_only_the_selected_item(self):
+        first = {
+            "type": "movie",
+            "id": "tt1254207",
+            "title": "Big Buck Bunny",
+            "year": 2008,
+            "position_seconds": 2,
+            "duration_seconds": 596,
+        }
+        second = {
+            "type": "series",
+            "id": "tt0055662:1:1",
+            "title": "The Beverly Hillbillies - S1E1",
+            "year": 1962,
+            "position_seconds": 44,
+            "duration_seconds": 1500,
+        }
+        self.post_json("/api/progress", first)
+        self.post_json("/api/progress", second)
+
+        _, removed = self.post_json(
+            "/api/continue-watching/remove",
+            {"type": first["type"], "id": first["id"]},
+        )
+        self.assertTrue(removed["removed"])
+        _, listing = self.get_json("/api/continue-watching")
+        self.assertEqual(listing["count"], 1)
+        self.assertEqual(listing["items"][0]["id"], second["id"])
+
+        reloaded = pocket.ProgressStore(self.server.progress_store.path)
+        self.assertEqual(
+            [item["id"] for item in reloaded.list_items()], [second["id"]]
+        )
+
+        _, repeated = self.post_json(
+            "/api/continue-watching/remove",
+            {"type": first["type"], "id": first["id"]},
+        )
+        self.assertFalse(repeated["removed"])
+
+    def test_continue_watching_remove_rejects_missing_identity(self):
+        status, payload = self.post_json_error(
+            "/api/continue-watching/remove", {"type": "movie"}
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["error"], "invalid_progress")
 
     def test_continue_watching_repairs_generic_saved_title(self):
         self.post_json(

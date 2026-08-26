@@ -50,6 +50,12 @@ DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
 MAX_LIVE_TV_ITEMS = 128
 MAX_SUBTITLE_BYTES = 2 * 1024 * 1024
+MAX_SUBTITLE_LANGUAGE_PREFERENCES = 5
+DEFAULT_MAX_SUBTITLES_PER_LANGUAGE = 3
+MAX_SUBTITLES_PER_LANGUAGE = 3
+MAX_TOTAL_SUBTITLE_TRACKS = (
+    MAX_SUBTITLE_LANGUAGE_PREFERENCES * MAX_SUBTITLES_PER_LANGUAGE
+)
 MAX_STREAM_LIST_PREFLIGHT = 12
 MAX_STREAM_LIST_PREFLIGHT_WORKERS = 4
 COMPATIBILITY_FIXTURES = (
@@ -206,6 +212,54 @@ def nonnegative_int(value):
         return max(0, int(float(value or 0)))
     except (TypeError, ValueError):
         return 0
+
+
+def bounded_positive_int(value, default, maximum):
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+    if parsed < 1:
+        return default
+    return min(parsed, maximum)
+
+
+def normalize_subtitle_languages(values):
+    if isinstance(values, str):
+        values = values.split(",")
+    languages = []
+    for value in values or []:
+        language = playback_compatibility.normalize_language_tag(value)
+        if language and language not in languages:
+            languages.append(language)
+        if len(languages) >= MAX_SUBTITLE_LANGUAGE_PREFERENCES:
+            break
+    return languages or ["eng"]
+
+
+def select_subtitle_tracks(subtitles, languages=None, max_per_language=None):
+    """Keep ranked subtitle candidates in preferred-language order."""
+    ordered_languages = normalize_subtitle_languages(languages)
+    per_language = bounded_positive_int(
+        max_per_language,
+        DEFAULT_MAX_SUBTITLES_PER_LANGUAGE,
+        MAX_SUBTITLES_PER_LANGUAGE,
+    )
+    selected = []
+    seen = set()
+    for language in ordered_languages:
+        count = 0
+        for subtitle in subtitles:
+            if subtitle.get("lang") != language or subtitle.get("id") in seen:
+                continue
+            seen.add(subtitle.get("id"))
+            selected.append(subtitle)
+            count += 1
+            if count >= per_language or len(selected) >= MAX_TOTAL_SUBTITLE_TRACKS:
+                break
+        if len(selected) >= MAX_TOTAL_SUBTITLE_TRACKS:
+            break
+    return selected
 
 
 class PublicMediaRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -725,6 +779,19 @@ class ProgressStore:
             self._save()
             return dict(item)
 
+    def remove(self, item_type, item_id):
+        item_type = str(item_type or "").strip()[:32]
+        item_id = str(item_id or "").strip()[:160]
+        if not item_type or not item_id:
+            raise ValueError("type and id are required")
+
+        key = self.key(item_type, item_id)
+        with self.lock:
+            removed = self.items.pop(key, None) is not None
+            if removed:
+                self._save()
+            return removed
+
 
 class PocketStremioHandler(BaseHTTPRequestHandler):
     server_version = "PocketStremio/0.9"
@@ -909,6 +976,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/progress":
             self.handle_progress()
             return
+        if parsed.path == "/api/continue-watching/remove":
+            self.handle_remove_progress()
+            return
         if parsed.path == "/api/account/link":
             self.handle_account_link()
             return
@@ -992,6 +1062,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         matroska_subtitles = bool(payload.get("matroska_subtitles")) and getattr(
             self.server, "matroska_subtitles_enabled", False
         )
+        subtitle_languages = normalize_subtitle_languages(
+            payload.get("subtitle_languages")
+        )
+        max_subtitles_per_language = bounded_positive_int(
+            payload.get("max_subtitles_per_language"),
+            DEFAULT_MAX_SUBTITLES_PER_LANGUAGE,
+            MAX_SUBTITLES_PER_LANGUAGE,
+        )
         if field_test and matroska_subtitles:
             self.write_json({"error": "invalid_subtitle_mode"}, status=400)
             return
@@ -1020,26 +1098,25 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 ) != payload.get("id"):
                     self.write_json({"error": "subtitle_mismatch"}, status=409)
                     return
-                matroska_tracks.append(subtitle)
-            for candidate in self.server.subtitle_cache.values():
-                if len(matroska_tracks) >= 3:
-                    break
-                if (
-                    candidate.get("id") in {
-                        track.get("id") for track in matroska_tracks
-                    }
-                    or candidate.get("item_type") != payload.get("type")
-                    or candidate.get("item_id") != payload.get("id")
-                    or str(candidate.get("lang") or "").lower()
-                    not in {"eng", "en", "english"}
-                ):
-                    continue
-                matroska_tracks.append(candidate)
+                subtitle_candidates = [subtitle]
+            else:
+                subtitle_candidates = []
+            subtitle_candidates.extend(
+                candidate
+                for candidate in self.server.subtitle_cache.values()
+                if candidate.get("item_type") == payload.get("type")
+                and candidate.get("item_id") == payload.get("id")
+            )
+            matroska_tracks = select_subtitle_tracks(
+                subtitle_candidates,
+                subtitle_languages,
+                max_subtitles_per_language,
+            )
             if not matroska_tracks:
                 self.write_json(
                     {
                         "error": "subtitles_unavailable",
-                        "message": "No supported English subtitles are available",
+                        "message": "No preferred-language subtitles are available",
                     },
                     status=409,
                 )
@@ -1141,7 +1218,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 "field_test": field_test,
                 "matroska_subtitles": matroska_subtitles,
                 "subtitle_tracks": [
-                    {"id": track.get("id", ""), "name": track.get("name", "English")[:80]}
+                    {
+                        "id": track.get("id", ""),
+                        "name": track.get("name", "English")[:80],
+                        "lang": track.get("lang", "und"),
+                    }
                     for track in matroska_tracks
                 ],
                 "subtitle_pack_url": (
@@ -1186,6 +1267,21 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json({"error": "invalid_progress", "message": str(exc)}, status=400)
             return
         self.write_json({"saved": item is not None, "item": item})
+
+    def handle_remove_progress(self):
+        payload = self.read_json_body()
+        if payload is None:
+            return
+        try:
+            removed = self.server.progress_store.remove(
+                payload.get("type"), payload.get("id")
+            )
+        except (OSError, ValueError) as exc:
+            self.write_json(
+                {"error": "invalid_progress", "message": str(exc)}, status=400
+            )
+            return
+        self.write_json({"removed": removed})
 
     def handle_account_addons(self, parsed):
         query = urllib.parse.parse_qs(parsed.query)
@@ -1769,6 +1865,24 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
         include_all = query.get("all", [""])[0].lower() in {"1", "true", "yes"}
+        requested_languages = []
+        for value in query.get("languages", ["eng"])[0].split(","):
+            language = playback_compatibility.normalize_language_tag(value)
+            if language and language not in requested_languages:
+                requested_languages.append(language)
+            if len(requested_languages) >= MAX_SUBTITLE_LANGUAGE_PREFERENCES:
+                break
+        if not requested_languages:
+            requested_languages = ["eng"]
+        max_per_language = bounded_positive_int(
+            query.get("max_per_language", [None])[0],
+            DEFAULT_MAX_SUBTITLES_PER_LANGUAGE,
+            MAX_SUBTITLES_PER_LANGUAGE,
+        )
+        language_rank = {
+            language: rank for rank, language in enumerate(requested_languages)
+        }
+        language_names = {"eng": "English", "spa": "Spanish", "ell": "Greek"}
         stream = self.server.stream_cache.get(query.get("stream_id", [""])[0], {})
         subtitles = []
 
@@ -1787,7 +1901,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             )
             return
 
-        if item_type == "movie" and item_id == BIG_BUCK_BUNNY_ID:
+        if (
+            "eng" in language_rank
+            and item_type == "movie"
+            and item_id == BIG_BUCK_BUNNY_ID
+        ):
             fixture = self.server.fixture_dir / "test-subtitle.srt"
             if fixture.is_file():
                 subtitles.append(
@@ -1840,13 +1958,17 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         f"a{addon_index}-sub-"
                         f"{hashlib.sha1(subtitle_url.encode()).hexdigest()[:10]}"
                     )
-                    lang = str(raw.get("lang") or raw.get("language") or "und")
-                    if lang.lower() not in {"en", "eng", "english"}:
+                    lang = playback_compatibility.normalize_language_tag(
+                        raw.get("lang") or raw.get("language")
+                    )
+                    if lang not in language_rank:
                         continue
                     subtitles.append(
                         {
                             "id": subtitle_id,
-                            "name": safe_addon_text(raw.get("name"), "English"),
+                            "name": safe_addon_text(
+                                raw.get("name"), language_names.get(lang, lang.upper())
+                            ),
                             "lang": lang,
                             "source": addon.get("name") or addon["manifest_url"],
                             "url": subtitle_url,
@@ -1884,12 +2006,15 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             for raw in raw_subtitles:
                 if not isinstance(raw, dict):
                     continue
-                lang = str(raw.get("lang") or raw.get("language") or "und")
-                if lang.lower() not in {"en", "eng", "english"}:
+                lang = playback_compatibility.normalize_language_tag(
+                    raw.get("lang") or raw.get("language")
+                )
+                if lang not in language_rank:
                     continue
                 subtitle_url = raw.get("url")
                 subtitle_name = safe_addon_text(
-                    raw.get("title") or raw.get("name"), "English"
+                    raw.get("title") or raw.get("name"),
+                    language_names.get(lang, lang.upper()),
                 )
                 normalized_name = subtitle_name.casefold()
                 if (
@@ -1908,7 +2033,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     {
                         "id": subtitle_id,
                         "name": subtitle_name,
-                        "lang": "eng",
+                        "lang": lang,
                         "source": f"Stremio account: {source['name']}",
                         "url": subtitle_url,
                         "item_type": item_type,
@@ -1921,6 +2046,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             if len(subtitles) >= 40:
                 break
 
+        subtitles.sort(key=lambda subtitle: language_rank.get(subtitle["lang"], 99))
+        if include_all:
+            subtitles = select_subtitle_tracks(
+                subtitles, requested_languages, max_per_language
+            )
         for subtitle in subtitles:
             self.server.subtitle_cache[subtitle["id"]] = subtitle
         strong_subtitles = [
@@ -2470,7 +2600,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         subtitle_paths = []
         process = None
         try:
-            for subtitle in tuple(subtitles)[:3]:
+            for subtitle in tuple(subtitles):
                 path = self.download_transcode_subtitle(
                     subtitle.get("url", ""), subtitle.get("local_path", "")
                 )
@@ -2483,7 +2613,13 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     )
                     path.unlink(missing_ok=True)
                     path = shifted_path
-                subtitle_paths.append((path, subtitle.get("name", "English")))
+                subtitle_paths.append(
+                    (
+                        path,
+                        subtitle.get("name", "Subtitle"),
+                        subtitle.get("lang", "und"),
+                    )
+                )
             if not subtitle_paths:
                 raise OSError("No subtitle tracks are available")
             command = transcoding.build_subtitles_matroska_command(
@@ -2493,8 +2629,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         path.name,
                         "webvtt" if path.suffix == ".vtt" else "srt",
                         name,
+                        language,
                     )
-                    for path, name in subtitle_paths
+                    for path, name, language in subtitle_paths
                 ],
             )
             process = subprocess.Popen(
@@ -2535,7 +2672,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     process.stdout.close()
                 if process.stderr is not None:
                     process.stderr.close()
-            for path, _name in subtitle_paths:
+            for path, _name, _language in subtitle_paths:
                 path.unlink(missing_ok=True)
             self.close_connection = True
 
