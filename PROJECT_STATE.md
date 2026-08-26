@@ -137,14 +137,15 @@ accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `db801417de41902d4a714905418ec9d0552723dc`
+Checkpoint commit: `42b0861dfdf6853cbcc974f55401c1d7b15c8fd7`
 Remote verified: YES
-Machine: Windows development checkout
+Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
-- Reconciled the Windows and macOS work on `main` without losing either line.
+- Added the permanent session bootstrap, pause/machine-switch handoff protocol,
+  verified-checkpoint rules, and read-only cross-platform status reporting.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
@@ -154,6 +155,8 @@ Physically confirmed:
 Implemented/tested but not physically confirmed:
 - Milestone 21 language-priority reordering and remaining settings/preferences
   acceptance work.
+- Both checkpoint-status implementations parse and run; no Miyoo product
+  behavior changed and no device test applies to the protocol itself.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
