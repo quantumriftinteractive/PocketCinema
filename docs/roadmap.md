@@ -717,6 +717,21 @@ and saved progress at 185 seconds.
   explicit fallback choice; never infer language solely from a filename.
 - Apply preferences to server-normalized tracks and subtitle results without
   exposing addon transports or media URLs.
+- When one or more preferred audio languages are present, hide unrelated
+  languages and automatically choose the highest-priority match. If none
+  match, do not silently choose an arbitrary language: explain that no
+  preferred track is available and offer the bounded other-track picker.
+- Apply the same ordered matching to subtitles. Package only matching
+  preferred languages when selectable Matroska subtitles are active. If none
+  match, offer `No subtitles`, `Choose other subtitles`, and `Back` instead of
+  silently substituting an unrelated language.
+- Keep the ordering independent for audio and subtitles. For example, audio
+  can prefer Japanese then English while subtitles prefer English then Greek.
+  `und` and missing language metadata never count as a preference match.
+- Resolve multiple tracks in the same preferred language deterministically
+  from normalized default disposition, match quality, and source order. Keep
+  the manual picker available as an explicit override rather than making it a
+  mandatory step for every playback.
 - Add an explicit Remove action for individual Continue Watching entries.
 - Keep compatibility modes visible and allow a bounded preference between
   direct, converted, and uninspected candidates.
@@ -797,7 +812,9 @@ infoPanel, or temporary removal-action state behind.
 Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue
-Watching item can be removed without marking unrelated media complete.
+Watching item can be removed without marking unrelated media complete. When no
+preferred language matches, the client must clearly offer the bounded other-track
+or no-subtitles choice rather than silently substituting an unrelated language.
 
 ### 22. Selectable Matroska Subtitles
 
@@ -877,7 +894,53 @@ Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.
 
-### 23. Offline Downloads
+### 23. PocketStremio Server Desktop Distribution
+
+**Status: Planned (queued after Milestone 21)**
+
+Replace the developer-oriented PocketStremio server launch experience with a
+small Windows-first desktop control application while preserving the existing
+Python server as the core implementation. Milestone 23 implementation must not
+begin until Milestone 21 is marked **Confirmed** and its device-facing
+acceptance criteria are supported by the required evidence. Code presence alone
+does not satisfy that gate.
+
+- Persist non-secret desktop settings in the platform-appropriate per-user
+  application-data directory, separately from account credentials, private
+  addon configuration, logs, and runtime data.
+- Expose PSS name, validated listen interface/address and port, a distinct
+  device-facing address, Stremio Service address/reachability, and
+  FFmpeg/FFprobe detection with manual path selection.
+- Provide Stopped, Starting, Running, and Error states plus Start, Stop, Restart,
+  and Copy Miyoo Address controls.
+- Extract configuration, interface selection, validation, capability detection,
+  and owned-child lifecycle into reusable Python modules instead of coupling
+  them to PowerShell or GUI event handlers.
+- Keep the server independently runnable from source and preserve
+  `manage-server.ps1` and `manage-server.sh` as developer/admin tools.
+- Produce a one-directory Windows application bundle first. Do not redistribute
+  FFmpeg/FFprobe or other external binaries until exact provenance, licensing,
+  notices, and update responsibilities are approved.
+- Prepare the same architecture for a later macOS `.app`, with Apple Silicon,
+  Intel/universal-build feasibility, signing, hardened-runtime, and notarization
+  requirements documented and tested before release claims.
+- Preserve direct play, conversion/downscaling, subtitle modes, multi-audio,
+  account linking, progress, Continue Watching, Resume, Menu cleanup, opaque
+  upstream URLs, loopback-only Stremio Service access, and Tailscale independence.
+
+Design and release plan: [PocketStremio Server Desktop Distribution Plan](desktop-distribution-plan.md)
+
+Acceptance criterion: a clean supported Windows PC can install or extract the
+actual PocketStremio Server release artifact, configure and persist the PSS
+name, listen interface/address, port, advertised Miyoo address, and Stremio
+Service through the desktop application, detect or manually select FFmpeg and
+FFprobe, start and stop only its owned server, and connect a real Miyoo Mini Plus
+without Python, PowerShell, a repository checkout, or manual environment
+variables. The packaged-artifact run must pass the documented playback,
+restart, failure, cleanup, licensing, and privacy checks before this milestone
+can be marked **Confirmed**.
+
+### 24. Offline Downloads
 
 **Status: Planned**
 
@@ -895,6 +958,41 @@ Acceptance criterion: one compatible legal test video can be downloaded,
 played offline after networking is disabled, and deleted from the app without
 leaving a partial file or modifying OnionOS directories.
 
+### 25. Unified PocketStremio UI
+
+**Status: Deferred**
+
+Gradually replace the mixed helper-driven presentation with a lightweight,
+app-local SDL 1.2 interface based on the 640x480 Affinity SVG concept. The
+reusable layout places the current navigation or list on the left and contextual
+details, status, help, or actions on the right. Keep the BusyBox shell as the
+initial API, state, and playback orchestrator; use one-shot UI processes that
+fully exit before FFplay rather than adding a resident framework.
+
+- Reproduce the concept's header, equal panes, strong dividers, focus treatment,
+  and bottom PSS-status area with fixed logical coordinates and simple drawing
+  primitives.
+- Add the native home behind an opt-in fallback, then migrate bounded lists,
+  the QWERTY keyboard, dialogs/loading states, and the existing secure QR flow
+  one screen at a time.
+- Keep `pocketstremio-selector`, `kbinput`, and `infoPanel` available until each
+  replacement passes Apps-context controller, memory, failure, and cleanup
+  tests.
+- Surface only implemented behavior and server-normalized public data. Do not
+  add History, posters, new settings semantics, or playback/network scope as UI
+  work.
+- Preserve the authoritative app-local config, opaque PSS IDs and URLs, the
+  release playback path, and all current physical control behavior.
+
+Design and migration plan: [Unified PocketStremio UI Plan](ui-redesign-plan.md)
+
+Acceptance criterion: the unified UI renders correctly and readably at 640x480,
+all migrated screens preserve controller/back behavior and current features,
+status work never blocks the home screen, the UI releases its resources before
+playback, direct and converted playback regressions remain unchanged, and a
+forced UI failure returns to the physically confirmed legacy path without stale
+processes or files.
+
 ## Deferred Features
 
 These features should begin only after real stream playback and compatibility
@@ -905,7 +1003,7 @@ behavior are stable:
   seekable-output behavior is designed and measured;
 - Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
-- favorites, history, and settings UI;
+- favorites and watch history (the unified UI refresh is Milestone 25);
 - torrent ingestion and addon results that do not provide direct HTTP media.
 
 Each deferred feature should become a separate milestone with its own device
