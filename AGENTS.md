@@ -304,24 +304,46 @@ to skip deployment.
 
 ## Mandatory Session Bootstrap
 
+Previous Codex conversation context is non-authoritative. At the start of every
+session, reconstruct current truth from, in order:
+
+1. `PROJECT_STATE.md`;
+2. current code and tests;
+3. `docs/roadmap.md`;
+4. `RELEASE_READINESS.md`;
+5. relevant evidence;
+6. Git history.
+
+Conversation memory comes after repository evidence and must never override it.
+If the repository changes after a conversation begins, re-read the relevant
+state before relying on an older conclusion.
+
 Before coding, every Codex session MUST:
 
-1. Read `PROJECT_STATE.md`.
-2. Check the current branch and local `HEAD`.
-3. Check working-tree cleanliness and inspect all existing changes; never
-   overwrite dirty files without understanding whether the changes are
-   intentional.
-4. Compare the local branch with its configured remote branch and determine
-   whether it is behind, ahead, diverged, or not remotely verifiable.
-5. If a task requires Miyoo access, verify SSH using the documented legacy MAC
-   option before reporting the device unreachable.
-6. Read the active milestone in `docs/roadmap.md`.
-7. Read relevant gates in `RELEASE_READINESS.md`.
-8. Read the evidence document relevant to the feature being modified.
-9. Inspect recent feature history with `git log`, `git show`, `git blame`, or
+1. Read `PROJECT_STATE.md` and `AGENTS.md`.
+2. Run `scripts/dev-status.ps1` on Windows or `scripts/dev-status.sh` through
+   `/bin/sh` on macOS/Unix.
+3. Check the current branch, local `HEAD`, complete working-tree state, and
+   configured remote branch. Inspect every existing change before proceeding.
+4. Verify the latest checkpoint recorded in `PROJECT_STATE.md` and whether it
+   is reachable from `origin/main`. Fetch explicitly when the read-only status
+   script reports the remote state unverified.
+5. Stop and report before development if the checkout is behind, diverged, or
+   contains unexplained work. Never overwrite or silently discard dirty files.
+6. Read the active milestone in `docs/roadmap.md`, relevant gates in
+   `RELEASE_READINESS.md`, and evidence relevant to the task.
+7. Inspect recent feature history with `git log`, `git show`, `git blame`, or
    `git diff` as appropriate.
-10. Compare the current code and tests with the physically confirmed production
-    behavior before modifying the feature.
+8. Compare current code and tests with physically confirmed production behavior.
+9. Continue from `Next exact action` in the latest verified checkpoint unless
+   the user's new request explicitly changes scope.
+10. If Miyoo access is required, verify SSH using the documented legacy MAC
+    option before reporting the device unreachable.
+
+`Follow the repository guidelines and continue where I left off.` means:
+perform this bootstrap, verify synchronization and the remote checkpoint, then
+resume its exact handoff. Do not ask the user to reconstruct the previous task
+unless repository evidence is genuinely ambiguous.
 
 ### Document precedence and conflicts
 
@@ -378,6 +400,118 @@ for the read-only synchronization check. A stale, dirty, diverged, or
 unverified checkout must be reported before development proceeds. These
 scripts never pull, rebase, reset, or stash.
 
-### Conversation context is non-authoritative.
+## Session Checkpoint and Handoff
 
-Previous Codex chat conclusions, summaries, assumptions, and remembered implementation state must never override the current repository bootstrap. When repository instructions or PROJECT_STATE.md change, every session must re-read them and discard conflicting conversational assumptions.
+A development session is not safely handed off while valuable project work
+exists only in a local checkout. The configured remote repository is the durable
+cross-machine checkpoint.
+
+Treat `I will continue later`, equivalent pause/end wording, or an indicated
+Windows/macOS machine switch as an instruction to run the full checkpoint
+procedure automatically. Do not merely acknowledge the pause and leave work
+local. A verified remote checkpoint should exist before any machine switch.
+
+### Verified checkpoint
+
+A checkpoint is valid only when:
+
+- intended work has been reviewed and appropriately validated;
+- acceptance state and evidence are updated where required;
+- all intended project changes are committed and pushed without force;
+- `PROJECT_STATE.md` identifies a concrete checkpoint commit;
+- a subsequent `git fetch origin` confirms that commit is reachable from
+  `origin/main`;
+- the local branch is not behind or diverged; and
+- no valuable implementation work remains only locally.
+
+The working tree should be clean. Intentionally retained local or untracked
+files must be reported and must not contain valuable project work, secrets,
+account configuration, runtime state, or other material needed to continue.
+
+Git commits cannot contain their own immutable IDs. Therefore the focused work
+commit is the recorded `Checkpoint commit`, and a follow-up metadata-only seal
+commit may write that ID into `PROJECT_STATE.md`. Both commits must be pushed;
+the recorded checkpoint must be an ancestor of the fetched `origin/main`.
+
+Keep `PROJECT_STATE.md` concise. It answers what is production, physically
+confirmed, experimental, active, broken, safely checkpointed, and next. Put
+detailed test histories in the roadmap and evidence documents. A checkpoint may
+contain implemented and locally tested work awaiting a Miyoo test, but it must
+distinguish `Implemented/tested but not physically confirmed` from `Physically
+confirmed` and name the required next physical test. Committing does not promote
+unmeasured device behavior.
+
+### Checkpoint creation procedure
+
+At the end of every meaningful development session:
+
+1. Inspect `git status`, including all untracked files.
+2. Review every changed or untracked file.
+3. Separate intended project work from logs, caches, runtime files, account
+   configuration, secrets, generated media, and local screenshots unless a
+   screenshot is intentionally tracked.
+4. Run validation appropriate to the work.
+5. Update the roadmap and evidence if acceptance state changed.
+6. Update the concise current state in `PROJECT_STATE.md`.
+7. Update `Latest Verified Checkpoint`, preserving the distinction between
+   implementation/testing and physical confirmation. Before the focused work
+   commit exists, it may still identify the prior verified checkpoint.
+8. Stage only intended project files and review the staged diff for private
+   URLs, tokens, credentials, generated data, and unrelated work.
+9. Commit with a focused message. Never use `git reset --hard`, silently discard
+   local work, or rewrite shared history.
+10. If needed, create the metadata-only seal described above so
+    `PROJECT_STATE.md` records the new focused work commit.
+11. Push normally to `origin/main`; never force-push.
+12. Run `git fetch origin`.
+13. Verify the recorded checkpoint is reachable from `origin/main`, the local
+    branch is not behind/diverged, and run the appropriate read-only
+    `dev-status` script again.
+
+### Handoff reporting
+
+If any required checkpoint step cannot be completed, report exactly this shape
+and do not say done, complete, ready to continue, or equivalent:
+
+```text
+HANDOFF INCOMPLETE
+
+Reason:
+
+Work existing only locally:
+
+Uncommitted files:
+
+Unpushed commits:
+
+Remote state:
+
+Safe to continue from another machine: NO
+```
+
+After a successful checkpoint, report:
+
+```text
+CHECKPOINT COMPLETE
+
+Checkpoint commit:
+Remote verified: YES
+Branch:
+origin/main:
+Working tree:
+Active milestone:
+
+Completed this session:
+
+Pending:
+
+Next exact action:
+
+Safe to continue from another machine: YES
+```
+
+The development-status scripts are strictly read-only. They may inspect local
+and remote state but must never fetch, pull, commit, push, reset, rebase, stash,
+or modify files. `Checkpoint reachable from origin/main: NO` must produce a
+prominent `REMOTE HANDOFF INVALID` warning and prohibit continuation from a
+different machine.

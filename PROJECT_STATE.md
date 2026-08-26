@@ -1,7 +1,7 @@
 # PocketStremio Current Project State
 
-Last updated: 2026-08-25
-Last updated by machine: Windows development checkout
+Last updated: 2026-08-26
+Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
 Expected remote branch: `origin/main`
@@ -135,29 +135,37 @@ Run the remaining Milestone 21 automated and Apps-context checks. Update the
 roadmap, evidence, and this file together only when the milestone is actually
 accepted.
 
-## Development Handoff
+## Latest Verified Checkpoint
 
-Last machine: Windows development checkout
-Last branch: `main`
-Last commit: `ab251c7800708ab9035d6d2f2764ec0f76ea7132`
-Working tree at handoff: reconciled; local screenshots remain intentionally
-untracked and are not project state
-Active milestone: 21 — Device Settings and Playback Preferences
+Checkpoint commit: `db801417de41902d4a714905418ec9d0552723dc`
+Remote verified: YES
+Machine: Windows development checkout
+Branch: `main`
+Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
-Last completed: Milestone 22 selectable Matroska subtitles
-Last physically confirmed: three-track Matroska R1 switching, off toggle,
-synchronized playback, and cleanup; latest user run also exercised three
-English and three Greek tracks with visible switching and off behavior
-Current experimental work: committed Milestone 21 changes pending physical
-acceptance
-Known regression: fixed Matroska subtitle-package cleanup tuple bug; automated
-coverage now confirms temporary-track cleanup
-Current implementation addition: language preferences now offer a controller
-flow to change priority order, mark the selected language's current position
-with `*`, and save the reordered list; the updated client is deployed and
-passes Miyoo `/bin/sh -n` and checksum verification
-Next exact action: physically test language-priority reordering, then continue
-the remaining Milestone 21 acceptance checks without changing release scope
+Completed:
+- Reconciled the Windows and macOS work on `main` without losing either line.
+
+Physically confirmed:
+- Milestone 22 three-track Matroska switching, off toggle, synchronized
+  playback, progress, Menu exit, and cleanup; a later run also exercised three
+  English and three Greek tracks.
+
+Implemented/tested but not physically confirmed:
+- Milestone 21 language-priority reordering and remaining settings/preferences
+  acceptance work.
+
+Known issue / blocker:
+- Milestone 21 remains pending Apps-context acceptance; release gates remain
+  open.
+
+Next exact action:
+- Physically test language-priority reordering, then complete the remaining
+  Milestone 21 acceptance checks without changing release scope.
+
+Required next physical test:
+- Reorder preferred languages from the controller UI, save, and verify the
+  chosen order affects subsequent language-prioritized choices.
 
 DO NOT:
 
