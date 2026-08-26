@@ -90,8 +90,9 @@ Menu exit, and complete PSS/Miyoo cleanup.
 
 ## Experimental / Not Yet Production
 
-- Milestone 21 work in the current working tree is uncommitted and is not part
-  of this baseline.
+- Milestone 21 work recovered from the Windows checkout is committed on the
+  reconciled `main`, but remains pending acceptance and is not yet part of the
+  production baseline.
 - The selectable Matroska player remains an opt-in release-scope decision.
 - Generalized preferred-language packaging and the normal-deployment player
   bundle are implemented and automated-tested, but only the three-track
@@ -105,19 +106,19 @@ Menu exit, and complete PSS/Miyoo cleanup.
 ## Known Regressions / Broken Behavior
 
 - No Matroska multi-track regression is present in the audited committed code.
-- The working tree is dirty; its changes must be reviewed before being treated
-  as production.
+- The Windows implementation and state/documentation recovery have been
+  reviewed and reconciled with the updated Mac `origin/main`; acceptance and
+  release gates remain open.
 - Milestone 17 long-duration bridge acceptance, fresh-SD validation, and final
   packaging/licensing gates remain open.
 
 ## Active Work
 
-Milestone 21: device settings and playback preferences. The existing dirty
-checkout contains implementation and documentation changes for language
+Milestone 21: device settings and playback preferences. The reconciled `main`
+contains the recovered implementation and documentation changes for language
 preferences, stream/audio filtering, Continue Watching removal, and related
-client/server behavior. Preserve these changes; do not silently overwrite or
-label them production until they are reviewed, tested, physically confirmed
-where required, documented, and committed together.
+client/server behavior. Do not label them production until they are physically
+confirmed where required and the milestone is accepted.
 
 ## Last Completed Work
 
@@ -130,24 +131,25 @@ pending.
 
 ## Next Action
 
-Inspect and reconcile the dirty Milestone 21 changes, then run the required
-automated and Apps-context checks. Update roadmap, evidence, and this file
-together only when the milestone is actually accepted.
+Run the remaining Milestone 21 automated and Apps-context checks. Update the
+roadmap, evidence, and this file together only when the milestone is actually
+accepted.
 
 ## Development Handoff
 
 Last machine: Windows development checkout
 Last branch: `main`
-Last commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
-Working tree at handoff: DIRTY; changes pre-date this state audit and were
-preserved
+Last commit: `ab251c7800708ab9035d6d2f2764ec0f76ea7132`
+Working tree at handoff: reconciled; local screenshots remain intentionally
+untracked and are not project state
 Active milestone: 21 — Device Settings and Playback Preferences
 
 Last completed: Milestone 22 selectable Matroska subtitles
 Last physically confirmed: three-track Matroska R1 switching, off toggle,
 synchronized playback, and cleanup; latest user run also exercised three
 English and three Greek tracks with visible switching and off behavior
-Current experimental work: uncommitted Milestone 21 changes
+Current experimental work: committed Milestone 21 changes pending physical
+acceptance
 Known regression: fixed Matroska subtitle-package cleanup tuple bug; automated
 coverage now confirms temporary-track cleanup
 Current implementation addition: language preferences now offer a controller
@@ -155,7 +157,7 @@ flow to change priority order, mark the selected language's current position
 with `*`, and save the reordered list; the updated client is deployed and
 passes Miyoo `/bin/sh -n` and checksum verification
 Next exact action: physically test language-priority reordering, then continue
-the remaining Milestone 21 acceptance checks without overwriting user work
+the remaining Milestone 21 acceptance checks without changing release scope
 
 DO NOT:
 
