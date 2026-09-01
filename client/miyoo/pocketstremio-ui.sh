@@ -2277,7 +2277,7 @@ play_selected_stream() {
   if [ "$MATROSKA_SUBTITLES" = "1" ]; then
     subtitle_id=none
     start_loading "PocketStremio" "Preparing video and selectable subtitles..."
-    subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id&all=1&max_per_language=$MAX_SUBTITLES_PER_LANGUAGE"
+    subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id&all=1&matroska_subtitles=1&max_per_language=$MAX_SUBTITLES_PER_LANGUAGE"
     [ -n "$SUBTITLE_LANGUAGES" ] && subtitle_query="$subtitle_query&languages=$SUBTITLE_LANGUAGES"
     api_get "$subtitle_query" \
       >/tmp/pocketstremio-subtitles.json

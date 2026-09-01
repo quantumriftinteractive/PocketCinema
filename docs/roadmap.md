@@ -890,6 +890,16 @@ marker, or temporary subtitle package. Together with the earlier logged R1
 transitions through all three tracks, off, and back to the first track, this
 satisfies the acceptance criterion.
 
+The Mac PSS's default FFmpeg build does not include libass, so it cannot support
+the normal MPEG-TS subtitle burn-in path. Selectable Matroska tracks do not need
+that filter: the Miyoo now explicitly requests that mode during subtitle
+discovery, and PSS accepts the request only while its Matroska mode is enabled.
+This retains the libass gate for ordinary subtitle selection. An Apps-context
+run discovered and packaged six tracks, downloaded the opaque package, switched
+from streams 2 to 3, 3 to 4, and 4 to 5 through R1, and saved progress at 200
+seconds. This is physical confirmation of the no-libass Matroska packaging path,
+not a claim that burn-in is available on that host.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.

@@ -1865,6 +1865,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
         include_all = query.get("all", [""])[0].lower() in {"1", "true", "yes"}
+        matroska_subtitles = (
+            query.get("matroska_subtitles", [""])[0].lower()
+            in {"1", "true", "yes"}
+            and getattr(self.server, "matroska_subtitles_enabled", False)
+        )
         requested_languages = []
         for value in query.get("languages", ["eng"])[0].split(","):
             language = playback_compatibility.normalize_language_tag(value)
@@ -1886,12 +1891,13 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         stream = self.server.stream_cache.get(query.get("stream_id", [""])[0], {})
         subtitles = []
 
-        # External subtitles require FFmpeg's libass-backed subtitles filter
-        # in the normal MPEG-TS path.  A PSS without it cannot render any of
-        # these choices, so omit them instead of leading the Miyoo to a later
-        # playback rejection.  The selected "No subtitles" path remains
-        # available in the client.
-        if not getattr(self.server, "subtitle_burn_in_available", False):
+        # Normal MPEG-TS playback needs FFmpeg's libass-backed subtitles
+        # filter.  Selectable Matroska mode packages text tracks instead, so
+        # it remains usable with an FFmpeg build that can mux Matroska and
+        # encode text subtitles but cannot burn them into video.
+        if not matroska_subtitles and not getattr(
+            self.server, "subtitle_burn_in_available", False
+        ):
             self.write_json(
                 {
                     "count": 0,

@@ -1013,6 +1013,36 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(subtitles["items"], [])
         self.assertIn("cannot burn", subtitles["unavailable_reason"])
 
+    def test_matroska_subtitles_are_discoverable_without_burn_in_support(self):
+        self.server.subtitle_burn_in_available = False
+        self.server.matroska_subtitles_enabled = True
+        self.server.stream_addons = [
+            {
+                "name": "Test subtitles",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+        upstream_url = "https://cdn.example/subtitle.srt"
+        with mock.patch.object(
+            pocket,
+            "fetch_json",
+            return_value={
+                "subtitles": [
+                    {"url": upstream_url, "lang": "eng", "name": "English"}
+                ]
+            },
+        ) as fetch:
+            _, subtitles = self.get_json(
+                "/api/subtitles/movie/tt0078748?all=1&matroska_subtitles=1"
+            )
+        fetch.assert_called()
+        self.assertEqual(subtitles["count"], 1)
+        self.assertEqual(subtitles["items"][0]["lang"], "eng")
+        self.assertEqual(
+            self.server.subtitle_cache[subtitles["items"][0]["id"]]["url"],
+            upstream_url,
+        )
+
     def test_transcode_reports_missing_output_stage(self):
         stream_id = "empty-transcode-stream"
         upstream_url = "https://cdn.example/video.mp4?token=private"

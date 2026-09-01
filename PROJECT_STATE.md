@@ -1,6 +1,6 @@
 # PocketStremio Current Project State
 
-Last updated: 2026-08-26
+Last updated: 2026-09-01
 Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
@@ -87,6 +87,11 @@ Milestone 17 remains incomplete and Milestone 21 is active. The latest
 physical Milestone 22 evidence confirms three-track Matroska playback,
 synchronized audio/video/subtitles, R1 notices, progress saving, status-0
 Menu exit, and complete PSS/Miyoo cleanup.
+
+The current Mac PSS/Miyoo path is also physically confirmed with an FFmpeg
+build lacking libass: it discovered and packaged six selectable tracks, served
+the opaque package, switched tracks through R1, and saved progress. Normal
+MPEG-TS subtitle burn-in remains unavailable on that FFmpeg build.
 
 ## Experimental / Not Yet Production
 
