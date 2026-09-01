@@ -245,7 +245,17 @@ message() {
     log "message title=$title body=$body"
     return 0
   fi
-  "$INFOPANEL" --title "$title" --message "$body" --auto >/dev/null 2>&1 || true
+  display_body=$(printf '%s\n' "$body" | tr '\r' ' ' | fold -s -w 32 | awk '
+    NR <= 4 { lines[NR] = $0 }
+    NR == 5 { truncated = 1 }
+    END {
+      for (i = 1; i <= 4 && i in lines; i++) {
+        if (i == 4 && truncated) print substr(lines[i], 1, 29) "..."
+        else print lines[i]
+      }
+    }
+  ')
+  "$INFOPANEL" --title "$title" --message "$display_body" --auto >/dev/null 2>&1 || true
 }
 
 start_loading() {
@@ -2135,7 +2145,8 @@ streams_flow() {
         fi
       else
         log "no verified audio tags available; leaving streams unfiltered"
-        message "PocketStremio" "No verified audio language tags; choose a stream"
+        message "Audio language" "No verified tags.
+Choose stream."
       fi
     fi
   fi

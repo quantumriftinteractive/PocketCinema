@@ -145,9 +145,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Exercise the no-verified-audio-tag path, then run the remaining
-settings/preference Apps-context checks. Update the roadmap, evidence, and this
-file together only when the milestone is actually accepted.
+Physically verify the wrapped multi-line message presentation, then run the
+remaining settings/preference Apps-context checks. Update the roadmap, evidence,
+and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -182,24 +182,27 @@ Physically confirmed:
 - Same-title stream reopening remained stable during the navigation-debug
   interval. The device logged repeated resolution, while PSS served later
   identical requests without a repeated addon fetch.
+- The normal PSS no-verified-audio-tag path appeared and continued to explicit
+  stream selection. Its original one-line notice was hard to read on the Miyoo.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
   deterministic subtitle priority and no-preferred-language fallback behavior.
-- The no-verified-audio-tag prompt that replaces the misleading `UND (verified)`
-  picker.
+- Generic infoPanel message wrapping: preserve explicit line breaks, wrap at 32
+  characters, and limit the display to four lines with an ellipsis. It is
+  syntax-tested and deployed, but awaits a visual Apps-context check.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Exercise the no-verified-audio-tag path, then complete the remaining
-  Milestone 21 acceptance checks without changing release scope.
+- Visually verify a wrapped long message, then complete the remaining Milestone
+  21 acceptance checks without changing release scope.
 
 Required next physical test:
-- Exercise deterministic subtitle priority and the bounded no-verified-audio-tag
-  choice from the controller UI.
+- Trigger a longer message and confirm clean multi-line rendering; then exercise
+  deterministic subtitle priority from the controller UI.
 
 DO NOT:
 

@@ -813,8 +813,12 @@ choice stayed consistent. The device logged repeated resolution of that title,
 while PSS served later identical stream requests without a repeated addon fetch.
 The audio-language picker excludes `und`, which is unverified rather than a
 verified language; when it has no verified tags to offer, it explains the
-condition and proceeds to explicit stream selection. That audio branch remains
-pending Apps-context confirmation.
+condition and proceeds to explicit stream selection. The normal PSS branch was
+physically exercised, but its original one-line notice was too long for the
+Miyoo display. All infoPanel message bodies now preserve explicit newlines,
+wrap at 32 characters, and show at most four lines with an ellipsis. The wrapper
+is syntax-tested and deployed; its longer-message presentation awaits an
+Apps-context visual check.
 
 The same run also regression-checked confirmed Milestone 22 after restoring the
 client and PSS Matroska mode flags. PSS packaged three selectable subtitle
