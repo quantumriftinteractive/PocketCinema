@@ -129,10 +129,11 @@ confirmed where required and the milestone is accepted.
 
 Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
 relevant implementation history is `b240328`, `3c29d15`, and `bd6d91a`.
-The current working tree generalizes packaging to five preferred languages,
-up to three tracks each, and promotes the app-local player/runtime/font bundle
-into normal Miyoo deployment; the generalized behavior remains physically
-pending.
+The current code also makes Matroska subtitle discovery explicit, so its
+packageable text tracks remain available on a PSS whose FFmpeg lacks libass.
+The normal deployment script can now verify and reuse an already-installed
+player/runtime bundle for tracked client upgrades when its ignored local build
+inputs are unavailable.
 
 ## Next Action
 
@@ -142,26 +143,28 @@ accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `42b0861dfdf6853cbcc974f55401c1d7b15c8fd7`
+Checkpoint commit: `01b2b1f83d4b4fd1aa7c5ac2c6029e8f943a6e43`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
-- Added the permanent session bootstrap, pause/machine-switch handoff protocol,
-  verified-checkpoint rules, and read-only cross-platform status reporting.
+- Added explicit Matroska subtitle discovery, preserving the libass requirement
+  for the normal burn-in path.
+- Added an opt-in, verified reuse mode to the standard Miyoo deployment script
+  for tracked upgrades where the player/runtime bundle already exists.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
   playback, progress, Menu exit, and cleanup; a later run also exercised three
   English and three Greek tracks.
+- On a Mac PSS without libass, six selectable tracks were packaged and played;
+  R1 switched tracks, and progress was saved.
 
 Implemented/tested but not physically confirmed:
 - Milestone 21 language-priority reordering and remaining settings/preferences
   acceptance work.
-- Both checkpoint-status implementations parse and run; no Miyoo product
-  behavior changed and no device test applies to the protocol itself.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
