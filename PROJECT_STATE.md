@@ -152,7 +152,7 @@ actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `0fcd754e2a19669f4192e23c9755aae448e12c47`
+Checkpoint commit: `5b7adf009b2ce06338b80d2ce1c6a5c052838f4c`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -166,6 +166,8 @@ Completed:
 - Recorded the physical Spanish-first language-priority persistence and
   user-confirmed playback test, while preserving the reported menu inconsistency
   as an unconfirmed follow-up.
+- Fixed and physically confirmed source-menu B/back cancellation; added the
+  automated-tested stream-list stability cache and no-verified-audio-tag path.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
