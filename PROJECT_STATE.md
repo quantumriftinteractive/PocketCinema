@@ -151,7 +151,7 @@ file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `5b7adf009b2ce06338b80d2ce1c6a5c052838f4c`
+Checkpoint commit: `c140d99c79660275d933cd1147021a085f8036e0`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -167,6 +167,7 @@ Completed:
   as an unconfirmed follow-up.
 - Fixed and physically confirmed source-menu B/back cancellation; added the
   automated-tested stream-list stability cache and no-verified-audio-tag path.
+- Recorded the physical same-title stream-list stability confirmation.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
