@@ -93,6 +93,12 @@ build lacking libass: it discovered and packaged six selectable tracks, served
 the opaque package, switched tracks through R1, and saved progress. Normal
 MPEG-TS subtitle burn-in remains unavailable on that FFmpeg build.
 
+The Milestone 21 controller reordering flow has also been physically exercised:
+Spanish was placed first, the next app launch loaded `spa,jpn,eng,ell`, and the
+user reported the subsequent playback test as working. A menu inconsistency was
+noticed during that run but is not reproducible from the retained device log, so
+it remains a follow-up rather than a confirmed defect.
+
 ## Experimental / Not Yet Production
 
 - Milestone 21 work recovered from the Windows checkout is committed on the
@@ -137,9 +143,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Run the remaining Milestone 21 automated and Apps-context checks. Update the
-roadmap, evidence, and this file together only when the milestone is actually
-accepted.
+Reproduce the reported Milestone 21 menu inconsistency, then run the remaining
+settings/preference Apps-context checks. Update the roadmap, evidence, and this
+file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -161,22 +167,25 @@ Physically confirmed:
   English and three Greek tracks.
 - On a Mac PSS without libass, six selectable tracks were packaged and played;
   R1 switched tracks, and progress was saved.
+- Controller language-priority reordering persisted Spanish first across an app
+  restart; the user reported the subsequent playback test working.
 
 Implemented/tested but not physically confirmed:
-- Milestone 21 language-priority reordering and remaining settings/preferences
-  acceptance work.
+- Remaining Milestone 21 settings/preferences acceptance work, including
+  deterministic subtitle priority and no-preferred-language fallback behavior.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Physically test language-priority reordering, then complete the remaining
-  Milestone 21 acceptance checks without changing release scope.
+- Reproduce the reported Settings-menu inconsistency, then complete the
+  remaining Milestone 21 acceptance checks without changing release scope.
 
 Required next physical test:
-- Reorder preferred languages from the controller UI, save, and verify the
-  chosen order affects subsequent language-prioritized choices.
+- Exercise deterministic subtitle priority and the bounded no-preferred-
+  language choice from the controller UI; capture the exact Settings-menu
+  sequence if its inconsistency recurs.
 
 DO NOT:
 

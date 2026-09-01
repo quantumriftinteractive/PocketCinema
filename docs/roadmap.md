@@ -791,6 +791,13 @@ Japanese audio. FFplay exited cleanly after 19 valid watched seconds; PSS then
 reported zero active conversions and bridges, and the Miyoo retained no player,
 client helper, infoPanel, or temporary playback state.
 
+A later controller follow-up moved Spanish to priority 1. The next app launch
+loaded `spa,jpn,eng,ell`, and the user reported the ensuing playback test as
+working. This confirms reordering persistence and the exercised playback path.
+The user noticed an unspecified menu inconsistency, but the retained log records
+only normal selector transitions; reproduce and characterize it before treating
+it as a defect or changing the navigation flow.
+
 The same run also regression-checked confirmed Milestone 22 after restoring the
 client and PSS Matroska mode flags. PSS packaged three selectable subtitle
 tracks, and the user pressed R1 and visibly reached the `Subtitles 2/3` notice.
