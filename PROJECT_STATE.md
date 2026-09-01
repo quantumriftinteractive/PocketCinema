@@ -149,7 +149,7 @@ file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `01b2b1f408713bfdea23c3f49c0245e082ce3653`
+Checkpoint commit: `0fcd754e2a19669f4192e23c9755aae448e12c47`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -160,6 +160,9 @@ Completed:
   for the normal burn-in path.
 - Added an opt-in, verified reuse mode to the standard Miyoo deployment script
   for tracked upgrades where the player/runtime bundle already exists.
+- Recorded the physical Spanish-first language-priority persistence and
+  user-confirmed playback test, while preserving the reported menu inconsistency
+  as an unconfirmed follow-up.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
