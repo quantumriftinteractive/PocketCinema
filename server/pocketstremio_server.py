@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import copy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
@@ -48,6 +49,8 @@ DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
 DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
 DEFAULT_MAX_PROBE_CACHE = 256
+DEFAULT_STREAM_LIST_CACHE_TTL = 5 * 60
+DEFAULT_MAX_STREAM_LIST_CACHE = 32
 MAX_LIVE_TV_ITEMS = 128
 MAX_SUBTITLE_BYTES = 2 * 1024 * 1024
 MAX_SUBTITLE_LANGUAGE_PREFERENCES = 5
@@ -542,6 +545,59 @@ class SessionStore:
         with self.lock:
             self._remove_expired(time.time())
             return len(self.items)
+
+
+class StreamListCache:
+    """Keep a short-lived, server-only stream list stable while backtracking."""
+
+    def __init__(
+        self,
+        ttl_seconds=DEFAULT_STREAM_LIST_CACHE_TTL,
+        max_items=DEFAULT_MAX_STREAM_LIST_CACHE,
+    ):
+        self.ttl_seconds = max(1, int(ttl_seconds))
+        self.max_items = max(1, int(max_items))
+        self.items = {}
+        self.lock = threading.Lock()
+
+    @staticmethod
+    def key(item_type, item_id, preflight_requested):
+        return "\0".join(
+            (str(item_type or ""), str(item_id or ""), str(bool(preflight_requested)))
+        )
+
+    def _remove_expired(self, now):
+        expired = [
+            key
+            for key, item in self.items.items()
+            if now - item.get("created_at", 0) >= self.ttl_seconds
+        ]
+        for key in expired:
+            self.items.pop(key, None)
+
+    def get(self, item_type, item_id, preflight_requested):
+        cache_key = self.key(item_type, item_id, preflight_requested)
+        with self.lock:
+            self._remove_expired(time.time())
+            item = self.items.get(cache_key)
+            if not item:
+                return None
+            return copy.deepcopy(item["response"])
+
+    def set(self, item_type, item_id, preflight_requested, response):
+        cache_key = self.key(item_type, item_id, preflight_requested)
+        with self.lock:
+            self._remove_expired(time.time())
+            while len(self.items) >= self.max_items and cache_key not in self.items:
+                oldest = min(
+                    self.items,
+                    key=lambda key: self.items[key].get("created_at", 0),
+                )
+                self.items.pop(oldest, None)
+            self.items[cache_key] = {
+                "created_at": time.time(),
+                "response": copy.deepcopy(response),
+            }
 
 
 class ProbeCache:
@@ -1496,6 +1552,19 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         )
 
     def handle_streams(self, item_type, item_id, parsed=None):
+        query = urllib.parse.parse_qs(parsed.query) if parsed else {}
+        preflight_requested = query.get("preflight", [""])[0].lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        cached_response = self.server.stream_list_cache.get(
+            item_type, item_id, preflight_requested
+        )
+        if cached_response is not None:
+            self.write_json(cached_response)
+            return
+
         streams = []
         failures = []
 
@@ -1739,12 +1808,6 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 )
 
         streams.sort(key=account_stream_quality_rank)
-        query = urllib.parse.parse_qs(parsed.query) if parsed else {}
-        preflight_requested = query.get("preflight", [""])[0].lower() in {
-            "1",
-            "true",
-            "yes",
-        }
         if preflight_requested and self.server.ffprobe_path:
             self.preflight_stream_list(streams)
         for stream in streams:
@@ -1791,7 +1854,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             for stream in streams
             if stream.get("playable")
         ]
-        self.write_json({"count": len(public_items), "items": public_items, "failures": failures})
+        response = {"count": len(public_items), "items": public_items, "failures": failures}
+        self.server.stream_list_cache.set(
+            item_type, item_id, preflight_requested, response
+        )
+        self.write_json(response)
 
     def preflight_stream_list(self, streams):
         """Probe a bounded set concurrently before presenting the stream picker.
@@ -2925,6 +2992,7 @@ def main():
     httpd.hls_bridge_lock = threading.Lock()
     httpd.active_hls_bridges = 0
     httpd.manifest_cache = {}
+    httpd.stream_list_cache = StreamListCache()
     httpd.probe_cache = ProbeCache(
         data_dir / "probe_cache.json", args.probe_cache_ttl, args.max_probe_cache
     )

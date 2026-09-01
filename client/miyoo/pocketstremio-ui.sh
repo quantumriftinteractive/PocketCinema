@@ -2113,19 +2113,29 @@ streams_flow() {
     ' \
       /tmp/pocketstremio-streams.json | sort -u >> /tmp/pocketstremio-source-filters.tsv
     selected_source=$(select_from_file "Stream source" /tmp/pocketstremio-source-filters.tsv)
+    if [ -z "$selected_source" ]; then
+      log "stream source selection canceled"
+      return 10
+    fi
     if [ -n "$selected_source" ] && [ "$selected_source" != "All sources" ]; then
       source_filter="$selected_source"
     fi
 
     if [ -z "$AUDIO_LANGUAGES" ] || { [ -z "$audio_filter" ] && [ "$AUDIO_FALLBACK" = "ask" ]; }; then
       printf 'All audio languages\t\n' > /tmp/pocketstremio-audio-filters.tsv
-      "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[]' \
+      "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[] | select(ascii_downcase != "und")' \
         /tmp/pocketstremio-streams.json | sort -u | while IFS= read -r language; do
           [ -n "$language" ] && printf '%s (verified)\t%s\n' "$language" "$language"
         done >> /tmp/pocketstremio-audio-filters.tsv
-      selected_audio=$(select_from_file "Audio language (verified tags)" /tmp/pocketstremio-audio-filters.tsv)
-      if [ -n "$selected_audio" ]; then
-        audio_filter=$(grep -F "$selected_audio	" /tmp/pocketstremio-audio-filters.tsv | head -n 1 | cut -f2)
+      verified_audio_count=$(wc -l </tmp/pocketstremio-audio-filters.tsv | tr -d ' ')
+      if [ "$verified_audio_count" -gt 1 ]; then
+        selected_audio=$(select_from_file "Audio language (verified tags)" /tmp/pocketstremio-audio-filters.tsv)
+        if [ -n "$selected_audio" ]; then
+          audio_filter=$(grep -F "$selected_audio	" /tmp/pocketstremio-audio-filters.tsv | head -n 1 | cut -f2)
+        fi
+      else
+        log "no verified audio tags available; leaving streams unfiltered"
+        message "PocketStremio" "No verified audio language tags; choose a stream"
       fi
     fi
   fi

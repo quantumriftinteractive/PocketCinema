@@ -96,8 +96,10 @@ MPEG-TS subtitle burn-in remains unavailable on that FFmpeg build.
 The Milestone 21 controller reordering flow has also been physically exercised:
 Spanish was placed first, the next app launch loaded `spa,jpn,eng,ell`, and the
 user reported the subsequent playback test as working. A menu inconsistency was
-noticed during that run but is not reproducible from the retained device log, so
-it remains a follow-up rather than a confirmed defect.
+was then characterized and fixed: B from Stream source now returns directly to
+the title action screen rather than falling into a filtered stream list. The
+device log records the cancellation path. The unrelated provider-result
+stability follow-up remains pending its own physical retest.
 
 ## Experimental / Not Yet Production
 
@@ -143,9 +145,10 @@ inputs are unavailable.
 
 ## Next Action
 
-Reproduce the reported Milestone 21 menu inconsistency, then run the remaining
-settings/preference Apps-context checks. Update the roadmap, evidence, and this
-file together only when the milestone is actually accepted.
+Physically retest the bounded stream-list cache and the no-verified-audio-tag
+path, then run the remaining settings/preference Apps-context checks. Update
+the roadmap, evidence, and this file together only when the milestone is
+actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -172,23 +175,29 @@ Physically confirmed:
   R1 switched tracks, and progress was saved.
 - Controller language-priority reordering persisted Spanish first across an app
   restart; the user reported the subsequent playback test working.
+- B from Stream source cancels to the title action screen; this was observed in
+  Apps and logged as `stream source selection canceled`.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
   deterministic subtitle priority and no-preferred-language fallback behavior.
+- Five-minute, server-only stream-list response caching for stable backtracking,
+  and the no-verified-audio-tag prompt that replaces the misleading `UND
+  (verified)` picker.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Reproduce the reported Settings-menu inconsistency, then complete the
-  remaining Milestone 21 acceptance checks without changing release scope.
+- Physically retest stable source/stream choices during a same-title reopen,
+  then complete the remaining Milestone 21 acceptance checks without changing
+  release scope.
 
 Required next physical test:
-- Exercise deterministic subtitle priority and the bounded no-preferred-
-  language choice from the controller UI; capture the exact Settings-menu
-  sequence if its inconsistency recurs.
+- Reopen the same title within five minutes and confirm stable source/stream
+  choices; exercise deterministic subtitle priority and the bounded
+  no-verified-audio-tag choice from the controller UI.
 
 DO NOT:
 

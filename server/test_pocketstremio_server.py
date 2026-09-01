@@ -287,6 +287,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.hls_bridge_lock = threading.Lock()
         self.server.active_hls_bridges = 0
         self.server.manifest_cache = {}
+        self.server.stream_list_cache = pocket.StreamListCache()
         self.server.probe_cache = pocket.ProbeCache(root / "data" / "probe_cache.json")
         self.server.ffprobe_path = ""
         self.server.ffmpeg_path = ""
@@ -1740,6 +1741,41 @@ class PocketStremioServerTest(unittest.TestCase):
             _, streams = self.get_json("/api/streams/movie/tt0000001")
         self.assertEqual(streams["count"], 0)
         self.assertEqual(streams["items"], [])
+
+    def test_stream_list_cache_stabilizes_backtracking_without_exposing_urls(self):
+        self.server.stream_addons = [
+            {
+                "name": "Changing source",
+                "manifest_url": "https://addon.example/manifest.json",
+            }
+        ]
+        stream_calls = 0
+
+        def fake_fetch(url, timeout=pocket.DEFAULT_TIMEOUT):
+            nonlocal stream_calls
+            del timeout
+            if url.endswith("manifest.json"):
+                return {"resources": ["stream"], "types": ["movie"]}
+            stream_calls += 1
+            return {
+                "streams": [
+                    {
+                        "name": f"Result {stream_calls}",
+                        "url": (
+                            "https://media.example/"
+                            f"result-{stream_calls}.mp4?token=private"
+                        ),
+                    }
+                ]
+            }
+
+        with mock.patch.object(pocket, "fetch_json", side_effect=fake_fetch):
+            _, first = self.get_json("/api/streams/movie/tt0000001")
+            _, second = self.get_json("/api/streams/movie/tt0000001")
+        self.assertEqual(stream_calls, 1)
+        self.assertEqual(first["items"], second["items"])
+        self.assertNotIn("media.example", json.dumps(second))
+        self.assertNotIn("token=private", json.dumps(second))
 
     def test_play_proxy_preserves_range_across_redirect(self):
         upstream = ThreadingHTTPServer(("127.0.0.1", 0), RedirectingMediaHandler)

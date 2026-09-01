@@ -794,9 +794,23 @@ client helper, infoPanel, or temporary playback state.
 A later controller follow-up moved Spanish to priority 1. The next app launch
 loaded `spa,jpn,eng,ell`, and the user reported the ensuing playback test as
 working. This confirms reordering persistence and the exercised playback path.
-The user noticed an unspecified menu inconsistency, but the retained log records
-only normal selector transitions; reproduce and characterize it before treating
-it as a defect or changing the navigation flow.
+The initial retained log did not identify the reported menu inconsistency; the
+subsequent controller report below provided the exact reproduction.
+
+That follow-up identified a concrete navigation defect: B at `Stream source`
+was treated as `All sources`, so it opened an unintended filtered stream list.
+The client now treats that cancellation as the existing title-screen back result.
+An Apps-context retest confirmed it returns directly to the title action screen;
+the device log records `stream source selection canceled`.
+
+PSS now retains the already-sanitized response for an item’s stream request in a
+bounded server-only cache (32 items, five minutes), so backtracking into the
+same title does not depend on a new provider response or a new preflight pass.
+The cache is automated-tested and keeps upstream URLs out of the cached device
+response. The audio-language picker excludes `und`, which is unverified rather
+than a verified language; when it has no verified tags to offer, it explains the
+condition and proceeds to explicit stream selection. Both of these follow-ups
+remain pending Apps-context confirmation.
 
 The same run also regression-checked confirmed Milestone 22 after restoring the
 client and PSS Matroska mode flags. PSS packaged three selectable subtitle
