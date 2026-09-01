@@ -151,7 +151,7 @@ and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `c140d99c79660275d933cd1147021a085f8036e0`
+Checkpoint commit: `001d1bd8ba7596d74fd17d8977d024e58c1536a8`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -168,6 +168,8 @@ Completed:
 - Fixed and physically confirmed source-menu B/back cancellation; added the
   automated-tested stream-list stability cache and no-verified-audio-tag path.
 - Recorded the physical same-title stream-list stability confirmation.
+- Added and deployed the bounded multi-line infoPanel message wrapper, pending
+  its next Apps-context visual check.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
