@@ -807,10 +807,14 @@ PSS now retains the already-sanitized response for an item’s stream request in
 bounded server-only cache (32 items, five minutes), so backtracking into the
 same title does not depend on a new provider response or a new preflight pass.
 The cache is automated-tested and keeps upstream URLs out of the cached device
-response. The audio-language picker excludes `und`, which is unverified rather
-than a verified language; when it has no verified tags to offer, it explains the
-condition and proceeds to explicit stream selection. Both of these follow-ups
-remain pending Apps-context confirmation.
+response. Apps-context navigation debugging reopened the same title repeatedly
+through the cache interval; the user reported its one returned source and stream
+choice stayed consistent. The device logged repeated resolution of that title,
+while PSS served later identical stream requests without a repeated addon fetch.
+The audio-language picker excludes `und`, which is unverified rather than a
+verified language; when it has no verified tags to offer, it explains the
+condition and proceeds to explicit stream selection. That audio branch remains
+pending Apps-context confirmation.
 
 The same run also regression-checked confirmed Milestone 22 after restoring the
 client and PSS Matroska mode flags. PSS packaged three selectable subtitle

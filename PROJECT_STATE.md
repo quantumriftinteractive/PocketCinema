@@ -145,10 +145,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Physically retest the bounded stream-list cache and the no-verified-audio-tag
-path, then run the remaining settings/preference Apps-context checks. Update
-the roadmap, evidence, and this file together only when the milestone is
-actually accepted.
+Exercise the no-verified-audio-tag path, then run the remaining
+settings/preference Apps-context checks. Update the roadmap, evidence, and this
+file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -179,27 +178,27 @@ Physically confirmed:
   restart; the user reported the subsequent playback test working.
 - B from Stream source cancels to the title action screen; this was observed in
   Apps and logged as `stream source selection canceled`.
+- Same-title stream reopening remained stable during the navigation-debug
+  interval. The device logged repeated resolution, while PSS served later
+  identical requests without a repeated addon fetch.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
   deterministic subtitle priority and no-preferred-language fallback behavior.
-- Five-minute, server-only stream-list response caching for stable backtracking,
-  and the no-verified-audio-tag prompt that replaces the misleading `UND
-  (verified)` picker.
+- The no-verified-audio-tag prompt that replaces the misleading `UND (verified)`
+  picker.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Physically retest stable source/stream choices during a same-title reopen,
-  then complete the remaining Milestone 21 acceptance checks without changing
-  release scope.
+- Exercise the no-verified-audio-tag path, then complete the remaining
+  Milestone 21 acceptance checks without changing release scope.
 
 Required next physical test:
-- Reopen the same title within five minutes and confirm stable source/stream
-  choices; exercise deterministic subtitle priority and the bounded
-  no-verified-audio-tag choice from the controller UI.
+- Exercise deterministic subtitle priority and the bounded no-verified-audio-tag
+  choice from the controller UI.
 
 DO NOT:
 
