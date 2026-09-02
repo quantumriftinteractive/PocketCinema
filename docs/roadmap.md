@@ -777,11 +777,14 @@ selectable subtitle tracks with Greek first and English next, physically
 confirming deterministic subtitle-priority application. The no-preferred-
 language fallback initially regressed: an Azerbaijani-only preference found no
 matching tracks and silently started playback without subtitles. The corrected
-client now presents `No subtitles`, `Choose other subtitles`, and `Back`; its
-bounded opaque other-language lookup repackages the selected language for the
-selectable Matroska player. Apps-context retesting confirmed the dialog, the
-alternate-subtitle list, no-subtitle playback, and Back returning to the stream
-list. Selecting and playing an alternate language remains pending.
+flow is user-directed: it names the missing preferred language, offers
+`Continue with no subtitles`, offers `Use English subtitles` only when English
+is actually available and is not already preferred, and offers `Back to
+streams`. Choosing English packages its bounded selectable-Matroska tracks for
+R1 cycling. The earlier file-level alternate-subtitle picker was deliberately
+replaced before acceptance. The revised dialog is automated-tested and
+committed, but awaits Miyoo deployment and Apps-context testing because the
+device tailnet address was unreachable.
 
 Saved audio order is also applied before stream selection. The client chooses
 the highest-priority saved language that exists in the currently playable,

@@ -1559,49 +1559,6 @@ class PocketStremioServerTest(unittest.TestCase):
             [subtitle["lang"] for subtitle in default["items"]], ["eng"]
         )
 
-    def test_matroska_other_subtitle_picker_can_request_bounded_other_languages(self):
-        self.server.subtitle_burn_in_available = False
-        self.server.matroska_subtitles_enabled = True
-        self.server.stream_addons = [
-            {
-                "name": "Test subtitles",
-                "manifest_url": "https://addon.example/manifest.json",
-            }
-        ]
-        with mock.patch.object(
-            pocket,
-            "fetch_json",
-            return_value={
-                "subtitles": [
-                    {
-                        "url": "https://cdn.example/spanish.srt",
-                        "lang": "es",
-                        "name": "Spanish",
-                    },
-                    {
-                        "url": "https://cdn.example/greek.srt",
-                        "lang": "gre",
-                        "name": "Greek",
-                    },
-                    {
-                        "url": "https://cdn.example/english.srt",
-                        "lang": "en-US",
-                        "name": "English",
-                    },
-                ]
-            },
-        ):
-            _, subtitles = self.get_json(
-                "/api/subtitles/movie/tt0078748?all=1&all_languages=1"
-                "&matroska_subtitles=1&languages=aze"
-            )
-        self.assertEqual(
-            [subtitle["lang"] for subtitle in subtitles["items"]],
-            ["spa", "ell", "eng"],
-        )
-        self.assertLessEqual(subtitles["count"], pocket.MAX_TOTAL_SUBTITLE_TRACKS)
-        self.assertNotIn("url", json.dumps(subtitles))
-
     def test_language_aliases_cover_name_picker_catalog_conventions(self):
         aliases = {
             "tr-TR": "tur",

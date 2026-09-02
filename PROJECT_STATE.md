@@ -121,11 +121,13 @@ stability follow-up remains pending its own physical retest.
 - No Matroska multi-track regression is present in the audited committed code.
 - The first physical no-preferred-subtitle test exposed a Milestone 21 defect:
   a missing preferred language silently started playback without subtitles.
-  The bounded `No subtitles` / `Choose other subtitles` / `Back` correction is
-  implemented, automated-tested, and deployed. Apps testing now confirms the
-  dialog, the alternate-subtitle list, no-subtitle playback, and Back returning
-  to the stream list. Selecting and playing an alternate language remains
-  pending.
+  The user-directed correction is implemented and automated-tested: name the
+  missing preference, offer no subtitles, offer English only when English is
+  actually available and not already preferred, and return Back to the stream
+  list. Its earlier file-level alternate-subtitle picker was intentionally
+  replaced before acceptance. The revised client is committed but not yet
+  deployed because the Miyoo tailnet address was unreachable; it awaits
+  deployment and Apps-context testing.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
@@ -215,8 +217,10 @@ Next exact action:
   scope.
 
 Required next physical test:
-- From the alternate-subtitle list, select an available language and confirm
-  that its bounded selectable-Matroska track set plays with R1 cycling.
+- With an unavailable non-English preference and available English tracks,
+  confirm the named dialog and explicit `Use English subtitles` option. Confirm
+  it packages bounded English tracks with R1 cycling, and that the option is
+  absent when English is already a preferred language.
 
 DO NOT:
 
