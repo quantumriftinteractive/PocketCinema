@@ -224,6 +224,9 @@ cleanup() {
     /tmp/pocketstremio-language-order.tsv \
     /tmp/pocketstremio-language-fallback.tsv \
     /tmp/pocketstremio-max-subtitles.tsv \
+    /tmp/pocketstremio-matroska-subtitle-fallback.tsv \
+    /tmp/pocketstremio-other-subtitles.json \
+    /tmp/pocketstremio-other-subtitles.tsv \
     "$SERVER_STATUS_FILE" "$SERVER_STATUS_JSON" \
     /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
@@ -2227,22 +2230,23 @@ Choose stream."
       subtitle_id=$(select_subtitle "$type" "$id" "$stream_id")
       [ "$subtitle_id" = "back" ] && continue
     fi
-    break
+    play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" \
+      "$stream_id" "$subtitle_id" "$audio_stream_index"
+    play_selected_rc=$?
+    if [ "$play_selected_rc" -eq 10 ]; then
+      return 10
+    fi
+    if [ "$play_selected_rc" -eq 12 ]; then
+      continue
+    fi
+    if [ "$play_selected_rc" -ne 0 ]; then
+      FAILED_STREAM_IDS="${FAILED_STREAM_IDS}|${stream_id}|"
+      STREAM_RETRY_SUBTITLE_ID="$subtitle_id"
+      log "stream failed; returning to filtered picker stream_id=$stream_id"
+      return 11
+    fi
+    return 0
   done
-
-  play_selected_stream "$type" "$id" "$title" "$year" "$resume_seconds" \
-    "$stream_id" "$subtitle_id" "$audio_stream_index"
-  play_selected_rc=$?
-  if [ "$play_selected_rc" -eq 10 ]; then
-    return 10
-  fi
-  if [ "$play_selected_rc" -ne 0 ]; then
-    FAILED_STREAM_IDS="${FAILED_STREAM_IDS}|${stream_id}|"
-    STREAM_RETRY_SUBTITLE_ID="$subtitle_id"
-    log "stream failed; returning to filtered picker stream_id=$stream_id"
-    return 11
-  fi
-  return 0
 }
 
 fallback_matroska_playback() {
@@ -2259,6 +2263,47 @@ fallback_matroska_playback() {
   rm -f "$FIELD_TEST_SUBTITLE_FILE"
   FIELD_TEST_SUBTITLE_FILE=""
   log "matroska setup fallback reason=$fallback_reason stream_id=$fallback_stream_id"
+  case "$fallback_reason" in
+    no-preferred-subtitles|server-subtitles_unavailable)
+      fallback_choice=$(select_matroska_subtitle_fallback "$fallback_type" \
+        "$fallback_id" "$fallback_stream_id")
+      case "$fallback_choice" in
+        none)
+          fallback_previous_mode="$MATROSKA_SUBTITLES"
+          MATROSKA_SUBTITLES=0
+          log "matroska preferred subtitles unavailable; user selected none"
+          play_selected_stream "$fallback_type" "$fallback_id" "$fallback_title" \
+            "$fallback_year" "$fallback_resume_seconds" "$fallback_stream_id" \
+            "none" "$fallback_audio_stream_index"
+          fallback_rc=$?
+          MATROSKA_SUBTITLES="$fallback_previous_mode"
+          return "$fallback_rc"
+          ;;
+        other:*)
+          fallback_other_id=$(printf '%s' "$fallback_choice" | cut -d: -f2)
+          fallback_other_language=$(printf '%s' "$fallback_choice" | cut -d: -f3)
+          [ -n "$fallback_other_id" ] && [ -n "$fallback_other_language" ] || return 1
+          fallback_previous_languages="$SUBTITLE_LANGUAGES"
+          SUBTITLE_LANGUAGES="$fallback_other_language"
+          log "matroska preferred subtitles unavailable; user selected other language=$fallback_other_language"
+          play_selected_stream "$fallback_type" "$fallback_id" "$fallback_title" \
+            "$fallback_year" "$fallback_resume_seconds" "$fallback_stream_id" \
+            "$fallback_other_id" "$fallback_audio_stream_index"
+          fallback_rc=$?
+          SUBTITLE_LANGUAGES="$fallback_previous_languages"
+          return "$fallback_rc"
+          ;;
+        back)
+          log "matroska preferred subtitle fallback canceled"
+          return 12
+          ;;
+        *)
+          log "matroska preferred subtitle fallback failed"
+          return 1
+          ;;
+      esac
+      ;;
+  esac
   fallback_subtitle_id=$(select_subtitle "$fallback_type" "$fallback_id" \
     "$fallback_stream_id")
   if [ "$fallback_subtitle_id" = "back" ]; then
@@ -2296,7 +2341,6 @@ play_selected_stream() {
     return 1
   fi
   if [ "$MATROSKA_SUBTITLES" = "1" ]; then
-    subtitle_id=none
     start_loading "PocketStremio" "Preparing video and selectable subtitles..."
     subtitle_query="/api/subtitles/$type/$id?stream_id=$stream_id&all=1&matroska_subtitles=1&max_per_language=$MAX_SUBTITLES_PER_LANGUAGE"
     [ -n "$SUBTITLE_LANGUAGES" ] && subtitle_query="$subtitle_query&languages=$SUBTITLE_LANGUAGES"
@@ -2455,6 +2499,76 @@ play_selected_stream() {
     fi
   fi
   return "$playback_result"
+}
+
+select_matroska_subtitle_fallback() {
+  fallback_type="$1"
+  fallback_id="$2"
+  fallback_stream_id="$3"
+  while :; do
+    printf 'No subtitles\tnone\nChoose other subtitles\tother\nBack\tback\n' \
+      >/tmp/pocketstremio-matroska-subtitle-fallback.tsv
+    fallback_action=$(select_from_file "Preferred subtitles unavailable" \
+      /tmp/pocketstremio-matroska-subtitle-fallback.tsv)
+    case "$fallback_action" in
+      "No subtitles")
+        printf '%s' "none"
+        return 0
+        ;;
+      "Choose other subtitles")
+        other_choice=$(select_matroska_other_subtitle "$fallback_type" \
+          "$fallback_id" "$fallback_stream_id")
+        case "$other_choice" in
+          other:*) printf '%s' "$other_choice"; return 0 ;;
+          back) continue ;;
+          *) continue ;;
+        esac
+        ;;
+      *)
+        printf '%s' "back"
+        return 0
+        ;;
+    esac
+  done
+}
+
+select_matroska_other_subtitle() {
+  other_type="$1"
+  other_id="$2"
+  other_stream_id="$3"
+  other_query="/api/subtitles/$other_type/$other_id?stream_id=$other_stream_id&all=1&all_languages=1&matroska_subtitles=1&max_per_language=$MAX_SUBTITLES_PER_LANGUAGE"
+  start_loading "PocketStremio" "Loading other subtitles..."
+  api_get "$other_query" >/tmp/pocketstremio-other-subtitles.json
+  other_lookup_rc=$?
+  stop_loading
+  if [ "$other_lookup_rc" -ne 0 ]; then
+    log "other subtitle lookup failed"
+    printf '%s' "back"
+    return 0
+  fi
+  other_count=$("$JQ" -r '.count // 0' /tmp/pocketstremio-other-subtitles.json)
+  if [ "$other_count" -le 0 ] 2>/dev/null; then
+    log "other subtitle lookup returned no tracks"
+    message "Preferred subtitles unavailable" "No other subtitles are available"
+    printf '%s' "back"
+    return 0
+  fi
+  "$JQ" -r '.items[] | "\(.name) [\(.lang)]\t\(.id)\t\(.lang)"' \
+    /tmp/pocketstremio-other-subtitles.json >/tmp/pocketstremio-other-subtitles.tsv
+  selected_other=$(select_from_file "Choose other subtitles" \
+    /tmp/pocketstremio-other-subtitles.tsv)
+  [ -n "$selected_other" ] || { printf '%s' "back"; return 0; }
+  other_line=$(grep -F "$selected_other	" \
+    /tmp/pocketstremio-other-subtitles.tsv | head -n 1)
+  other_subtitle_id=$(printf '%s' "$other_line" | cut -f2)
+  other_language=$(printf '%s' "$other_line" | cut -f3)
+  if [ -z "$other_subtitle_id" ] || [ -z "$other_language" ]; then
+    log "other subtitle selection did not match"
+    printf '%s' "back"
+    return 0
+  fi
+  log "selected other subtitle id=$other_subtitle_id language=$other_language"
+  printf 'other:%s:%s' "$other_subtitle_id" "$other_language"
 }
 
 select_subtitle() {

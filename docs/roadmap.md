@@ -775,7 +775,13 @@ and English and Greek subtitle order; a later app launch loaded those values,
 confirming persistence. A controller playback check then offered three
 selectable subtitle tracks with Greek first and English next, physically
 confirming deterministic subtitle-priority application. The no-preferred-
-language fallback remains pending.
+language fallback initially regressed: an Azerbaijani-only preference found no
+matching tracks and silently started playback without subtitles. The corrected
+client now presents `No subtitles`, `Choose other subtitles`, and `Back`; its
+bounded opaque other-language lookup repackages the selected language for the
+selectable Matroska player. Apps-context retesting confirmed the dialog, the
+alternate-subtitle list, no-subtitle playback, and Back returning to the stream
+list. Selecting and playing an alternate language remains pending.
 
 Saved audio order is also applied before stream selection. The client chooses
 the highest-priority saved language that exists in the currently playable,

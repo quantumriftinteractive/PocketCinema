@@ -1932,6 +1932,11 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
     def handle_subtitles(self, item_type, item_id, parsed):
         query = urllib.parse.parse_qs(parsed.query)
         include_all = query.get("all", [""])[0].lower() in {"1", "true", "yes"}
+        all_languages = query.get("all_languages", [""])[0].lower() in {
+            "1",
+            "true",
+            "yes",
+        }
         matroska_subtitles = (
             query.get("matroska_subtitles", [""])[0].lower()
             in {"1", "true", "yes"}
@@ -2034,7 +2039,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     lang = playback_compatibility.normalize_language_tag(
                         raw.get("lang") or raw.get("language")
                     )
-                    if lang not in language_rank:
+                    if not lang or (not all_languages and lang not in language_rank):
                         continue
                     subtitles.append(
                         {
@@ -2082,7 +2087,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 lang = playback_compatibility.normalize_language_tag(
                     raw.get("lang") or raw.get("language")
                 )
-                if lang not in language_rank:
+                if not lang or (not all_languages and lang not in language_rank):
                     continue
                 subtitle_url = raw.get("url")
                 subtitle_name = safe_addon_text(
@@ -2120,7 +2125,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 break
 
         subtitles.sort(key=lambda subtitle: language_rank.get(subtitle["lang"], 99))
-        if include_all:
+        if all_languages:
+            subtitles = subtitles[:MAX_TOTAL_SUBTITLE_TRACKS]
+        elif include_all:
             subtitles = select_subtitle_tracks(
                 subtitles, requested_languages, max_per_language
             )

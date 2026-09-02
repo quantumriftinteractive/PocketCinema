@@ -119,6 +119,13 @@ stability follow-up remains pending its own physical retest.
 ## Known Regressions / Broken Behavior
 
 - No Matroska multi-track regression is present in the audited committed code.
+- The first physical no-preferred-subtitle test exposed a Milestone 21 defect:
+  a missing preferred language silently started playback without subtitles.
+  The bounded `No subtitles` / `Choose other subtitles` / `Back` correction is
+  implemented, automated-tested, and deployed. Apps testing now confirms the
+  dialog, the alternate-subtitle list, no-subtitle playback, and Back returning
+  to the stream list. Selecting and playing an alternate language remains
+  pending.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
@@ -198,11 +205,12 @@ Known issue / blocker:
   open.
 
 Next exact action:
-- Exercise the no-preferred-language fallback without changing release scope.
+- Retest the deployed no-preferred-subtitle fallback without changing release
+  scope.
 
 Required next physical test:
-- With no preferred subtitle language available, confirm that the client offers
-  `No subtitles`, `Choose other subtitles`, and `Back` without substitution.
+- From the alternate-subtitle list, select an available language and confirm
+  that its bounded selectable-Matroska track set plays with R1 cycling.
 
 DO NOT:
 
