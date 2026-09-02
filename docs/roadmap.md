@@ -783,7 +783,10 @@ is actually available and is not already preferred, and offers `Back to
 streams`. Choosing English packages its bounded selectable-Matroska tracks for
 R1 cycling. The earlier file-level alternate-subtitle picker was deliberately
 replaced before acceptance. The revised dialog is automated-tested and deployed
-to the Miyoo, but awaits Apps-context testing.
+to the Miyoo. An Apps-context local-video run with Greek preferred reached the
+named fallback dialog and, after `Use English subtitles`, the selectable-
+subtitle playback stream. R1 cycling of that fallback package and the
+English-already-preferred suppression case remain to be physically confirmed.
 
 Saved audio order is also applied before stream selection. The client chooses
 the highest-priority saved language that exists in the currently playable,

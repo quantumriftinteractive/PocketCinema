@@ -181,7 +181,7 @@ Completed:
   list. The correction is automated-tested and deployed.
 - Replaced that file-level picker with the user-directed named-preference,
   no-subtitles, English-if-available, and Back-to-streams fallback. It is
-  automated-tested and deployed, pending Apps-context confirmation.
+  automated-tested and deployed.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
@@ -202,24 +202,27 @@ Physically confirmed:
   from the Apps context.
 - The controller offered three selectable subtitle tracks in deterministic
   preference order: Greek first, followed by English.
+- With Greek preferred and the local compatibility video selected, the
+  unavailable-preference dialog named the English fallback, and choosing
+  `Use English subtitles` reached the selectable-subtitle playback stream.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
-  no-preferred-language fallback behavior.
+  R1 cycling of the English fallback package and suppression of the English
+  option when English is already preferred.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Retest the deployed no-preferred-subtitle fallback without changing release
-  scope.
+- From the deployed English fallback stream, verify R1 cycles its bounded
+  English subtitle package; then retest with English already preferred.
 
 Required next physical test:
-- With an unavailable non-English preference and available English tracks,
-  confirm the named dialog and explicit `Use English subtitles` option. Confirm
-  it packages bounded English tracks with R1 cycling, and that the option is
-  absent when English is already a preferred language.
+- Confirm R1 cycles the bounded English tracks after the explicit fallback
+  choice. With English already in the preferred subtitle-language list, confirm
+  the `Use English subtitles` option is absent.
 
 DO NOT:
 
