@@ -782,9 +782,8 @@ flow is user-directed: it names the missing preferred language, offers
 is actually available and is not already preferred, and offers `Back to
 streams`. Choosing English packages its bounded selectable-Matroska tracks for
 R1 cycling. The earlier file-level alternate-subtitle picker was deliberately
-replaced before acceptance. The revised dialog is automated-tested and
-committed, but awaits Miyoo deployment and Apps-context testing because the
-device tailnet address was unreachable.
+replaced before acceptance. The revised dialog is automated-tested and deployed
+to the Miyoo, but awaits Apps-context testing.
 
 Saved audio order is also applied before stream selection. The client chooses
 the highest-priority saved language that exists in the currently playable,

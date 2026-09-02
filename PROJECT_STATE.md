@@ -125,9 +125,8 @@ stability follow-up remains pending its own physical retest.
   missing preference, offer no subtitles, offer English only when English is
   actually available and not already preferred, and return Back to the stream
   list. Its earlier file-level alternate-subtitle picker was intentionally
-  replaced before acceptance. The revised client is committed but not yet
-  deployed because the Miyoo tailnet address was unreachable; it awaits
-  deployment and Apps-context testing.
+  replaced before acceptance. The revised client is now deployed and awaits
+  Apps-context testing.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
@@ -159,7 +158,7 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `b36db01037b3afbd9f59802b0531143e6f036cb7`
+Checkpoint commit: `381a3faeb3cdddb92eab38912516cd85bd5f406e`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -180,6 +179,9 @@ Completed:
 - Corrected unavailable subtitle preferences with an explicit bounded fallback:
   no subtitles, a safe other-language picker, or Back to the existing stream
   list. The correction is automated-tested and deployed.
+- Replaced that file-level picker with the user-directed named-preference,
+  no-subtitles, English-if-available, and Back-to-streams fallback. It is
+  automated-tested and deployed, pending Apps-context confirmation.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
@@ -200,9 +202,6 @@ Physically confirmed:
   from the Apps context.
 - The controller offered three selectable subtitle tracks in deterministic
   preference order: Greek first, followed by English.
-- With an unavailable preferred subtitle language, the fallback dialog and
-  other-subtitle list appeared, no-subtitle playback worked, and Back returned
-  to the stream list.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
