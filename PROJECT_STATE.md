@@ -186,21 +186,23 @@ Physically confirmed:
   stream selection. Its original one-line notice was hard to read on the Miyoo.
 - A PSS scan response rendered cleanly as a wrapped two-line infoPanel message
   from the Apps context.
+- The controller offered three selectable subtitle tracks in deterministic
+  preference order: Greek first, followed by English.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
-  deterministic subtitle priority and no-preferred-language fallback behavior.
+  no-preferred-language fallback behavior.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Complete the remaining Milestone 21 acceptance checks without changing
-  release scope.
+- Exercise the no-preferred-language fallback without changing release scope.
 
 Required next physical test:
-- Exercise deterministic subtitle priority from the controller UI.
+- With no preferred subtitle language available, confirm that the client offers
+  `No subtitles`, `Choose other subtitles`, and `Back` without substitution.
 
 DO NOT:
 
