@@ -1,6 +1,6 @@
 # PocketStremio Current Project State
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
@@ -150,7 +150,7 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `001d1bd8ba7596d74fd17d8977d024e58c1536a8`
+Checkpoint commit: `2ddfc40c12c3a257911d04093b402c54a5b6e384`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
