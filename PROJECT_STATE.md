@@ -145,9 +145,8 @@ inputs are unavailable.
 
 ## Next Action
 
-Physically verify the wrapped multi-line message presentation, then run the
-remaining settings/preference Apps-context checks. Update the roadmap, evidence,
-and this file together only when the milestone is actually accepted.
+Run the remaining settings/preference Apps-context checks. Update the roadmap,
+evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -168,8 +167,7 @@ Completed:
 - Fixed and physically confirmed source-menu B/back cancellation; added the
   automated-tested stream-list stability cache and no-verified-audio-tag path.
 - Recorded the physical same-title stream-list stability confirmation.
-- Added and deployed the bounded multi-line infoPanel message wrapper, pending
-  its next Apps-context visual check.
+- Added and deployed the bounded multi-line infoPanel message wrapper.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
@@ -186,25 +184,23 @@ Physically confirmed:
   identical requests without a repeated addon fetch.
 - The normal PSS no-verified-audio-tag path appeared and continued to explicit
   stream selection. Its original one-line notice was hard to read on the Miyoo.
+- A PSS scan response rendered cleanly as a wrapped two-line infoPanel message
+  from the Apps context.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
   deterministic subtitle priority and no-preferred-language fallback behavior.
-- Generic infoPanel message wrapping: preserve explicit line breaks, wrap at 32
-  characters, and limit the display to four lines with an ellipsis. It is
-  syntax-tested and deployed, but awaits a visual Apps-context check.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Visually verify a wrapped long message, then complete the remaining Milestone
-  21 acceptance checks without changing release scope.
+- Complete the remaining Milestone 21 acceptance checks without changing
+  release scope.
 
 Required next physical test:
-- Trigger a longer message and confirm clean multi-line rendering; then exercise
-  deterministic subtitle priority from the controller UI.
+- Exercise deterministic subtitle priority from the controller UI.
 
 DO NOT:
 
