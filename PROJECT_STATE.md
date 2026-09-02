@@ -157,7 +157,7 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `5e24bca9ec16352287bb8be4579a8fa055513cb3`
+Checkpoint commit: `b36db01037b3afbd9f59802b0531143e6f036cb7`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
@@ -175,6 +175,9 @@ Completed:
   automated-tested stream-list stability cache and no-verified-audio-tag path.
 - Recorded the physical same-title stream-list stability confirmation.
 - Added and deployed the bounded multi-line infoPanel message wrapper.
+- Corrected unavailable subtitle preferences with an explicit bounded fallback:
+  no subtitles, a safe other-language picker, or Back to the existing stream
+  list. The correction is automated-tested and deployed.
 
 Physically confirmed:
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
@@ -195,6 +198,9 @@ Physically confirmed:
   from the Apps context.
 - The controller offered three selectable subtitle tracks in deterministic
   preference order: Greek first, followed by English.
+- With an unavailable preferred subtitle language, the fallback dialog and
+  other-subtitle list appeared, no-subtitle playback worked, and Back returned
+  to the stream list.
 
 Implemented/tested but not physically confirmed:
 - Remaining Milestone 21 settings/preferences acceptance work, including
