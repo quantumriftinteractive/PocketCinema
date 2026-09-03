@@ -6,7 +6,11 @@
 
 PocketStremio must work on a directly reachable home LAN and, when the Miyoo is away from home, through an independently managed remote-network route. For supported v1 remote use that route is the official Tailscale client on the PSS host plus the separate Miyoo Tailscale companion's userspace HTTP proxy. Local use must not require Tailscale.
 
-The current first-run gap is measured: with no PocketStremio configuration, the Miyoo receives a local PSS discovery response but begins with direct HTTP. It cannot validate a tailnet-only PSS address or a manually entered tailnet address through the optional proxy. The prior live configuration was restored unchanged after that test.
+The original first-run gap was measured: with no PocketStremio configuration,
+the Miyoo began with direct HTTP and could not validate a tailnet-only PSS
+through the optional proxy. Phase 3 now resolves that gap; its separate
+config-free Apps installation opened setup before home without altering the
+preserved live configuration.
 
 Current implementation facts:
 
@@ -90,16 +94,16 @@ Do not add proxy types, credentials, PAC/SOCKS support, provider discovery, or a
 
 ### 3. Replace first-run connection setup
 
-**Implementation status:** Implemented, automated/static-validated, and
-deployed; partially confirmed from OnionOS Apps. Legacy startup and manual
+**Implementation status:** Implemented, automated/static-validated, deployed,
+and physically confirmed from OnionOS Apps. Legacy startup and manual
 Local-only setup were confirmed through a direct Miyoo `friday` search. The
 hotspot scan then advertised the direct PSS and selection passed direct
 validation. Remote-only setup/search through the proxy and the found-but-
 unreachable Local validation case are also confirmed. Remote proxy-failure
 recovery and Remote-profile restart persistence are also confirmed. Complete
 Automatic Local-unavailable → Remote → Local fallback is also confirmed; the
-three-second Both/Automatic information message is also confirmed.
-Pristine-first-run awaits Apps confirmation. The approved two-endpoint profile,
+three-second Both/Automatic information message and a separate config-free
+pristine first run are also confirmed. The approved two-endpoint profile,
 mode selection, direct local
 validation, manual remote validation through the generic proxy, and direct-first
 Automatic resolution are included in this Phase 3 delivery. Legacy
@@ -124,8 +128,8 @@ Classify failures by stage. A proxy refusal/timeout says the remote route or hel
 
 ### 4. Make discovery and reachability distinct
 
-**Implementation status:** Included in the Phase 3 delivery above; pending
-Apps-context confirmation.
+**Implementation status:** Included in the physically confirmed Phase 3
+delivery above.
 
 Keep UDP discovery direct as a Local setup convenience. Keep every syntactically valid advertisement in selection data, label it `Found on local network`, and separately report direct validation as `Reachable` or `Not reachable from this route`. Selection retries direct validation before saving the Local URL.
 
@@ -133,8 +137,8 @@ Do not proxy UDP discovery. Remote setup uses a manually entered Remote PSS URL 
 
 ### 5. Add profile routing and resilient startup
 
-**Implementation status:** Included in the Phase 3 delivery above; pending
-Apps-context confirmation.
+**Implementation status:** Included in the physically confirmed Phase 3
+delivery above.
 
 After first-run setup works, add the local/remote fields and modes. Resolve one active route at launch and use it consistently for status, API calls, play URLs, subtitles, progress, and FFplay proxy environment. Quick Resume binds to the logical PSS profile plus route identity so it does not silently replay against another PSS.
 
@@ -191,7 +195,11 @@ Technical GitHub documentation can explain the userspace HTTP-proxy architecture
 
 ## Milestone impact and open decisions
 
-This is Milestone 21 first-run/settings work, not a reason to start Milestone 23. It changes no confirmation status. Milestone 21 needs automated route/configuration coverage plus the physical tests above before it can be Confirmed. Milestone 23 can surface PSS endpoints/guidance but cannot substitute for Miyoo-side onboarding.
+This is Milestone 21 first-run/settings work, not a reason to start Milestone 23.
+Phase 3 now has automated route/configuration coverage and the required
+Apps-context tests. Milestone 21 still has separate acceptance work before it
+can be Confirmed. Milestone 23 can surface PSS endpoints/guidance but cannot
+substitute for Miyoo-side onboarding.
 
 Recommended implementation order: companion endpoint visibility; minimal PSS proxy controls; direct/remote first-run setup; two-endpoint automatic routing; clean dual-app release packaging; then the separately gated Windows PSS desktop distribution.
 

@@ -21,20 +21,18 @@ Until Milestone 23 is implemented and accepted from the actual packaged
 artifact, the Python/PowerShell workflow below remains a developer/source path,
 not the intended end-user v1.0 installation.
 
-## Verified Connection and Onboarding Blocker
+## Verified Connection and Onboarding Resolution
 
-First-run Miyoo onboarding is not release-ready for every supported transport.
-The client correctly defaults to direct HTTP, but its first-run UI currently
-cannot configure the optional generic HTTP proxy before it scans for or validates
-a PSS. In the measured development environment, the PSS was listening on its
-tailnet address and the shared Wi-Fi blocked peer UDP discovery. The Miyoo did
-receive a PSS discovery response, but could not validate that PSS or a manually
-entered tailnet address because the saved app-local proxy configuration had
-been intentionally removed for the first-run test. The original configuration
-was restored unchanged after the test.
+The pre-Phase-3 no-config test measured a tailnet onboarding gap: direct startup
+could not validate a tailnet PSS through the optional generic proxy. Phase 3
+now supplies first-run Local, Remote, and Both/Automatic setup with atomically
+saved profiles, direct Local validation, Remote validation through the user
+configured proxy, and direct-first fallback. Its full Apps-context acceptance
+matrix, including a separate config-free installation that opened setup before
+home without altering the preserved live profile, is physically confirmed.
 
-This is not a request for PocketStremio to manage Tailscale or any other
-network provider. The product gap is a transport-agnostic onboarding path that:
+This does not ask PocketStremio to manage Tailscale or any other network
+provider. The completed transport-agnostic onboarding path:
 
 - tries direct LAN connection first without exposing unnecessary networking
   complexity to ordinary users;
@@ -80,8 +78,8 @@ Connected, disabled direct-route transitions, and a `friday` search after
 restoring the default all passed from Apps.
 
 Phase 3 first-run connection onboarding and two-endpoint routing are
-implemented, automated/static-validated, deployed, and partially physically
-confirmed, but not accepted. The client retains legacy single-server
+implemented, automated/static-validated, deployed, and physically confirmed.
+The client retains legacy single-server
 configuration unchanged; new
 profiles atomically store Local PSS, Remote PSS, and Automatic | Local only |
 Remote only mode. Legacy startup and manual Local-only setup/search are
@@ -93,9 +91,9 @@ are also physically confirmed, as is Remote-profile restart persistence.
 Automatic's complete Local-unavailable → Remote → Local fallback is physically
 confirmed. Automatic probes Local directly, then Remote through the generic
 proxy, and all PSS requests use the resolved route. The Both/Automatic
-three-second information message is physically confirmed; pristine first run
-remains pending, so the release gate remains open until the remaining
-Apps-context acceptance matrix passes.
+three-second information message and pristine first run are physically
+confirmed. The release gate remains open for the separate remaining release
+requirements, not Phase 3 onboarding.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

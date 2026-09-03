@@ -128,11 +128,6 @@ stability follow-up remains pending its own physical retest.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
-- The no-config first-run path cannot currently connect to a tailnet-only PSS:
-  it starts direct, so manual entry and discovery validation cannot use the
-  app-local generic proxy that the saved configuration normally supplies. The
-  discovery response is seen but rejected at status validation; the original
-  live configuration was restored unchanged after this test.
 - Milestone 17 long-duration bridge acceptance, fresh-SD validation, and final
   packaging/licensing gates remain open.
 
@@ -153,15 +148,16 @@ Phase 2 adds PocketStremio-owned editable generic HTTP-proxy controls. It is
 implemented, statically validated, deployed, and physically confirmed. It
 preserves direct transport for absent/empty `PROXY` and does not inspect or
 control the companion. The final Apps run restored the default proxy and
-successfully searched for `friday` through it. Phase 3 onboarding is not
-physically confirmed yet.
+successfully searched for `friday` through it. Phase 3 onboarding is physically
+confirmed.
 
 Phase 3 first-run connection onboarding, discovery/reachability separation,
-and two-endpoint routing are implemented, automated/static-validated, and
-deployed. They preserve legacy `SERVER_BASE`/`PROXY` behavior without automatic
+and two-endpoint routing are implemented, automated/static-validated,
+deployed, and physically confirmed. They preserve legacy `SERVER_BASE`/`PROXY`
+behavior without automatic
 migration, add atomically saved Local/Remote/Mode profile fields, and use one
 active direct-or-proxied route for all client requests. Apps-context evidence
-partially confirms legacy startup and the manual Local direct route: the Miyoo
+confirms legacy startup and the manual Local direct route: the Miyoo
 saved `172.20.10.3:8755` as Local-only, showed `Connected (Local)`, and returned
 `friday` search results through that direct route. UDP discovery then advertised
 that direct PSS, and selection completed a separate direct validation. The
@@ -171,8 +167,7 @@ The Local scan of that Tailnet advertisement correctly failed direct validation
 as the negative discovery case. Changing the Remote-only proxy to
 `127.0.0.1:1056` reported `Remote proxy unavailable`; restoring the default
 immediately returned to `Connected (Remote)`. A fresh app launch preserved the
-Remote endpoint, mode, proxy, and selected Remote route. Pristine-first-run
-remains pending.
+Remote endpoint, mode, proxy, and selected Remote route.
 
 With both endpoints saved in Automatic mode, the Mac's hotspot address then
 disappeared while its Tailnet endpoint remained reachable. The Miyoo resolved
@@ -186,7 +181,17 @@ information panel explaining that both endpoints are saved and that Local is
 preferred before Remote/proxy routing, then opens Local setup. It uses an
 app-owned persistent panel and clears its dismissal flag after closing.
 
+A separate temporary OnionOS Apps installation with no PocketStremio config,
+logs, last-play state, or Tailscale state opened `PocketStremio setup` before
+the home screen. Back exited without creating config, and the development
+installation's saved profile checksum remained unchanged. The temporary app was
+then removed. This completes Phase 3 physical confirmation.
+
 ## Last Completed Work
+
+Phase 3 portable connection onboarding is now physically confirmed. Its
+separate pristine Apps installation entered setup with no created state and
+left the preserved live profile unchanged.
 
 Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
 relevant implementation history is `b240328`, `3c29d15`, and `bd6d91a`.
@@ -198,9 +203,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Complete the remaining Phase 3 Apps-context pristine-first-run check. Update
-the roadmap, evidence, and this file together only when the milestone is
-actually accepted.
+Physically test the remaining Milestone 21 subtitle-download and
+conversion-startup failure categories. Do not begin Milestone 23 desktop
+distribution or release-installer work.
 
 ## Latest Verified Checkpoint
 
@@ -211,7 +216,7 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
-- Partially confirmed Phase 3 from OnionOS Apps. The preserved legacy route
+- Confirmed Phase 3 onboarding from OnionOS Apps. The preserved legacy route
   started normally. On the iPhone hotspot, manually entering the Mac PSS's
   direct address saved `LOCAL_PSS`, selected Local-only mode, showed
   `Connected (Local)`, and returned `friday` search results directly from the
@@ -239,13 +244,18 @@ Completed:
   Apps. It explained Local priority and Remote/proxy fallback, then opened the
   Local picker; the app-owned `/tmp/dismiss_info_panel` flag was clean after it
   closed.
+- Confirmed pristine Phase 3 first run from a separate temporary OnionOS Apps
+  installation with no config, logs, last-play state, or Tailscale state. It
+  opened `PocketStremio setup` before home; B exited without creating config.
+  The live app's saved profile checksum remained unchanged, and the temporary
+  installation was removed afterward.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
   configured generic proxy; and Automatic resolves Local directly before
   Remote through that proxy. Focused route/profile tests, shell/PowerShell
   parsing, Python compilation, and server tests pass. Existing live config was
-  preserved, while physical acceptance remains pending.
+  preserved, and the full Phase 3 Apps acceptance matrix is confirmed.
 - Physically confirmed Phase 2 generic HTTP-proxy controls from OnionOS Apps:
   the preserved root-path config started cleanly, edit/default/disable persisted
   correctly, `1056` became Offline, restoring `1055` became Connected,
@@ -311,14 +321,19 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
-- Phase 3 partial acceptance: legacy startup, manual Local-only setup, and
+- Phase 3 onboarding acceptance: legacy startup, manual Local-only setup, and
   normal Local discovery/validation are confirmed. The direct hotspot PSS route
   was selected, persisted, reported `Connected (Local)`, and served a Miyoo
   `friday` search. Remote-only setup persisted the Tailnet endpoint and default
   proxy, reported `Connected (Remote)`, and served the same search through the
   proxy. A Local scan then found that Tailnet-advertised endpoint; selecting it
   failed the required direct validation and exercised the found-but-unreachable
-  negative case.
+  negative case. Remote proxy-failure/default recovery, Remote-profile restart
+  persistence, and complete Automatic Local-to-Remote-to-Local fallback are
+  confirmed. The three-second Both/Automatic message is confirmed. A separate
+  config-free temporary Apps installation opened the setup controller before
+  home and exited without creating state; the original live profile was
+  unchanged and the temporary installation was removed.
 - Phase 2 generic HTTP-proxy controls: the settings UI accepts a legacy
   `http://host:port/` value at startup; explicit disable and enable-default
   actions persist correctly; proxy changes immediately invalidate the old PSS
@@ -364,15 +379,6 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
-- Phase 3 first-run/profile routing: Local/Remote endpoints, Automatic | Local
-  only | Remote only modes, direct-first fallback, per-route status, manual
-  remote validation through the generic proxy, and direct discovery candidate
-  validation. Legacy, manual Local-only, and normal discovery/validation are
-  physically confirmed; Remote-only and the found-but-unreachable discovery
-  case are also confirmed. Remote proxy-failure/default recovery is confirmed.
-  Remote-profile restart persistence is confirmed. Complete Automatic
-  Local-to-Remote-to-Local fallback is confirmed; pristine-first-run remains
-  pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -380,17 +386,15 @@ Implemented/tested but not physically confirmed:
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
-- Phase 3 requires Apps-context acceptance before it can be considered a
-  confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Run the pristine-first-run check. Do not begin desktop PSS or
+- Physically test the remaining Milestone 21 subtitle-download and
+  conversion-startup failure categories. Do not begin desktop PSS or
   release-installer work.
 
 Required next physical test:
-- On a separate pristine installation/config, launch from OnionOS Apps and
-  confirm the setup controller opens before the home screen; do not modify the
-  preserved legacy config on the development Miyoo merely to simulate first run.
+- From OnionOS Apps, exercise the bounded subtitle-download and
+  conversion-startup failure messages, then return cleanly to selection.
 
 DO NOT:
 

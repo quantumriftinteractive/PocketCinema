@@ -697,9 +697,9 @@ first-run proxy/onboarding design is required before tailnet first-run can be
 accepted. The proposed direct-first, generic-proxy remote route is documented
 in [Portable Connection and First-Run Onboarding Plan](portable-connection-onboarding-plan.md);
 the companion's endpoint-display phase is implemented, statically tested,
-deployed, and physically confirmed; the remaining PocketStremio onboarding work
-is implemented, automated/static-tested, deployed, and partially physically
-confirmed. Legacy startup and manual Local-only direct setup/search passed from
+deployed, and physically confirmed; the PocketStremio onboarding work is
+implemented, automated/static-tested, deployed, and physically confirmed.
+Legacy startup and manual Local-only direct setup/search passed from
 OnionOS Apps; the hotspot scan also advertised the direct PSS and passed
 selection validation. Remote-only setup/search through the proxy and the
 found-but-unreachable Local validation case also passed, as did Remote proxy
@@ -707,8 +707,10 @@ failure/default recovery and Remote-profile restart persistence. It now includes
 first-run Local/Remote/Both setup, separate direct discovery/reachability
 handling, and direct-first Automatic routing through the existing generic
 proxy; its complete Local-unavailable → Remote → Local fallback and its
-three-second Both/Automatic information message are physically confirmed.
-Pristine first run remains pending. Playback failure reporting now classifies
+three-second Both/Automatic information message are physically confirmed. A
+separate config-free temporary Apps installation opened the setup controller
+before home without altering the preserved live profile, completing Phase 3
+first-run confirmation. Playback failure reporting now classifies
 bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
