@@ -914,12 +914,15 @@ activate_http_proxy() {
     return 0
   fi
   PROXY="$new_proxy"
+  # Reuse the normal monitor so its next /api/status request uses this
+  # transport, rather than leaving a result cached under the previous proxy.
+  start_server_monitor
   if [ -n "$PROXY" ]; then
     log "saved HTTP proxy enabled"
-    message "HTTP Proxy" "Proxy saved"
+    message "HTTP Proxy" "Proxy saved. Checking PSS..."
   else
     log "saved HTTP proxy disabled"
-    message "HTTP Proxy" "Proxy disabled; direct connections only"
+    message "HTTP Proxy" "Proxy disabled. Direct connections only. Checking PSS..."
   fi
 }
 

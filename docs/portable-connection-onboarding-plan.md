@@ -71,7 +71,9 @@ When disabled, retain it as setup information but label it `HTTP proxy when enab
 pending the required Apps-context test. The first launch found that a preserved
 legacy `http://host:port/` value (valid under the prior curl-only handling) was
 too strictly rejected. The deployed compatibility fix canonicalizes only that
-root-path spelling in memory; physical confirmation remains pending.
+root-path spelling in memory. The subsequent persistence run found that the
+existing PSS status monitor was not restarted after proxy changes; the minimal
+deployed correction restarts that same monitor and awaits physical confirmation.
 
 Preserve the HTTP-URL format. Add a `Connection settings` screen with:
 

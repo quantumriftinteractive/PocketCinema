@@ -72,7 +72,10 @@ PocketStremio-owned editable restore default `http://127.0.0.1:1055`; they do
 not inspect or control the companion. The first Apps launch exposed a strict
 validation regression for the preserved, previously supported
 `http://host:port/` spelling; a minimal deployed compatibility fix canonicalizes
-only that root-path form in memory and remains pending physical confirmation.
+only that root-path form in memory. The subsequent Apps settings run confirmed
+proxy persistence but found stale PSS status after an effective transport
+change; the monitor-refresh correction is deployed and awaits physical
+confirmation.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

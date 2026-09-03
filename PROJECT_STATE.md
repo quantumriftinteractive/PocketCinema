@@ -155,8 +155,10 @@ confirmed; it preserves direct transport for absent/empty `PROXY` and does not
 inspect or control the companion. Its first Apps launch exposed a startup
 compatibility regression for the preserved, previously supported
 `http://host:port/` spelling. The deployed fix canonicalizes only that root
-path form in memory without rewriting the live config; Apps confirmation is
-still required.
+path form in memory without rewriting the live config. The later Apps settings
+run confirmed persistence but found that a proxy change left the existing PSS
+monitor result stale until restart. The minimal refresh fix is implemented and
+awaits physical retest.
 
 ## Last Completed Work
 
@@ -182,6 +184,13 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Implemented the Phase 2 stale-status correction after physical testing found
+  that proxy edit, default restore, and disable kept the PSS monitor result
+  from the previous transport. A successful effective proxy change now restarts
+  the existing proxy-aware monitor, immediately shows `Server: Connecting...`,
+  and then records its normal `/api/status` result. Focused static coverage
+  verifies all three actions share that path; it is deployed and physical
+  retest is pending.
 - Deployed a Phase 2 startup-compatibility fix after the first Apps test found
   that the preserved `PROXY=http://127.0.0.1:1055/` was rejected by the new
   strict validator. The helper now accepts and canonicalizes the old root-path
@@ -265,7 +274,9 @@ Implemented/tested but not physically confirmed:
   generic proxy helper normalizes HTTP host:port input, rejects credentials and
   malformed values, preserves unrelated config, and accepts the prior valid
   `http://host:port/` root-path spelling without an interactive startup error.
-  It is awaiting Apps-context confirmation after deployment.
+  Its persistence UI has been exercised, but a stale server-status defect was
+  found after transport changes; the immediate existing-monitor refresh fix is
+  deployed and awaiting Apps-context confirmation.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -274,24 +285,27 @@ Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 - Phase 2 is not physically confirmed: its initial Apps launch exposed the
-  legacy root-path proxy validation regression. The minimal compatibility fix
-  is deployed and must first prove a clean startup before the full proxy test.
+  legacy root-path proxy validation regression, then its settings test exposed
+  stale PSS reachability after proxy transport changes. The compatibility fix
+  and monitor-refresh correction are deployed; physical retest remains
+  required.
 - Tailnet first-run onboarding is blocked until the app can obtain its generic
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- From OnionOS Apps, launch PocketStremio once with the preserved
-  `PROXY=http://127.0.0.1:1055/` and confirm it reaches the home UI without a
-  validation dialog; then run the full Phase 2 proxy-settings persistence and
-  existing proxy-aware request test.
+- Deploy the Phase 2 monitor-refresh correction, then from OnionOS Apps verify
+  that edit to an unreachable proxy, restore default, and disable each replace
+  the prior server state with `Connecting...` and the current reachability
+  result without restarting PocketStremio.
 
 Required next physical test:
-- First launch PocketStremio from Apps using the preserved root-path proxy
-  value and confirm no validation dialog. Then from Settings edit the HTTP
-  proxy to a temporary valid value, confirm persistence after app restart,
-  restore `http://127.0.0.1:1055`, clear it and confirm persistent direct mode,
-  then restore the default and verify an existing PSS request succeeds through
-  the independently enabled companion.
+- From Settings, set `127.0.0.1:1056` and return to the home screen: it must
+  first show `Server: Connecting...`, then `Server: Offline` without restart.
+  Restore `127.0.0.1:1055`: it must again show `Connecting...`, then
+  `Connected` without restart. Disable the proxy and confirm the same
+  Connecting-to-current-result behavior and the direct-only confirmation.
+  Finally restore the default and verify an existing PSS request succeeds
+  through the independently enabled companion.
 
 DO NOT:
 
