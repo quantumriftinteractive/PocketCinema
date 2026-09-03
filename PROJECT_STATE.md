@@ -156,7 +156,7 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `fd1d5c7c481045b715f7483b5c1b9dfb899c8daf`
+Checkpoint commit: `e92120997146724ed6e2fd4c205fc27639853989`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
