@@ -49,6 +49,18 @@ network provider. The product gap is a transport-agnostic onboarding path that:
 A future desktop PSS application can make server endpoint selection and setup
 information visible, but it cannot itself create the Miyoo's network route. The
 client still needs a direct route or a separately configured generic proxy.
+
+### Proposed v1 direction (not implemented)
+
+The agreed planning direction is a direct-first PocketStremio setup with a
+separately selectable remote route. The standalone Miyoo Tailscale companion
+will remain the owner of its userspace networking and will display its HTTP
+proxy endpoint. PocketStremio will retain a generic, editable HTTP-proxy URL
+(initial default `http://127.0.0.1:1055`) and will not inspect or control the
+companion. The proposed two-endpoint profile, automatic route behavior,
+packaging boundary, and required tests are recorded in
+[Portable Connection and First-Run Onboarding Plan](docs/portable-connection-onboarding-plan.md).
+This is a design decision, not implementation or physical confirmation.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
@@ -87,7 +99,8 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   tokens, generated media, logs, or runtime state from the development machine.
 - First-run client onboarding succeeds for direct LAN PSS access and for an
   explicitly selected optional generic HTTP-proxy route, without requiring a
-  pre-existing PocketStremio config file.
+  pre-existing PocketStremio config file. The proxy URL is viewable and
+  editable; the initial companion-oriented default is `http://127.0.0.1:1055`.
 - A normal Windows user can install or extract the PocketStremio Server desktop
   application, configure it, and operate its owned server without installing
   Python, running PowerShell, cloning the repository, or preparing environment
@@ -123,9 +136,11 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
 - A fresh-SD test passes with a clean account or explicitly documented no-account
   mode.
 - A fresh Miyoo can discover or enter a direct-LAN PSS address, and can select
-  an optional generic proxy before validating a routed PSS address. This must
-  be physically tested without starting, stopping, inspecting, or configuring
-  the independent network provider from PocketStremio.
+  an optional generic proxy before validating a routed PSS address. Discovery
+  must distinguish a received local advertisement from direct reachability;
+  remote setup must not depend on UDP discovery. This must be physically tested
+  without starting, stopping, inspecting, or configuring the independent
+  network provider from PocketStremio.
 - A normal direct-play movie, a series episode, a converted subtitle case, and
   a server restart/recovery case pass from Apps.
 - A converted multi-audio stream allows choosing a verified audio track before

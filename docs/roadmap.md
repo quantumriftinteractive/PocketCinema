@@ -694,7 +694,9 @@ the client starts direct, so it discovered the Mac PSS but rejected both its
 manual address and discovery result during status validation because no proxy
 was available. The original device configuration was restored unchanged. A
 first-run proxy/onboarding design is required before tailnet first-run can be
-accepted. Playback failure reporting now classifies bounded,
+accepted. The proposed direct-first, generic-proxy remote route is documented
+in [Portable Connection and First-Run Onboarding Plan](portable-connection-onboarding-plan.md);
+it remains unimplemented and unconfirmed. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure

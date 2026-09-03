@@ -144,6 +144,10 @@ preferences, stream/audio filtering, Continue Watching removal, and related
 client/server behavior. Do not label them production until they are physically
 confirmed where required and the milestone is accepted.
 
+The first-run local/remote onboarding design is documented in
+`docs/portable-connection-onboarding-plan.md`. It is planning only: no client,
+companion, network, deployment, or Tailscale behavior changed in this session.
+
 ## Last Completed Work
 
 Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
@@ -217,8 +221,8 @@ Physically confirmed:
 
 Implemented/tested but not physically confirmed:
 - Remaining separate Milestone 21 settings/preferences acceptance work,
-  including a first-run proxy/onboarding design for tailnet PSS access and the
-  precise subtitle-download and conversion-startup failure categories.
+  including first-run local/remote proxy onboarding and the precise
+  subtitle-download and conversion-startup failure categories.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
@@ -227,12 +231,15 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Decide whether first-run tailnet support should add an app-local generic
-  proxy setup step or remain explicitly limited to direct-LAN PSS discovery.
+- Obtain approval of the proposed two-endpoint local/remote profile and begin
+  the first Milestone 21 implementation phase in
+  `docs/portable-connection-onboarding-plan.md`; no networking behavior has
+  changed yet.
 
 Required next physical test:
-- After a first-run proxy decision is implemented, start with no config and
-  connect to the tailnet PSS through manual entry and discovery.
+- After first-run remote setup is implemented, start with no PocketStremio
+  config, configure the generic proxy through the UI, and validate a tailnet
+  PSS manually. Direct discovery remains a separate LAN-only test.
 
 DO NOT:
 
