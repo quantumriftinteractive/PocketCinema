@@ -166,13 +166,16 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `541f56abfb42047e348277ac6d7f0cb81ba3b6ea`
+Checkpoint commit: `7b553c4b0b12340ec579448968518206b79e53ac`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Physically confirmed the companion endpoint display in both Enabled and
+  Disabled states. The controller Disable -> Enable recovery restored the
+  expected proxy listeners and tailnet IP, then B exited cleanly.
 - Added a normal deployer reuse mode for tracked companion upgrades when the
   ignored local Tailscale binaries are absent. It verifies and preserves the
   installed device binaries, state, and logs; deployment and the enabled-screen
