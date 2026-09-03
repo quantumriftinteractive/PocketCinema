@@ -209,7 +209,7 @@ distribution or release-installer work.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `9c3b553a0b68bfe384e47cc09ecfe5366a13c238`
+Checkpoint commit: `207ca48fd566612e898ad2c2d98160cf24cf9163`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
