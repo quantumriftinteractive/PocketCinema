@@ -96,9 +96,9 @@ Local-only setup were confirmed through a direct Miyoo `friday` search. The
 hotspot scan then advertised the direct PSS and selection passed direct
 validation. Remote-only setup/search through the proxy and the found-but-
 unreachable Local validation case are also confirmed. Remote proxy-failure
-recovery is also confirmed. Automatic fallback, restart persistence, and
-pristine-first-run await Apps confirmation. The approved two-endpoint profile,
-mode selection, direct local
+recovery and Remote-profile restart persistence are also confirmed. Automatic
+fallback and pristine-first-run await Apps confirmation. The approved two-
+endpoint profile, mode selection, direct local
 validation, manual remote validation through the generic proxy, and direct-first
 Automatic resolution are included in this Phase 3 delivery. Legacy
 `SERVER_BASE`/`PROXY` configurations remain legacy routes until a user

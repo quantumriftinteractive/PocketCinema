@@ -703,10 +703,10 @@ confirmed. Legacy startup and manual Local-only direct setup/search passed from
 OnionOS Apps; the hotspot scan also advertised the direct PSS and passed
 selection validation. Remote-only setup/search through the proxy and the
 found-but-unreachable Local validation case also passed, as did Remote proxy
-failure/default recovery. It now includes first-run Local/Remote/Both setup,
-separate direct discovery/reachability handling, and direct-first Automatic
-routing through the existing generic proxy. Playback failure reporting now
-classifies bounded,
+failure/default recovery and Remote-profile restart persistence. It now includes
+first-run Local/Remote/Both setup, separate direct discovery/reachability
+handling, and direct-first Automatic routing through the existing generic
+proxy. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
