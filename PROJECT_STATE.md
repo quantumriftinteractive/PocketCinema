@@ -6,407 +6,110 @@ Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
-Release state: Not release-ready; Milestones 21 and 22 are physically confirmed, while
-fresh-install, packaging/licensing, and final release-scope gates remain open.
+Release state: Not release-ready. Milestones 21 and 22 remain physically
+confirmed; fresh-install, packaging/licensing, and final release-scope gates are
+open.
 
 PocketCinema is the canonical pre-release identity. PocketStremio/`PSS` names
 in historical evidence describe the application that was physically tested at
-the time; they do not reduce the confirmed Milestone 21 or 22 behavior. The
-rename is automated-validated, but its required PocketCinema Apps-context
-migration smoke test is still pending.
+the time; they do not reduce the confirmed Milestone 21 or 22 behavior.
 
 ## Production Baseline
 
-The committed baseline includes the confirmed PocketCinema vertical slice:
+The committed baseline supports movie/series search, season and episode browsing,
+opaque server-side stream selection and play sessions, direct-compatible and
+bounded converted playback, Continue Watching/Resume/Play from Start,
+host-isolated account playback, converted audio-track selection, bounded subtitle
+burn-in/downscaling, opt-in selectable Matroska subtitles, and clean Miyoo Menu
+exit/cleanup.
 
-- movie and series search;
-- season and episode browsing;
-- opaque server-side stream selection and play sessions;
-- direct compatible playback and bounded converted playback;
-- Continue Watching, Resume, and Play from Start;
-- account-backed direct HTTPS playback with host-side token isolation;
-- verified converted audio-track selection;
-- English subtitle burn-in and bounded 640x360 downscaling;
-- selectable Matroska subtitles as an opt-in app-local mode: up to three
-  server-normalized text tracks per preferred language, R1 cycling, and
-  automatic burn-in fallback;
-- clean Miyoo Menu exit and cleanup of playback/conversion state.
-
-The normal production fallback remains the server-mediated MPEG-TS burn-in
-path. Selectable Matroska playback is confirmed, but its inclusion in a v1.0
-release is still a release decision.
+Milestone 22's three-track English Matroska acceptance—R1 cycling, subtitles
+off, synchronized A/V/subtitles, progress saving, and cleanup—is physically
+confirmed. The normal production fallback remains server-mediated MPEG-TS
+burn-in. Whether the selectable Matroska player ships in v1.0 remains a release
+decision.
 
 ## Production Invariants
 
-- Keep upstream addon URLs, subtitle URLs, and account credentials on the PCServer
-  host; device APIs, logs, and process arguments expose only opaque IDs.
-- PocketCinema uses direct HTTP by default and an optional generic proxy. It
-  does not start, stop, inspect, or authenticate Tailscale.
-- Stremio Service access remains loopback-only on the PCServer host, with the
-  existing inbound firewall block preserved.
-- Continue Watching must preserve Resume and Play from Start semantics.
-- Playback readiness, Menu exit, cancellation, and failure must leave no stale
-  FFplay, helper, conversion, bridge, marker, or temporary subtitle state.
-- Converted output must preserve the measured compatibility envelope and
-  reject unsupported media before FFplay.
+- Keep addon URLs, media/subtitle URLs, and account credentials on the PCServer;
+  the device receives only opaque identifiers.
+- Stremio Service is loopback-only on the PCServer host; preserve the inbound
+  firewall block for TCP `11470-11474` and `12470`.
+- PocketCinema is transport-agnostic: direct HTTP is normal, an optional generic
+  HTTP proxy supports Remote routing, and it never manages Tailscale.
+- Automatic routing tries Local PCServer directly, then Remote PCServer through
+  the configured proxy. Discovery and reachability remain separate.
+- Continue Watching excludes startup and unverified pause intervals. All exits
+  clean up FFplay, helpers, conversion/bridge, markers, and temporary subtitles.
+- Selectable Matroska mode retains multiple tracks (up to three per preferred
+  language), R1 switching, and the off toggle. Converted multi-audio retains
+  manual track selection.
 
-### Matroska subtitle tracks
+## Current Identity Refactor
 
-- Multiple subtitle tracks are required in selectable Matroska mode.
-- The physical acceptance run used three English text tracks.
-- R1 cycling through tracks, subtitles off, and back to the first track is
-  production-confirmed and must remain available.
-- A one-subtitle implementation is a regression unless explicitly approved.
+Commit `a8c6c42222980a1ce77388c7ef2f7cbb301b0bdb` implements the controlled
+pre-Milestone-23 PocketCinema identity refactor. It renames live client/server
+paths, module names, configuration/environment identifiers, UI strings, current
+documentation, and the M23 title. No desktop shell or release artifact was
+created.
 
-### Converted audio
+The one-time development Miyoo migration is documented in
+`docs/pocketcinema-rename-migration.md`. It atomically migrates the saved
+Local/Remote/Automatic profile, proxy, playback settings, and last-play state
+into `/mnt/SDCARD/App/PocketCinema/`, without copying, reading, moving, or
+changing Tailscale state. The old directory is preserved for manual post-test
+archival because it contains the protected rollback Tailscale state.
 
-- Verified multi-audio converted streams must allow manual track selection.
-- The selected ordinal must reach the bounded converter and Quick Resume path.
+Automated and static validation is complete. The renamed app has not yet had its
+required Apps-context smoke test, so this rename is **Implemented/tested but not
+physically confirmed**. Milestones 21 and 22 remain physically confirmed under
+their historical PocketStremio evidence.
 
-```yaml
-production_invariants:
-  matroska_subtitles:
-    multi_track: true
-    maximum_packaged_tracks: 15
-    maximum_tracks_per_language: 3
-    minimum_physically_confirmed_tracks: 3
-    track_switching: true
-    off_toggle: true
-    status: physically_confirmed
-  converted_audio:
-    manual_track_selection: true
-    status: physically_confirmed
-  continue_watching:
-    resume: true
-    play_from_start: true
-    status: physically_confirmed
-  stream_opacity:
-    upstream_urls_hidden_from_device: true
-    account_tokens_host_only: true
-    status: physically_confirmed
-```
+## Intentional Legacy Identifiers
 
-## Physically Confirmed Behavior
+- `POCKETSTREMIO_DISCOVER_V1` and `POCKETSTREMIO_PSS_V1` remain the private UDP
+  discovery wire marker, avoiding a protocol migration.
+- The prebuilt selector retains `POCKETSTREMIO_SELECTOR_*` as its private
+  compiled-helper ABI. PocketCinema supplies it internally and passes
+  PocketCinema titles explicitly.
+- `/mnt/SDCARD/App/PocketStremio/tailscale/state/tailscaled.state` remains the
+  protected rollback copy and is never migrated or deleted by ordinary work.
 
-Milestones 1–16, 18, and 20–22 are marked Confirmed in the roadmap.
-Milestone 17 remains incomplete and Milestone 23 is Next. The latest
-physical Milestone 22 evidence confirms three-track Matroska playback,
-synchronized audio/video/subtitles, R1 notices, progress saving, status-0
-Menu exit, and complete PCServer/Miyoo cleanup.
+## Active Work and Next Action
 
-The current Mac PCServer/Miyoo path is also physically confirmed with an FFmpeg
-build lacking libass: it discovered and packaged six selectable tracks, served
-the opaque package, switched tracks through R1, and saved progress. Normal
-MPEG-TS subtitle burn-in remains unavailable on that FFmpeg build.
+Milestone 23 is the sole **Next** milestone, but its desktop-server shell remains
+planning-only. First perform the post-rename PocketCinema Apps-context smoke
+test in `docs/pocketcinema-rename-migration.md`:
 
-The Milestone 21 controller reordering flow has also been physically exercised:
-Spanish was placed first, the next app launch loaded `spa,jpn,eng,ell`, and the
-user reported the subsequent playback test as working. A menu inconsistency was
-was then characterized and fixed: B from Stream source now returns directly to
-the title action screen rather than falling into a filtered stream list. The
-device log records the cancellation path. The unrelated provider-result
-stability follow-up remains pending its own physical retest.
-
-The final Milestone 21 failure-path tests are also physically confirmed. A
-controlled subtitle-download failure showed `Selected subtitle could not be
-downloaded`; a controlled conversion-start failure showed `PCServer conversion could
-not start`. Both returned cleanly to stream selection without exposing provider
-details. Normal PCServer operation was restored after testing.
-
-## Experimental / Not Yet Production
-
-- Milestone 23 is planned only; no desktop-server implementation or release
-  artifact exists yet.
-- The selectable Matroska player remains an opt-in release-scope decision.
-- Generalized preferred-language packaging and the normal-deployment player
-  bundle are implemented and automated-tested, but only the three-track
-  English Apps-context invariant is physically confirmed. A six-track,
-  multi-language Apps-context run is still required before expanding that
-  physical claim.
-- Unmeasured codecs, containers, encrypted or fragmented-MP4 HLS, arbitrary
-  seeking in live converted output, and offline downloads remain outside the
-  production baseline.
-
-## Known Regressions / Broken Behavior
-
-- No Matroska multi-track regression is present in the audited committed code.
-- The former no-preferred-subtitle regression is fixed and physically confirmed:
-  the dialog names the missing preference and offers only no subtitles,
-  English when available, or Back to streams.
-- The Windows implementation and state/documentation recovery have been
-  reviewed and reconciled with the updated Mac `origin/main`; acceptance and
-  release gates remain open.
-- Milestone 17 long-duration bridge acceptance, fresh-SD validation, and final
-  packaging/licensing gates remain open.
-
-## Active Work
-
-Pre-Milestone-23 identity refactor: PocketCinema/PocketCinema Server/PCServer
-is implemented and automated-validated. It does not begin the Milestone 23
-desktop shell. The one-time development Miyoo migration recorded in
-`docs/pocketcinema-rename-migration.md` preserves the Local/Remote/Automatic
-profile, generic proxy, playback settings, and last-play state while leaving
-the legacy directory and all Tailscale state untouched.
-
-Milestone 23: PocketCinema Server Desktop Distribution. It is now the sole
-Next milestone after Milestone 21’s completed controller/device acceptance.
-The approved desktop-distribution plan remains planning only; do not infer a
-desktop implementation or packaged artifact from this milestone status.
-
-The first-run local/remote onboarding design is documented in
-`docs/portable-connection-onboarding-plan.md`. Its companion endpoint-display
-phase is implemented, statically validated, deployed, and physically confirmed
-from OnionOS Apps; no PocketCinema client or network behavior changed.
-
-Phase 2 adds PocketCinema-owned editable generic HTTP-proxy controls. It is
-implemented, statically validated, deployed, and physically confirmed. It
-preserves direct transport for absent/empty `PROXY` and does not inspect or
-control the companion. The final Apps run restored the default proxy and
-successfully searched for `friday` through it. Phase 3 onboarding is physically
-confirmed.
-
-Milestone 21 first-run connection onboarding, discovery/reachability separation,
-and two-endpoint routing are implemented, automated/static-validated,
-deployed, and physically confirmed. They preserve legacy `SERVER_BASE`/`PROXY`
-behavior without automatic
-migration, add atomically saved Local/Remote/Mode profile fields, and use one
-active direct-or-proxied route for all client requests. Apps-context evidence
-confirms legacy startup and the manual Local direct route: the Miyoo
-saved `172.20.10.3:8755` as Local-only, showed `Connected (Local)`, and returned
-`friday` search results through that direct route. UDP discovery then advertised
-that direct PCServer, and selection completed a separate direct validation. The
-Remote-only setup is also confirmed: it saved the Tailnet endpoint, showed
-`Connected (Remote)`, and returned a Miyoo `friday` search through the proxy.
-The Local scan of that Tailnet advertisement correctly failed direct validation
-as the negative discovery case. Changing the Remote-only proxy to
-`127.0.0.1:1056` reported `Remote proxy unavailable`; restoring the default
-immediately returned to `Connected (Remote)`. A fresh app launch preserved the
-Remote endpoint, mode, proxy, and selected Remote route.
-
-With both endpoints saved in Automatic mode, the Mac's hotspot address then
-disappeared while its Tailnet endpoint remained reachable. The Miyoo resolved
-`Connected (Remote)` through the proxy. When the direct hotspot address became
-available again, the saved Automatic profile returned without edits to
-`Connected (Local)`. The complete direct-first Local → Remote → Local
-Automatic fallback is physically confirmed.
-
-The Both/Automatic setup now shows a physically confirmed three-second
-information panel explaining that both endpoints are saved and that Local is
-preferred before Remote/proxy routing, then opens Local setup. It uses an
-app-owned persistent panel and clears its dismissal flag after closing.
-
-A separate temporary OnionOS Apps installation with no PocketCinema config,
-logs, last-play state, or Tailscale state opened `PocketCinema setup` before
-the home screen. Back exited without creating config, and the development
-installation's saved profile checksum remained unchanged. The temporary app was
-then removed. This completes Phase 3 physical confirmation.
-
-## Last Completed Work
-
-Milestone 21 device settings and playback preferences are now Confirmed. Its
-final controlled Apps failure runs showed the subtitle-download and
-conversion-startup messages, each returning cleanly to stream selection; normal
-PCServer operation was restored afterwards.
-
-Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
-relevant implementation history is `b240328`, `3c29d15`, and `bd6d91a`.
-The current code also makes Matroska subtitle discovery explicit, so its
-packageable text tracks remain available on a PCServer whose FFmpeg lacks libass.
-The normal deployment script can now verify and reuse an already-installed
-player/runtime bundle for tracked client upgrades when its ignored local build
-inputs are unavailable.
-
-## Next Action
-
-Perform the post-rename PocketCinema Apps-context smoke test documented in
-`docs/pocketcinema-rename-migration.md`, then record the outcome. Begin
-Milestone 23 only when explicitly requested, using
-`docs/desktop-distribution-plan.md`; do not claim a desktop package exists
-until the clean-PC and Miyoo acceptance gates are met.
+1. Deploy with `scripts/deploy-miyoo.ps1`, preserving and migrating the current
+   development configuration.
+2. Confirm PocketCinema appears and launches from OnionOS Apps; verify the saved
+   route/profile, `friday` search, Local/Remote/Automatic routing, Continue
+   Watching, clean B/Menu exit, and untouched Tailscale companion state.
+3. Record the result before beginning Milestone 23 implementation, which still
+   requires an explicit request.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `8c573e7d68c8aac88082b17783d6b5218195d100`
-Remote verified: YES
+Checkpoint commit: `a8c6c42222980a1ce77388c7ef2f7cbb301b0bdb`
+Remote verified: pending push
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
 
 Completed:
-- Confirmed the final Milestone 21 Apps failure categories. The controlled
-  subtitle-download run displayed `Selected subtitle could not be downloaded`;
-  the controlled conversion-start run displayed `PCServer conversion could not
-  start`. Both returned to stream selection, and normal PCServer was restored.
-- Confirmed Phase 3 onboarding from OnionOS Apps. The preserved legacy route
-  started normally. On the iPhone hotspot, manually entering the Mac PCServer's
-  direct address saved the then-current `LOCAL_PSS` key, selected Local-only mode, showed
-  `Connected (Local)`, and returned `friday` search results directly from the
-  Miyoo. The later hotspot scan advertised `172.20.10.3:8755`; selecting it
-  completed separate direct validation and retained the Local profile.
-- Confirmed Phase 3 Remote-only setup from OnionOS Apps. The profile saved
-  the then-current `REMOTE_PSS=http://100.82.23.65:8755`, `CONNECTION_MODE=remote`, and the
-  default generic proxy; the monitor reported `Connected (Remote)` and a Miyoo
-  `friday` search returned HTTP 200 through that route. Scanning the same
-  Tailnet-advertised endpoint under Local setup then failed the required direct
-  validation, confirming the found-but-unreachable negative case.
-- Confirmed Phase 3 Remote-only proxy recovery. Editing the proxy to
-  `127.0.0.1:1056` restarted the status monitor and reported `Remote proxy
-  unavailable`; Restore default saved `127.0.0.1:1055`, restarted the monitor,
-  and returned to `Connected (Remote)` without an app restart.
-- Confirmed Phase 3 Remote-profile restart persistence. After a fresh launch,
-  the saved Remote endpoint, `remote` mode, and default proxy were loaded and
-  the monitor returned to `Connected (Remote)`.
-- Confirmed complete Phase 3 Automatic fallback. With the saved `automatic`
-  profile, losing `172.20.10.3` made the Miyoo select the still-reachable
-  Tailnet endpoint through the default proxy and report `Connected (Remote)`;
-  restoring the direct hotspot address returned it to `Connected (Local)` with
-  no profile edits.
-- Confirmed the Both/Automatic three-second information message from OnionOS
-  Apps. It explained Local priority and Remote/proxy fallback, then opened the
-  Local picker; the app-owned `/tmp/dismiss_info_panel` flag was clean after it
-  closed.
-- Confirmed pristine Phase 3 first run from a separate temporary OnionOS Apps
-  installation with no config, logs, last-play state, or Tailscale state. It
-  opened `PocketCinema setup` before home; B exited without creating config.
-  The live app's saved profile checksum remained unchanged, and the temporary
-  installation was removed afterward.
-- Implemented and deployed Phase 3 connection onboarding. The controller flow
-  supports Local, Remote, and Both/Automatic setup; direct local discovery and
-  validation are distinct; remote setup is manual and validates through the
-  configured generic proxy; and Automatic resolves Local directly before
-  Remote through that proxy. Focused route/profile tests, shell/PowerShell
-  parsing, Python compilation, and server tests pass. Existing live config was
-  preserved, and the full Phase 3 Apps acceptance matrix is confirmed.
-- Physically confirmed Phase 2 generic HTTP-proxy controls from OnionOS Apps:
-  the preserved root-path config started cleanly, edit/default/disable persisted
-  correctly, `1056` became Offline, restoring `1055` became Connected,
-  disabling used the correct direct-route state, and restoring the default
-  supported a successful `friday` search. The app did not manage the
-  independent companion.
-- Corrected the disabled Phase 2 proxy menu after Apps testing showed it still
-  offered a redundant `Disable proxy` action. The deployed disabled state now
-  offers the explicit `Enable default (127.0.0.1:1055)` action, manual edit,
-  and Back; Disable appears only when a proxy is enabled. Apps confirmation
-  selected the new action and restored the saved default proxy.
-- Implemented the Phase 2 stale-status correction after physical testing found
-  that proxy edit, default restore, and disable kept the PCServer monitor result
-  from the previous transport. A successful effective proxy change now restarts
-  the existing proxy-aware monitor, immediately shows `Server: Connecting...`,
-  and then records its normal `/api/status` result. Focused static coverage
-  verifies all three actions share that path. Apps testing confirmed the
-  `1056` Offline, default Connected, and disabled direct-route transitions
-  without restarting PocketCinema.
-- Deployed a Phase 2 startup-compatibility fix after the first Apps test found
-  that the preserved `PROXY=http://127.0.0.1:1055/` was rejected by the new
-  strict validator. The helper now accepts and canonicalizes the old root-path
-  form while retaining rejection of credentials and non-root paths. The device
-  config line and unrelated settings were left unchanged; physical retest is
-  pending.
-- Implemented and deployed Phase 2 generic HTTP-proxy controls. The live
-  PocketCinema config was preserved; new helper/UI scripts parse on-device.
-  Automated checks pass, while Apps-context settings and real proxy-use tests
-  remain pending.
-- Physically confirmed the companion endpoint display in both Enabled and
-  Disabled states. The controller Disable -> Enable recovery restored the
-  expected proxy listeners and tailnet IP, then B exited cleanly.
-- Added a normal deployer reuse mode for tracked companion upgrades when the
-  ignored local Tailscale binaries are absent. It verifies and preserves the
-  installed device binaries, state, and logs; deployment and the enabled-screen
-  endpoint display have been observed, and the disabled/re-enable recovery is
-  now physically confirmed.
-- Implemented the companion-only HTTP proxy endpoint display. The shared
-  listener source preserves the `127.0.0.1:1055` default and the existing
-  launch-time overrides; shell/static checks pass and the change was deployed
-  through the tailnet with existing device binaries preserved. The Apps test is
-  physically confirmed.
-- Recorded the proposed portable local/remote connection design, including the
-  independent companion proxy display, editable generic proxy, first-run flow,
-  two-route automatic behavior, release packaging boundary, and acceptance
-  tests. This is planning only; no product behavior changed.
-- Added explicit Matroska subtitle discovery, preserving the libass requirement
-  for the normal burn-in path.
-- Added an opt-in, verified reuse mode to the standard Miyoo deployment script
-  for tracked upgrades where the player/runtime bundle already exists.
-- Recorded the physical Spanish-first language-priority persistence and
-  user-confirmed playback test, while preserving the reported menu inconsistency
-  as an unconfirmed follow-up.
-- Fixed and physically confirmed source-menu B/back cancellation; added the
-  automated-tested stream-list stability cache and no-verified-audio-tag path.
-- Recorded the physical same-title stream-list stability confirmation.
-- Added and deployed the bounded multi-line infoPanel message wrapper.
-- Corrected unavailable subtitle preferences with an explicit bounded fallback:
-  no subtitles, a safe other-language picker, or Back to the existing stream
-  list. The correction is automated-tested and deployed.
-- Replaced that file-level picker with the user-directed named-preference,
-  no-subtitles, English-if-available, and Back-to-streams fallback. It is
-  automated-tested and deployed.
 
-Physically confirmed:
-- Phase 3 onboarding acceptance: legacy startup, manual Local-only setup, and
-  normal Local discovery/validation are confirmed. The direct hotspot PCServer route
-  was selected, persisted, reported `Connected (Local)`, and served a Miyoo
-  `friday` search. Remote-only setup persisted the Tailnet endpoint and default
-  proxy, reported `Connected (Remote)`, and served the same search through the
-  proxy. A Local scan then found that Tailnet-advertised endpoint; selecting it
-  failed the required direct validation and exercised the found-but-unreachable
-  negative case. Remote proxy-failure/default recovery, Remote-profile restart
-  persistence, and complete Automatic Local-to-Remote-to-Local fallback are
-  confirmed. The three-second Both/Automatic message is confirmed. A separate
-  config-free temporary Apps installation opened the setup controller before
-  home and exited without creating state; the original live profile was
-  unchanged and the temporary installation was removed.
-- Phase 2 generic HTTP-proxy controls: the settings UI accepts a legacy
-  `http://host:port/` value at startup; explicit disable and enable-default
-  actions persist correctly; proxy changes immediately invalidate the old PCServer
-  status and recheck through the existing monitor; and a `friday` search
-  succeeds after restoring `http://127.0.0.1:1055`. PocketCinema never
-  inspected or managed the companion.
-- With `PROXY=` saved, the Phase 2 HTTP-proxy menu showed `Enable default
-  (127.0.0.1:1055)`. Selecting it saved `PROXY=http://127.0.0.1:1055` and
-  restarted the existing PCServer status monitor. The later Apps run confirmed
-  `127.0.0.1:1056` changed status to Offline, restoring the default changed it
-  to Connected, and disabling changed it to the correct direct-route state,
-  all without an app restart. A later `friday` search through the restored
-  default completed Phase 2 confirmation.
-- The companion's Enabled and Disabled Apps screens visibly show its HTTP proxy
-  endpoint. A controller Disable -> Enable cycle restored its
-  `127.0.0.1:1055` listeners and `100.97.46.26` IP; B exited cleanly.
-- Milestone 22 three-track Matroska switching, off toggle, synchronized
-  playback, progress, Menu exit, and cleanup; a later run also exercised three
-  English and three Greek tracks.
-- On a Mac PCServer without libass, six selectable tracks were packaged and played;
-  R1 switched tracks, and progress was saved.
-- Controller language-priority reordering persisted Spanish first across an app
-  restart; the user reported the subsequent playback test working.
-- B from Stream source cancels to the title action screen; this was observed in
-  Apps and logged as `stream source selection canceled`.
-- Same-title stream reopening remained stable during the navigation-debug
-  interval. The device logged repeated resolution, while PCServer served later
-  identical requests without a repeated addon fetch.
-- The normal PCServer no-verified-audio-tag path appeared and continued to explicit
-  stream selection. Its original one-line notice was hard to read on the Miyoo.
-- A PCServer scan response rendered cleanly as a wrapped two-line infoPanel message
-  from the Apps context.
-- The controller offered three selectable subtitle tracks in deterministic
-  preference order: Greek first, followed by English.
-- With Greek preferred and the local compatibility video selected, the
-  unavailable-preference dialog named the English fallback, and choosing
-  `Use English subtitles` reached the selectable-subtitle playback stream.
-- That fallback cached three English tracks; R1 cycled all three and subtitles
-  off, then playback exited cleanly and saved progress. With `ell,eng` saved,
-  replay correctly bypassed the fallback dialog.
-- Source-name filtering selected the local compatibility source from a
-  multi-provider result, showed its filtered stream list, and B returned
-  cleanly through the title screen with no stale app markers.
+- Controlled PocketCinema/PocketCinema Server/PCServer rename with no API-path
+  redesign and no Tailscale lifecycle change.
+- Explicit Miyoo configuration/state migration, current documentation updates,
+  and canonical client/server artwork documentation.
+- Python compilation, 70 server unit tests, shell syntax and focused
+  connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
+  Range verification, and `git diff --check`.
 
-Next exact action:
-- Begin Milestone 23 only on explicit request, starting from the approved
-  desktop-distribution plan. Release packaging and clean-PC validation remain
-  separate future work.
+Pending:
 
-DO NOT:
-
-- collapse Matroska subtitles to one track;
-- replace the production burn-in fallback without measured acceptance;
-- change Tailscale lifecycle from PocketCinema;
-- treat dirty working-tree changes as committed production state.
+- Apps-context rename smoke test and device log collection.
+- ARM selector reproducibility rebuild: unavailable on this checkout because the
+  ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
+  retained and documented.
