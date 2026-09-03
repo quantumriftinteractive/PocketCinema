@@ -745,8 +745,10 @@ without exposing addon transports or media URLs.  It also offers audio-language
 filters only for language tags verified by server-side media preflight; streams
 without a verified language tag remain available under the all-audio choice.
 This avoids guessing from release filenames while keeping the feature useful
-for sources that expose correct FFprobe language metadata.  Physical controller
-testing of the new picker is pending.
+for sources that expose correct FFprobe language metadata. Apps-context testing
+selected the local compatibility source from a multi-provider result, showed
+only its filtered stream list, and returned with B through the title screen;
+the device log confirmed the exact controller path and no stale markers remained.
 
 Audio track metadata is now collected during FFprobe preflight. When a source
 has multiple detected audio tracks, the Miyoo picker presents their verified

@@ -206,22 +206,26 @@ Physically confirmed:
 - That fallback cached three English tracks; R1 cycled all three and subtitles
   off, then playback exited cleanly and saved progress. With `ell,eng` saved,
   replay correctly bypassed the fallback dialog.
+- Source-name filtering selected the local compatibility source from a
+  multi-provider result, showed its filtered stream list, and B returned
+  cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
 - Remaining separate Milestone 21 settings/preferences acceptance work,
-  starting with the source-name filter controller flow.
+  including first-run server setup and the precise subtitle-download and
+  conversion-startup failure categories.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- Test the documented source-name filter from the controller without changing
-  the now-confirmed subtitle fallback.
+- Plan the first-run no-config server-setup check without disturbing the
+  current saved device configuration.
 
 Required next physical test:
-- Confirm source-name filtering and its Back/cancellation path from the
-  controller.
+- With the current config safely preserved, test the no-config first-run server
+  setup path and restore the saved configuration afterward.
 
 DO NOT:
 
