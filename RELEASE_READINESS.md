@@ -85,10 +85,10 @@ confirmed, but not accepted. The client retains legacy single-server
 configuration unchanged; new
 profiles atomically store Local PSS, Remote PSS, and Automatic | Local only |
 Remote only mode. Legacy startup and manual Local-only setup/search are
-physically confirmed; discovery remains untested against the now-running
-hotspot PSS. Automatic probes Local directly, then Remote through the generic
-proxy, and all PSS requests use the resolved route. The release gate remains
-open until the remaining Apps-context acceptance matrix passes.
+physically confirmed; normal UDP discovery and selection validation also passed
+against the hotspot PSS. Automatic probes Local directly, then Remote through
+the generic proxy, and all PSS requests use the resolved route. The release
+gate remains open until the remaining Apps-context acceptance matrix passes.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
