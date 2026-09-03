@@ -337,9 +337,9 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Rebind the Mac PSS to its Tailnet address and complete Remote-only, proxy
-  failure/default restore, and persistence Apps checks. First retry UDP
-  discovery against the running hotspot PSS. Do not begin desktop PSS or
+- Retry UDP discovery against the running hotspot PSS. Then rebind the Mac PSS
+  to its Tailnet address and complete Remote-only, proxy failure/default
+  restore, and persistence Apps checks. Do not begin desktop PSS or
   release-installer work.
 
 Required next physical test:
