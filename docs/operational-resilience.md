@@ -74,8 +74,12 @@ over 60 seconds. This isolates the observed failure to a transient subtitle or
 conversion-startup failure rather than Miyoo decoding, audio, display geometry,
 or a permanently invalid stream. The exact inner exception was not retained by
 the prior server process. PSS now emits sanitized stage-specific HTTP reasons
-for subtitle download, conversion launch, and missing conversion output; their
-Apps-context messages remain pending physical failure tests.
+for subtitle download, conversion launch, and missing conversion output. The
+Miyoo uses a bounded opaque play-session error lookup when FFplay reduces a
+response to a generic HTTP status. Controlled OnionOS Apps tests confirmed
+`Selected subtitle could not be downloaded` for subtitle-download failure and
+`PSS conversion could not start` for conversion-start failure; both returned
+cleanly to the stream picker without exposing provider details.
 
 The physical test exercised a PocketStremio server failure while the configured
 local proxy remained healthy. PocketStremio no longer manages that proxy's

@@ -667,7 +667,7 @@ cleans up every server and device process without exposing upstream tokens.
 
 ### 21. Device Settings and Playback Preferences
 
-**Status: Next**
+**Status: Confirmed**
 
 The user-prioritized server-connectivity slice is implemented for split-host
 development. The home screen reports connected, offline, or unconfigured
@@ -716,8 +716,10 @@ sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
 testing confirmed the bounded generic PSS/provider category for a pre-readiness
-`502`; newly added subtitle-download and conversion-startup subcategories remain
-pending physical confirmation. The device-local Quick Resume entry stores only
+`502`. Controlled OnionOS Apps runs now also confirmed the specific,
+sanitized `Selected subtitle could not be downloaded` and `PSS conversion could
+not start` messages, each returning cleanly to stream selection. The
+device-local Quick Resume entry stores only
 the selected PSS address and opaque stream/subtitle IDs; it skips the prior
 menus while that PSS remains running, then clears the stale selection and
 returns to normal selection after a PSS restart or server change. Its first
@@ -884,7 +886,8 @@ report that none exists, subtitle priorities are deterministic, and a Continue
 Watching item can be removed without marking unrelated media complete. When no
 preferred language matches, the client must clearly offer the bounded other-audio
 track or, for subtitles, explicit no-subtitles, English-if-available, and Back
-choices rather than silently substituting an unrelated language.
+choices rather than silently substituting an unrelated language. This is
+confirmed from OnionOS Apps, including the bounded playback-failure messages.
 
 ### 22. Selectable Matroska Subtitles
 
@@ -976,7 +979,7 @@ smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.
 
 ### 23. PocketStremio Server Desktop Distribution
 
-**Status: Planned (queued after Milestone 21)**
+**Status: Next**
 
 Replace the developer-oriented PocketStremio server launch experience with a
 small Windows-first desktop control application while preserving the existing

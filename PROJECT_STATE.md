@@ -5,8 +5,8 @@ Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
 Expected remote branch: `origin/main`
-Active milestone: Milestone 21 — Device Settings and Playback Preferences
-Release state: Not release-ready; Milestone 22 is physically confirmed, while
+Active milestone: Milestone 23 — PocketStremio Server Desktop Distribution
+Release state: Not release-ready; Milestones 21 and 22 are physically confirmed, while
 fresh-install, packaging/licensing, and final release-scope gates remain open.
 
 ## Production Baseline
@@ -82,8 +82,8 @@ production_invariants:
 
 ## Physically Confirmed Behavior
 
-Milestones 1–16, 18, 20, and 22 are marked Confirmed in the roadmap.
-Milestone 17 remains incomplete and Milestone 21 is active. The latest
+Milestones 1–16, 18, and 20–22 are marked Confirmed in the roadmap.
+Milestone 17 remains incomplete and Milestone 23 is Next. The latest
 physical Milestone 22 evidence confirms three-track Matroska playback,
 synchronized audio/video/subtitles, R1 notices, progress saving, status-0
 Menu exit, and complete PSS/Miyoo cleanup.
@@ -101,11 +101,16 @@ the title action screen rather than falling into a filtered stream list. The
 device log records the cancellation path. The unrelated provider-result
 stability follow-up remains pending its own physical retest.
 
+The final Milestone 21 failure-path tests are also physically confirmed. A
+controlled subtitle-download failure showed `Selected subtitle could not be
+downloaded`; a controlled conversion-start failure showed `PSS conversion could
+not start`. Both returned cleanly to stream selection without exposing provider
+details. Normal PSS operation was restored after testing.
+
 ## Experimental / Not Yet Production
 
-- Milestone 21 work recovered from the Windows checkout is committed on the
-  reconciled `main`, but remains pending acceptance and is not yet part of the
-  production baseline.
+- Milestone 23 is planned only; no desktop-server implementation or release
+  artifact exists yet.
 - The selectable Matroska player remains an opt-in release-scope decision.
 - Generalized preferred-language packaging and the normal-deployment player
   bundle are implemented and automated-tested, but only the three-track
@@ -119,12 +124,9 @@ stability follow-up remains pending its own physical retest.
 ## Known Regressions / Broken Behavior
 
 - No Matroska multi-track regression is present in the audited committed code.
-- The first physical no-preferred-subtitle test exposed a Milestone 21 defect:
-  a missing preferred language silently started playback without subtitles.
-  The user-directed correction now has Apps-context confirmation: it names the
-  missing preference, offers no subtitles, offers English only when available
-  and not already preferred, and returns Back to the stream list. Its earlier
-  file-level alternate-subtitle picker was deliberately removed.
+- The former no-preferred-subtitle regression is fixed and physically confirmed:
+  the dialog names the missing preference and offers only no subtitles,
+  English when available, or Back to streams.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
@@ -133,11 +135,10 @@ stability follow-up remains pending its own physical retest.
 
 ## Active Work
 
-Milestone 21: device settings and playback preferences. The reconciled `main`
-contains the recovered implementation and documentation changes for language
-preferences, stream/audio filtering, Continue Watching removal, and related
-client/server behavior. Do not label them production until they are physically
-confirmed where required and the milestone is accepted.
+Milestone 23: PocketStremio Server Desktop Distribution. It is now the sole
+Next milestone after Milestone 21’s completed controller/device acceptance.
+The approved desktop-distribution plan remains planning only; do not infer a
+desktop implementation or packaged artifact from this milestone status.
 
 The first-run local/remote onboarding design is documented in
 `docs/portable-connection-onboarding-plan.md`. Its companion endpoint-display
@@ -151,7 +152,7 @@ control the companion. The final Apps run restored the default proxy and
 successfully searched for `friday` through it. Phase 3 onboarding is physically
 confirmed.
 
-Phase 3 first-run connection onboarding, discovery/reachability separation,
+Milestone 21 first-run connection onboarding, discovery/reachability separation,
 and two-endpoint routing are implemented, automated/static-validated,
 deployed, and physically confirmed. They preserve legacy `SERVER_BASE`/`PROXY`
 behavior without automatic
@@ -189,9 +190,10 @@ then removed. This completes Phase 3 physical confirmation.
 
 ## Last Completed Work
 
-Phase 3 portable connection onboarding is now physically confirmed. Its
-separate pristine Apps installation entered setup with no created state and
-left the preserved live profile unchanged.
+Milestone 21 device settings and playback preferences are now Confirmed. Its
+final controlled Apps failure runs showed the subtitle-download and
+conversion-startup messages, each returning cleanly to stream selection; normal
+PSS operation was restored afterwards.
 
 Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
 relevant implementation history is `b240328`, `3c29d15`, and `bd6d91a`.
@@ -203,9 +205,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Physically test the remaining Milestone 21 subtitle-download and
-conversion-startup failure categories. Do not begin Milestone 23 desktop
-distribution or release-installer work.
+Begin Milestone 23 only when requested, using
+`docs/desktop-distribution-plan.md`; do not claim a desktop package exists
+until the clean-PC and Miyoo acceptance gates are met.
 
 ## Latest Verified Checkpoint
 
@@ -213,9 +215,13 @@ Checkpoint commit: `207ca48fd566612e898ad2c2d98160cf24cf9163`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
-Active milestone: Milestone 21 — Device Settings and Playback Preferences
+Active milestone: Milestone 23 — PocketStremio Server Desktop Distribution
 
 Completed:
+- Confirmed the final Milestone 21 Apps failure categories. The controlled
+  subtitle-download run displayed `Selected subtitle could not be downloaded`;
+  the controlled conversion-start run displayed `PSS conversion could not
+  start`. Both returned to stream selection, and normal PSS was restored.
 - Confirmed Phase 3 onboarding from OnionOS Apps. The preserved legacy route
   started normally. On the iPhone hotspot, manually entering the Mac PSS's
   direct address saved `LOCAL_PSS`, selected Local-only mode, showed
@@ -378,23 +384,10 @@ Physically confirmed:
   multi-provider result, showed its filtered stream list, and B returned
   cleanly through the title screen with no stale app markers.
 
-Implemented/tested but not physically confirmed:
-- Remaining separate Milestone 21 settings/preferences acceptance work,
-  including first-run local/remote proxy onboarding and the precise
-  subtitle-download and conversion-startup failure categories.
-
-Known issue / blocker:
-- Milestone 21 remains pending Apps-context acceptance; release gates remain
-  open.
-
 Next exact action:
-- Physically test the remaining Milestone 21 subtitle-download and
-  conversion-startup failure categories. Do not begin desktop PSS or
-  release-installer work.
-
-Required next physical test:
-- From OnionOS Apps, exercise the bounded subtitle-download and
-  conversion-startup failure messages, then return cleanly to selection.
+- Begin Milestone 23 only on explicit request, starting from the approved
+  desktop-distribution plan. Release packaging and clean-PC validation remain
+  separate future work.
 
 DO NOT:
 

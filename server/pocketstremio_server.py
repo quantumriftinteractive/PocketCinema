@@ -541,6 +541,17 @@ class SessionStore:
                 return None, True
             return dict(item), False
 
+    def put(self, session_id, item):
+        now = time.time()
+        with self.lock:
+            self._remove_expired(now)
+            while len(self.items) >= self.max_items and session_id not in self.items:
+                oldest = min(
+                    self.items, key=lambda key: self.items[key].get("created_at", 0)
+                )
+                self.items.pop(oldest, None)
+            self.items[session_id] = {"created_at": now, **item}
+
     def __len__(self):
         with self.lock:
             self._remove_expired(time.time())
@@ -994,6 +1005,10 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
         if len(parts) == 2 and parts[0] == "play":
             self.handle_play_session(parts[1], parsed)
+            return
+
+        if len(parts) == 3 and parts[:2] == ["api", "play-error"]:
+            self.handle_play_error(parts[2])
             return
 
         if len(parts) == 2 and parts[0] == "subtitle":
@@ -2154,6 +2169,16 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             }
         )
 
+    def handle_play_error(self, session_id):
+        failure, expired = self.server.playback_failures.get(session_id)
+        if not failure:
+            self.write_json(
+                {"error": "play_error_expired" if expired else "play_error_not_found"},
+                status=404,
+            )
+            return
+        self.write_json({"error": failure.get("error", "playback_failed")})
+
     def handle_play_session(self, session_id, parsed=None):
         session, expired = self.server.play_sessions.get(session_id)
         if not session:
@@ -2178,7 +2203,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     session = dict(session)
                     session["start_seconds"] = requested_start
         if session.get("transcode"):
-            self.stream_transcode(session)
+            self.stream_transcode(session_id, session)
         elif session.get("local_path"):
             local_path = self.server.stremio_service.resolve_local_path(
                 session["local_path"]
@@ -2219,7 +2244,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.server.ffmpeg_path, payload, self.server.transcode_dir
         )
 
-    def stream_transcode(self, session):
+    def stream_transcode(self, session_id, session):
         # A converted seek/aspect restart closes the previous HTTP response
         # immediately, but its FFmpeg cleanup runs in the request thread. Wait
         # briefly for that single bounded job to release before rejecting a
@@ -2245,6 +2270,12 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
         with self.server.transcode_state_lock:
             self.server.active_transcodes += 1
         try:
+            test_failure = getattr(self.server, "test_transcode_failure", "")
+            if test_failure == "subtitle-download":
+                failure_stage = "subtitle"
+                raise OSError("controlled subtitle download failure")
+            if test_failure == "conversion-start":
+                raise OSError("controlled conversion startup failure")
             subtitle_url = session.get("subtitle_url") or ""
             subtitle_local_path = session.get("subtitle_path") or ""
             if session.get("field_test") or session.get("matroska_subtitles"):
@@ -2370,6 +2401,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     f"Transcode failed before response: {failure_stage} ({diagnostic})",
                     flush=True,
                 )
+                self.server.playback_failures.put(session_id, {"error": error})
                 self.write_json(
                     {
                         "error": error,
@@ -2919,6 +2951,12 @@ def main():
         action="store_true",
         help="Enable bounded selectable Matroska subtitles for the app-local player",
     )
+    parser.add_argument(
+        "--test-transcode-failure",
+        choices=("subtitle-download", "conversion-start"),
+        default="",
+        help="Development-only controlled conversion failure; disabled by default",
+    )
     parser.add_argument("--probe-timeout", type=int, default=45)
     parser.add_argument("--probe-cache-ttl", type=int, default=DEFAULT_PROBE_CACHE_TTL)
     parser.add_argument("--max-probe-cache", type=int, default=DEFAULT_MAX_PROBE_CACHE)
@@ -2989,6 +3027,7 @@ def main():
     httpd.stream_cache = {}
     httpd.subtitle_cache = {}
     httpd.play_sessions = SessionStore(args.session_ttl, args.max_sessions)
+    httpd.playback_failures = SessionStore(args.session_ttl, args.max_sessions)
     httpd.hls_bridge_lock = threading.Lock()
     httpd.active_hls_bridges = 0
     httpd.manifest_cache = {}
@@ -3010,6 +3049,7 @@ def main():
     httpd.transcode_job_lock = threading.Lock()
     httpd.transcode_state_lock = threading.Lock()
     httpd.active_transcodes = 0
+    httpd.test_transcode_failure = args.test_transcode_failure
     httpd.transcode_resource_monitor = TranscodeResourceMonitor(
         data_dir / "transcode-resources.log"
     )

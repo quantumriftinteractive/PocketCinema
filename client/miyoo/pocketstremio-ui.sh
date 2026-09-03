@@ -262,6 +262,7 @@ cleanup() {
   rm -f /tmp/stay_awake /tmp/pocketstremio-subtitle.srt \
     "$FIELD_TEST_SUBTITLE_FILE" \
     /tmp/pocketstremio-ffplay.log /tmp/pocketstremio-paused-seconds \
+    /tmp/pocketstremio-play-error.json \
     "$PLAYBACK_CONTROL_FILE" \
     /tmp/pocketstremio-aspect-request \
     /tmp/pocketstremio-account.json /tmp/pocketstremio-account-link.json \
@@ -559,6 +560,33 @@ classify_playback_error() {
   fi
 }
 
+# FFplay reports a short HTTP status line only, so retrieve the bounded,
+# session-scoped PSS failure code after a playback setup failure.  Older PSS
+# versions simply return 404 and retain the existing local classification.
+playback_server_error() {
+  playback_error_url="$1"
+  playback_error_session_id=${playback_error_url##*/}
+  playback_error_session_id=${playback_error_session_id%%\?*}
+  case "$playback_error_session_id" in
+    ''|*[!0-9a-f]*) return 1 ;;
+  esac
+  playback_error_file=/tmp/pocketstremio-play-error.json
+  rm -f "$playback_error_file"
+  if ! curl_request -fsS --max-time 5 -o "$playback_error_file" \
+    "$SERVER_BASE/api/play-error/$playback_error_session_id" \
+    2>>"$HTTP_ERROR_FILE"; then
+    rm -f "$playback_error_file"
+    return 1
+  fi
+  playback_error_code=$("$JQ" -r '.error // empty' "$playback_error_file" 2>/dev/null)
+  rm -f "$playback_error_file"
+  case "$playback_error_code" in
+    subtitle_download_failed) printf '%s\n' "Selected subtitle could not be downloaded" ;;
+    transcode_start_failed|transcode_failed) printf '%s\n' "PSS conversion could not start" ;;
+    *) return 1 ;;
+  esac
+}
+
 run_ffplay() (
   video_filter="$1"
   url="$2"
@@ -760,6 +788,8 @@ play_url() {
   fi
   if [ "$PLAYBACK_VALID" -ne 1 ] || [ "$PLAYBACK_RC" -ne 0 ] 2>/dev/null; then
     PLAYBACK_ERROR=$(classify_playback_error "$ffplay_log" "$PLAYBACK_RC")
+    server_playback_error=$(playback_server_error "$url" || true)
+    [ -n "$server_playback_error" ] && PLAYBACK_ERROR="$server_playback_error"
     log "playback failure rc=$PLAYBACK_RC reason=$PLAYBACK_ERROR"
   fi
   rm -f "$ffplay_log"

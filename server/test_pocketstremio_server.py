@@ -284,6 +284,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.server.stream_cache = {}
         self.server.subtitle_cache = {}
         self.server.play_sessions = pocket.SessionStore()
+        self.server.playback_failures = pocket.SessionStore()
         self.server.hls_bridge_lock = threading.Lock()
         self.server.active_hls_bridges = 0
         self.server.manifest_cache = {}
@@ -955,6 +956,49 @@ class PocketStremioServerTest(unittest.TestCase):
             payload = json.load(response)
         self.assertEqual(payload["error"], "subtitle_download_failed")
         self.assertEqual(self.server.active_transcodes, 0)
+
+    def test_controlled_transcode_failure_stages(self):
+        stream_id = "controlled-transcode-failure"
+        upstream_url = "https://cdn.example/video.mp4?token=private"
+        self.server.stream_cache[stream_id] = {
+            "id": stream_id,
+            "name": "Controlled transcode failure",
+            "url": upstream_url,
+        }
+        self.server.probe_cache.set(
+            upstream_url,
+            {
+                "status": "confirmed",
+                "message": "test",
+                "container": "mp4",
+                "video_codec": "h264",
+                "audio_codec": "aac",
+                "width": 1280,
+                "height": 720,
+            },
+        )
+        self.server.ffmpeg_path = "test-ffmpeg"
+
+        for mode, reason, error in (
+            ("subtitle-download", "Subtitle download failed", "subtitle_download_failed"),
+            ("conversion-start", "Conversion could not start", "transcode_start_failed"),
+        ):
+            self.server.test_transcode_failure = mode
+            _, play = self.post_json(
+                "/api/play",
+                {"type": "movie", "id": "tt0000001", "stream_id": stream_id},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(play["url"], timeout=5)
+            self.assertEqual(caught.exception.code, 502)
+            self.assertEqual(caught.exception.reason, reason)
+            with caught.exception as response:
+                payload = json.load(response)
+            self.assertEqual(payload["error"], error)
+            _, reported = self.get_json(f"/api/play-error/{play['session_id']}")
+            self.assertEqual(reported, {"error": error})
+            self.assertEqual(self.server.active_transcodes, 0)
+        self.server.test_transcode_failure = ""
 
     def test_subtitle_play_is_rejected_without_burn_in_support(self):
         stream_id = "subtitle-capability-stream"

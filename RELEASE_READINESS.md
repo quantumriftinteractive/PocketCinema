@@ -592,8 +592,8 @@ physically confirmed. A v1.0 that excludes selectable Matroska must keep the
 option disabled and omit the experimental player artifacts. Fresh-SD
 onboarding, final movie/episode/converted regressions, reproducible release
 artifacts, third-party notices, and the privacy review must still pass before
-publishing. Milestone 23 desktop implementation remains gated on documented
-Milestone 21 completion; once that gate is met, the Windows release must also
+publishing. Milestone 21 is confirmed, so Milestone 23 desktop implementation
+may proceed; the Windows release must still
 pass the clean-PC packaged-artifact acceptance above. A macOS build is not a
 supported end-user release until its equivalent clean-bundle, architecture,
 signing, notarization, privacy, lifecycle, and real-Miyoo checks pass.
