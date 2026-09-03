@@ -66,19 +66,18 @@ implemented. Nothing in this direction changes PocketStremio ownership of, or
 control over, the independent companion.
 
 PocketStremio's Phase 2 generic HTTP-proxy controls are implemented, statically
-validated, and deployed but not yet physically confirmed. They retain direct
-transport for an absent or explicitly empty `PROXY`, and use the
+validated, deployed, and physically confirmed. They retain direct transport
+for an absent or explicitly empty `PROXY`, and use the
 PocketStremio-owned editable restore default `http://127.0.0.1:1055`; they do
 not inspect or control the companion. The first Apps launch exposed a strict
 validation regression for the preserved, previously supported
 `http://host:port/` spelling; a minimal deployed compatibility fix canonicalizes
 only that root-path form in memory. The subsequent Apps settings run confirmed
 proxy persistence but found stale PSS status after an effective transport
-change; the monitor-refresh correction is deployed and awaits physical
-confirmation. The disabled-state `Enable default (127.0.0.1:1055)` control has
-been observed from Apps, and `1056` Offline, default Connected, and disabled
-direct-route transitions now pass without restart. A normal PSS request after
-re-enabling the default proxy remains before Phase 2 confirmation.
+change; the monitor-refresh correction is physically confirmed. The disabled-
+state `Enable default (127.0.0.1:1055)` control, `1056` Offline, default
+Connected, disabled direct-route transitions, and a `friday` search after
+restoring the default all passed from Apps.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

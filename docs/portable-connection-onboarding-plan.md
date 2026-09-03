@@ -67,17 +67,16 @@ When disabled, retain it as setup information but label it `HTTP proxy when enab
 
 ### 2. Add minimal PocketStremio proxy controls
 
-**Implementation status:** Implemented, statically validated, and deployed;
-pending the required Apps-context test. The first launch found that a preserved
+**Implementation status:** Implemented, statically validated, deployed, and
+physically confirmed from OnionOS Apps. The first launch found that a preserved
 legacy `http://host:port/` value (valid under the prior curl-only handling) was
 too strictly rejected. The deployed compatibility fix canonicalizes only that
 root-path spelling in memory. The subsequent persistence run found that the
 existing PSS status monitor was not restarted after proxy changes; the minimal
-deployed correction restarts that same monitor and awaits physical confirmation.
-The disabled-state `Enable default (127.0.0.1:1055)` action is physically
-observed; `1056` Offline, default Connected, and disabled direct-route
-transitions are physically confirmed without restart. A normal PSS request
-after re-enabling the default remains before Phase 2 confirmation.
+deployed correction restarts that same monitor. The disabled-state `Enable
+default (127.0.0.1:1055)` action, `1056` Offline, default Connected, disabled
+direct-route transitions, and a `friday` search after restoring the default
+are physically confirmed without restart.
 
 Preserve the HTTP-URL format. Add a `Connection settings` screen with:
 

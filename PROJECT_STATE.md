@@ -150,17 +150,11 @@ phase is implemented, statically validated, deployed, and physically confirmed
 from OnionOS Apps; no PocketStremio client or network behavior changed.
 
 Phase 2 adds PocketStremio-owned editable generic HTTP-proxy controls. It is
-implemented, statically validated, and deployed but not yet physically
-confirmed; it preserves direct transport for absent/empty `PROXY` and does not
-inspect or control the companion. Its first Apps launch exposed a startup
-compatibility regression for the preserved, previously supported
-`http://host:port/` spelling. The deployed fix canonicalizes only that root
-path form in memory without rewriting the live config. The later Apps settings
-run confirmed persistence but found that a proxy change left the existing PSS
-monitor result stale until restart. The minimal refresh fix is implemented and
-is physically confirmed. The disabled-state activation menu and all three
-transport transitions are physically confirmed; one normal PSS request after
-re-enabling the default proxy remains before Phase 2 can be confirmed.
+implemented, statically validated, deployed, and physically confirmed. It
+preserves direct transport for absent/empty `PROXY` and does not inspect or
+control the companion. The final Apps run restored the default proxy and
+successfully searched for `friday` through it. Phase 3 onboarding is not
+started.
 
 ## Last Completed Work
 
@@ -186,6 +180,12 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Physically confirmed Phase 2 generic HTTP-proxy controls from OnionOS Apps:
+  the preserved root-path config started cleanly, edit/default/disable persisted
+  correctly, `1056` became Offline, restoring `1055` became Connected,
+  disabling used the correct direct-route state, and restoring the default
+  supported a successful `friday` search. The app did not manage the
+  independent companion.
 - Corrected the disabled Phase 2 proxy menu after Apps testing showed it still
   offered a redundant `Disable proxy` action. The deployed disabled state now
   offers the explicit `Enable default (127.0.0.1:1055)` action, manual edit,
@@ -245,6 +245,12 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
+- Phase 2 generic HTTP-proxy controls: the settings UI accepts a legacy
+  `http://host:port/` value at startup; explicit disable and enable-default
+  actions persist correctly; proxy changes immediately invalidate the old PSS
+  status and recheck through the existing monitor; and a `friday` search
+  succeeds after restoring `http://127.0.0.1:1055`. PocketStremio never
+  inspected or managed the companion.
 - With `PROXY=` saved, the Phase 2 HTTP-proxy menu showed `Enable default
   (127.0.0.1:1055)`. Selecting it saved `PROXY=http://127.0.0.1:1055` and
   restarted the existing PSS status monitor. The later Apps run confirmed
@@ -284,17 +290,6 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
-- Phase 2 HTTP-proxy Settings controls: view/edit, restore the editable
-  `http://127.0.0.1:1055` default, or persistently disable proxy use. The
-  generic proxy helper normalizes HTTP host:port input, rejects credentials and
-  malformed values, preserves unrelated config, and accepts the prior valid
-  `http://host:port/` root-path spelling without an interactive startup error.
-  Its persistence UI has been exercised, but a stale server-status defect was
-  found after transport changes; the immediate existing-monitor refresh fix is
-  physically confirmed. When disabled, the deployed menu explicitly offers
-  `Enable default (127.0.0.1:1055)` instead of a redundant disable action;
-  that activation behavior is physically confirmed. The remaining physical
-  check is a normal PSS request after restoring the default.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -302,23 +297,16 @@ Implemented/tested but not physically confirmed:
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
-- Phase 2 is not physically confirmed: its initial Apps launch exposed the
-  legacy root-path proxy validation regression, then its settings test exposed
-  stale PSS reachability after proxy transport changes. The compatibility fix
-  and monitor-refresh correction are now physically confirmed. A normal PSS
-  request through the re-enabled default proxy remains required before the
-  phase can be accepted.
 - Tailnet first-run onboarding is blocked until the app can obtain its generic
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- From OnionOS Apps re-enable the default proxy and perform one normal PSS
-  request, such as Search, through it.
+- Continue only the remaining Milestone 21 settings/preference acceptance work;
+  do not begin Phase 3 onboarding without explicit direction.
 
 Required next physical test:
-- From the current disabled state, choose `Enable default (127.0.0.1:1055)`,
-  wait for `Server: Connected`, then perform a normal PSS request such as
-  Search. Confirm it succeeds through the independently enabled companion.
+- Run the separately scoped remaining Milestone 21 settings/preference checks
+  when directed. No Phase 2 proxy test remains.
 
 DO NOT:
 
