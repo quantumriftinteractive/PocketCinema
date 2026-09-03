@@ -204,7 +204,7 @@ actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `1901304533e8a54c9613cb7b54c99cb36bfdf2cb`
+Checkpoint commit: `9c3b553a0b68bfe384e47cc09ecfe5366a13c238`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
