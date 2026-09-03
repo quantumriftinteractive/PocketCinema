@@ -165,13 +165,17 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `a313755437fa12b6e60837c0497a092b21a71055`
+Checkpoint commit: `022da891ed984e9df7bfb55f79bb4d7c912e9d17`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Recorded the proposed portable local/remote connection design, including the
+  independent companion proxy display, editable generic proxy, first-run flow,
+  two-route automatic behavior, release packaging boundary, and acceptance
+  tests. This is planning only; no product behavior changed.
 - Added explicit Matroska subtitle discovery, preserving the libass requirement
   for the normal burn-in path.
 - Added an opt-in, verified reuse mode to the standard Miyoo deployment script
