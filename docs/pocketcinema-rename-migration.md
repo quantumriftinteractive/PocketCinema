@@ -55,5 +55,9 @@ title is not used by the production client.
 
 `UI_concept/Icons/PocketCinema_Client_icon.png` is the canonical Miyoo/client
 artwork. `UI_concept/Icons/PocketCinema_Server_icon.png` is the master artwork
-for the future PocketCinema Server desktop application. Neither asset is wired
-into a desktop shell or converted into packaging formats by this rename.
+for the future PocketCinema Server desktop application.
+`UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png` is the canonical
+artwork for the independent OnionOS Tailscale companion application; it does
+not claim to be an official Tailscale asset or endorsement. None of these
+source assets is converted into desktop packaging formats by this rename. The
+companion artwork is not wired into OnionOS metadata.
