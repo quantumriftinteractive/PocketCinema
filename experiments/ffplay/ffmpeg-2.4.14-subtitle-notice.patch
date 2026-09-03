@@ -144,8 +144,8 @@ index d9b0dd4..ab8c50d 100644
 @@ -3581,6 +3623,7 @@ static void opt_input_file(void *optctx, const char *filename)
          filename = "pipe:";
      input_filename = filename;
-     subtitle_filter_file = getenv("POCKETSTREMIO_SUBTITLE_FILE");
-+    subtitle_notice_font = getenv("POCKETSTREMIO_DEFAULT_FONT");
+     subtitle_filter_file = getenv("POCKETCINEMA_SUBTITLE_FILE");
++    subtitle_notice_font = getenv("POCKETCINEMA_DEFAULT_FONT");
  }
 
  static int opt_codec(void *optctx, const char *opt, const char *arg)

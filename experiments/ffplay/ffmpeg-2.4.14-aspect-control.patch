@@ -7,8 +7,8 @@
 
 static void check_aspect_request(VideoState *is)
 {
-    if (access("/tmp/pocketstremio-aspect-request", F_OK) == 0) {
-        unlink("/tmp/pocketstremio-aspect-request");
+    if (access("/tmp/pocketcinema-aspect-request", F_OK) == 0) {
+        unlink("/tmp/pocketcinema-aspect-request");
         display_aspect_mode = display_aspect_mode == 3 ? 0 : 3;
         is->force_refresh = 1;
     }
@@ -20,7 +20,7 @@ static void check_aspect_request(VideoState *is)
 @@
      VideoState *is;
      char dummy_videodriver[] = "SDL_VIDEODRIVER=dummy";
-+    const char *aspect_mode = getenv("POCKETSTREMIO_ASPECT_MODE");
++    const char *aspect_mode = getenv("POCKETCINEMA_ASPECT_MODE");
 +
 +    if (aspect_mode != NULL)
 +        display_aspect_mode = atoi(aspect_mode) == 3 ? 3 : 0;

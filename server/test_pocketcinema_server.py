@@ -16,7 +16,7 @@ from server import discovery
 from server import link_stremio_account
 from server import open_media_addon
 from server import playback_compatibility
-from server import pocketstremio_server as pocket
+from server import pocketcinema_server as pocket
 from server import stremio_account
 from server import stremio_service
 from server import transcoding
@@ -34,7 +34,7 @@ class DiscoveryResponderTest(unittest.TestCase):
     def test_responder_returns_one_named_preferred_address(self):
         responder = discovery.DiscoveryResponder(
             "0123456789abcdef",
-            "Mac PSS",
+            "Mac PCServer",
             "Overlay",
             "http://192.0.2.10:8755",
             "test-version",
@@ -54,14 +54,14 @@ class DiscoveryResponderTest(unittest.TestCase):
             responder.close()
         self.assertEqual(
             packet.decode("utf-8"),
-            "POCKETSTREMIO_PSS_V1\t0123456789abcdef\tMac PSS\tOverlay\t"
+            "POCKETSTREMIO_PSS_V1\t0123456789abcdef\tMac PCServer\tOverlay\t"
             "http://192.0.2.10:8755\ttest-version\n",
         )
 
     def test_responder_ignores_unknown_probe(self):
         responder = discovery.DiscoveryResponder(
             "0123456789abcdef",
-            "Mac PSS",
+            "Mac PCServer",
             "LAN",
             "http://192.0.2.20:8755",
             "test-version",
@@ -71,7 +71,7 @@ class DiscoveryResponderTest(unittest.TestCase):
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(0.3)
         try:
-            client.sendto(b"not-pocketstremio\n", ("127.0.0.1", responder.bound_port))
+            client.sendto(b"not-pocketcinema\n", ("127.0.0.1", responder.bound_port))
             with self.assertRaises(socket.timeout):
                 client.recvfrom(discovery.MAX_PACKET_BYTES)
         finally:
@@ -252,7 +252,7 @@ class RefreshingHlsHandler(BaseHTTPRequestHandler):
         pass
 
 
-class PocketStremioServerTest(unittest.TestCase):
+class PocketCinemaServerTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         root = Path(self.temp_dir.name)
@@ -267,7 +267,7 @@ class PocketStremioServerTest(unittest.TestCase):
         )
 
         self.server = pocket.ThreadingHTTPServer(
-            ("127.0.0.1", 0), pocket.PocketStremioHandler
+            ("127.0.0.1", 0), pocket.PocketCinemaHandler
         )
         self.server.media_dir = media_dir
         self.server.fixture_dir = fixture_dir
@@ -749,7 +749,7 @@ class PocketStremioServerTest(unittest.TestCase):
             "fetch_json",
             side_effect=AssertionError("offline series fixture used an upstream"),
         ):
-            status, search = self.get_json("/api/search?q=pocketstremio%20test%20series")
+            status, search = self.get_json("/api/search?q=pocketcinema%20test%20series")
             self.assertEqual(status, 200)
             self.assertEqual(search["count"], 1)
             series = search["items"][0]
@@ -1661,7 +1661,7 @@ class PocketStremioServerTest(unittest.TestCase):
         self.assertEqual(all_subtitles["other_count"], 0)
 
     def test_srt_subtitle_normalization_keeps_local_srt(self):
-        payload = b"1\n00:00:00,000 --> 00:00:01,000\nPocketStremio\n"
+        payload = b"1\n00:00:00,000 --> 00:00:01,000\nPocketCinema\n"
         with tempfile.TemporaryDirectory() as directory:
             path = transcoding.normalize_subtitle_payload(
                 "unused-ffmpeg", payload, directory
@@ -1675,7 +1675,7 @@ class PocketStremioServerTest(unittest.TestCase):
         addon_thread.start()
         manifest_url = f"http://127.0.0.1:{addon.server_address[1]}/manifest.json"
         self.server.stream_addons = [
-            {"name": "PocketStremio Open Media", "manifest_url": manifest_url}
+            {"name": "PocketCinema Open Media", "manifest_url": manifest_url}
         ]
         try:
             with urllib.request.urlopen(manifest_url, timeout=5) as response:
@@ -1735,7 +1735,7 @@ class PocketStremioServerTest(unittest.TestCase):
                         "name": "Unsupported stream",
                         "url": "https://media.example/video.mp4",
                         "behaviorHints": {
-                            "pocketstremio": {
+                            "pocketcinema": {
                                 "status": "unsupported",
                                 "message": "AV1 is unsupported",
                             }
@@ -2044,7 +2044,7 @@ segments.ts
         upstream_thread.start()
         bridge_started = threading.Event()
         bridge_stopped = threading.Event()
-        original_bridge = pocket.PocketStremioHandler.stream_hls_transport
+        original_bridge = pocket.PocketCinemaHandler.stream_hls_transport
 
         def tracked_bridge(handler, session):
             bridge_started.set()
@@ -2058,7 +2058,7 @@ segments.ts
             with mock.patch.object(
                 stremio_account, "validate_direct_stream_url", return_value=True
             ), mock.patch.object(
-                pocket.PocketStremioHandler,
+                pocket.PocketCinemaHandler,
                 "stream_hls_transport",
                 tracked_bridge,
             ):
@@ -2376,7 +2376,7 @@ segments.ts
             {
                 "type": "movie",
                 "id": "tt16366836",
-                "title": "PocketStremio",
+                "title": "PocketCinema",
                 "year": 2024,
                 "position_seconds": 155,
                 "duration_seconds": 6537,

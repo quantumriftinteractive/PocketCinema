@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# PocketStremio's supported generic HTTP-proxy default. It is a user-owned
+# PocketCinema's supported generic HTTP-proxy default. It is a user-owned
 # setting only; this file does not identify or manage the software providing it.
-POCKETSTREMIO_DEFAULT_HTTP_PROXY="http://127.0.0.1:1055"
+POCKETCINEMA_DEFAULT_HTTP_PROXY="http://127.0.0.1:1055"
 
-pocketstremio_normalize_http_proxy() {
+pocketcinema_normalize_http_proxy() {
   proxy_value=$(printf '%s' "$1" | tr -d '\r\n')
   [ -n "$proxy_value" ] || return 1
   case "$proxy_value" in
@@ -42,7 +42,7 @@ pocketstremio_normalize_http_proxy() {
   printf 'http://%s:%s\n' "$proxy_host" "$proxy_port"
 }
 
-pocketstremio_save_http_proxy() {
+pocketcinema_save_http_proxy() {
   proxy_config_file="$1"
   proxy_value="$2"
   proxy_config_dir=$(dirname "$proxy_config_file")

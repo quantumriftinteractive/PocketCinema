@@ -1,18 +1,18 @@
-# PocketStremio Agent Instructions
+# PocketCinema Agent Instructions
 
 ## Scope
 
 These instructions apply to the entire repository.
 
-PocketStremio is an experimental thin client for the Miyoo Mini Plus running
-OnionOS. The active PSS host owns metadata, stream resolution, media proxying,
+PocketCinema is an experimental thin client for the Miyoo Mini Plus running
+OnionOS. The active PCServer host owns metadata, stream resolution, media proxying,
 and server-side state. The Miyoo owns controller interaction, compact JSON
 parsing, and FFplay launch. The confirmed deployment uses the gaming PC as the
-PSS host; macOS is also a supported development host when its prerequisites are
+PCServer host; macOS is also a supported development host when its prerequisites are
 verified.
 
-In development discussion and documentation, `PSS` is the accepted shorthand
-for the PocketStremio server. Spell it out on first use in user-facing material.
+In development discussion and documentation, `PCServer` is the accepted shorthand
+for the PocketCinema server. Spell it out on first use in user-facing material.
 
 Read `docs/roadmap.md` before starting feature work. Only the milestone marked
 **Next** should receive new feature scope unless the user explicitly changes the
@@ -20,8 +20,8 @@ priority.
 
 ## Non-Negotiable Boundaries
 
-- Keep PocketStremio persistent device files under
-  `/mnt/SDCARD/App/PocketStremio/`. The independent `onion-tailscale/`
+- Keep PocketCinema persistent device files under
+  `/mnt/SDCARD/App/PocketCinema/`. The independent `onion-tailscale/`
   subproject targets `/mnt/SDCARD/App/Tailscale/` under its local instructions.
 - Do not modify OnionOS core files. If no app-local solution exists, stop and
   explain the required change before touching a core file, then document it.
@@ -30,10 +30,10 @@ priority.
   state at `/mnt/SDCARD/App/PocketStremio/tailscale/state/tailscaled.state`.
   Never run both daemons, reset either state, reauthenticate the working node,
   or delete the rollback copy during ordinary development.
-- PocketStremio must be transport-agnostic. Direct HTTP is the default; a
-  generic HTTP proxy is optional configuration. PocketStremio must never start,
+- PocketCinema must be transport-agnostic. Direct HTTP is the default; a
+  generic HTTP proxy is optional configuration. PocketCinema must never start,
   stop, or inspect Tailscale.
-- PocketStremio must access Stremio Service only through loopback on the gaming
+- PocketCinema must access Stremio Service only through loopback on the gaming
   PC. Preserve the inbound Windows Firewall block for TCP `11470-11474` and
   `12470`; never make those ports reachable from the Miyoo, LAN, or tailnet.
 - Do not commit private addon URLs, tokens, Tailscale state, downloaded binaries,
@@ -44,7 +44,7 @@ priority.
 ## Source of Truth / State Ownership
 
 `PROJECT_STATE.md` owns the current operational and production state of
-PocketStremio, including the active milestone, confirmed behavior, invariants,
+PocketCinema, including the active milestone, confirmed behavior, invariants,
 experimental work, regressions, and development handoff. Do not duplicate
 detailed current-state narratives in `AGENTS.md`.
 
@@ -63,12 +63,12 @@ release-readiness document, and relevant evidence.
 ```text
 Miyoo shell/SDL client
   -> direct HTTP or configured generic HTTP proxy
-  -> PocketStremio server (PSS host)
+  -> PocketCinema server (PCServer host)
   -> metadata, addon, compatibility, conversion, and media services
 ```
 
 The Miyoo owns controller interaction, compact JSON parsing, and playback
-launch. The PSS host owns metadata, stream resolution, compatibility checks,
+launch. The PCServer host owns metadata, stream resolution, compatibility checks,
 conversion, private credentials, upstream transports, and server-side state.
 The app remains transport-agnostic and does not manage the network provider.
 
@@ -92,19 +92,19 @@ Deployment maps repository files as follows:
 
 ```text
 app/launch.sh
-  -> /mnt/SDCARD/App/PocketStremio/launch.sh
+  -> /mnt/SDCARD/App/PocketCinema/launch.sh
 app/playback-poc.sh
-  -> /mnt/SDCARD/App/PocketStremio/playback-poc.sh
-client/miyoo/pocketstremio-ui.sh
-  -> /mnt/SDCARD/App/PocketStremio/client/pocketstremio-ui.sh
-client/miyoo/bin/pocketstremio-selector
-  -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-selector
-client/miyoo/bin/pocketstremio-pause-monitor
-  -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-pause-monitor
-client/miyoo/bin/pocketstremio-discovery
-  -> /mnt/SDCARD/App/PocketStremio/bin/pocketstremio-discovery
-client/miyoo/pocketstremio.conf.example
-  -> /mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf.example
+  -> /mnt/SDCARD/App/PocketCinema/playback-poc.sh
+client/miyoo/pocketcinema-ui.sh
+  -> /mnt/SDCARD/App/PocketCinema/client/pocketcinema-ui.sh
+client/miyoo/bin/pocketcinema-selector
+  -> /mnt/SDCARD/App/PocketCinema/bin/pocketcinema-selector
+client/miyoo/bin/pocketcinema-pause-monitor
+  -> /mnt/SDCARD/App/PocketCinema/bin/pocketcinema-pause-monitor
+client/miyoo/bin/pocketcinema-discovery
+  -> /mnt/SDCARD/App/PocketCinema/bin/pocketcinema-discovery
+client/miyoo/pocketcinema.conf.example
+  -> /mnt/SDCARD/App/PocketCinema/config/pocketcinema.conf.example
 ```
 
 Do not store target addresses or credentials in new committed files. Use the
@@ -112,7 +112,7 @@ existing defaults or environment overrides and keep deployment credentials out
 of git.
 
 The optional live device config is
-`/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf`. Deployment must never
+`/mnt/SDCARD/App/PocketCinema/config/pocketcinema.conf`. Deployment must never
 overwrite it. Environment variables take precedence over app-local config.
 
 ## Implementation Rules
@@ -151,7 +151,7 @@ overwrite it. Environment variables take precedence over app-local config.
   never process arguments or logs, and do not use an online QR service.
 - The Miyoo framebuffer requires a 180-degree rendering correction.
 - Confirmed keys are Up `273`, Down `274`, A `32`, and B `306`.
-- B/back applies to PocketStremio selector screens. During FFplay playback, the
+- B/back applies to PocketCinema selector screens. During FFplay playback, the
   Miyoo Menu button exits; B advances video frame by frame on this FFplay build.
 - Stdout is a strict data channel: on success emit exactly the selected value and
   a newline; on cancel emit nothing and return nonzero.
@@ -165,7 +165,7 @@ overwrite it. Environment variables take precedence over app-local config.
 - Preserve current endpoints and response compatibility unless the change is
   explicitly versioned and deployed with the client.
 - Keep private upstream URLs server-side. `/api/streams` returns opaque stream
-  IDs and `/api/play` creates a PocketStremio play URL.
+  IDs and `/api/play` creates a PocketCinema play URL.
 - Keep account addon transports, credentials, and media URLs server-side. Only
   safe direct HTTP(S) results are eligible; reject P2P, external-player,
   local/private-address, credential-bearing, and unsafe results.
@@ -250,8 +250,8 @@ When product/client changes require physical Miyoo validation, deploy the change
 
 Scale tests to the change. Before committing, run the relevant checks:
 
-- `python -m py_compile server/pocketstremio_server.py`
-- `python -m unittest server.test_stremio_account server.test_pocketstremio_server -v`
+- `python -m py_compile server/pocketcinema_server.py`
+- `python -m unittest server.test_stremio_account server.test_pocketcinema_server -v`
 - Parse every changed `.sh` with `sh -n` or Git Bash `sh -n`.
 - Parse all changed `.ps1` files with the PowerShell parser.
 - For server changes, exercise `/api/status`, search, metadata, streams, play

@@ -1,9 +1,9 @@
 #!/bin/sh
 
-BASE_DIR=/mnt/SDCARD/App/PocketStremio
+BASE_DIR=/mnt/SDCARD/App/PocketCinema
 SYS_DIR=/mnt/SDCARD/.tmp_update
 LOG_FILE="$BASE_DIR/logs/button-diagnostic.log"
-DIAGNOSTIC="$BASE_DIR/bin/pocketstremio-button-diagnostic"
+DIAGNOSTIC="$BASE_DIR/bin/pocketcinema-button-diagnostic"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 
 rm -f "$BASE_DIR/config/button-diagnostic.mode"
@@ -29,7 +29,7 @@ fi
 panel_pid=""
 rm -f /tmp/dismiss_info_panel
 if [ -x "$INFOPANEL" ]; then
-  "$INFOPANEL" --title "PocketStremio Controls" \
+  "$INFOPANEL" --title "PocketCinema Controls" \
     --message "Press each control once. Press Menu last to finish." \
     --persistent >/dev/null 2>&1 &
   panel_pid=$!

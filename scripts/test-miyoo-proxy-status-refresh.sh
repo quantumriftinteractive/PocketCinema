@@ -2,7 +2,7 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
-UI_SCRIPT="$SCRIPT_DIR/../client/miyoo/pocketstremio-ui.sh"
+UI_SCRIPT="$SCRIPT_DIR/../client/miyoo/pocketcinema-ui.sh"
 
 assert_contains() {
   printf '%s\n' "$1" | grep -F -q -- "$2" || {
@@ -70,7 +70,7 @@ refresh_line=$(line_number "$activate_http_proxy_body" 'start_server_monitor')
 # performs the normal status validation with the selected transport.
 assert_contains "$start_server_monitor_body" 'write_server_status "Server: Connecting..."'
 assert_contains "$start_server_monitor_body" 'resolve_active_route'
-assert_contains "$resolve_active_route_body" 'pocketstremio_resolve_connection_route'
+assert_contains "$resolve_active_route_body" 'pocketcinema_resolve_connection_route'
 
 # A disabled proxy offers an explicit activation action, not a redundant
 # disable action. Edit, default activation/restore, and disable all share
@@ -80,7 +80,7 @@ assert_contains "$enabled_proxy_menu" 'Disable proxy'
 assert_contains "$disabled_proxy_menu" 'Enable default (%s)'
 assert_not_contains "$disabled_proxy_menu" 'Disable proxy'
 assert_contains "$http_proxy_flow_body" 'activate_http_proxy "$normalized_proxy"'
-assert_contains "$http_proxy_flow_body" 'activate_http_proxy "$POCKETSTREMIO_DEFAULT_HTTP_PROXY"'
+assert_contains "$http_proxy_flow_body" 'activate_http_proxy "$POCKETCINEMA_DEFAULT_HTTP_PROXY"'
 assert_contains "$http_proxy_flow_body" 'activate_http_proxy ""'
 
 printf 'Miyoo proxy status refresh tests passed\n'

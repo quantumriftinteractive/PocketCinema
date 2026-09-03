@@ -48,4 +48,4 @@
  static int opt_input_file(void *optctx, const char *filename)
  {
 @@
-+    subtitle_filter_file = getenv("POCKETSTREMIO_SUBTITLE_FILE");
++    subtitle_filter_file = getenv("POCKETCINEMA_SUBTITLE_FILE");

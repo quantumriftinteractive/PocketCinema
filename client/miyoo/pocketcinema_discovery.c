@@ -13,6 +13,7 @@
 #define MAX_PACKET 1024
 #define MAX_RESULTS 16
 
+/* Kept as the deployed discovery wire identifier for interoperability. */
 static const char request[] = "POCKETSTREMIO_DISCOVER_V1\n";
 static const char prefix[] = "POCKETSTREMIO_PSS_V1\t";
 

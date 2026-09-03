@@ -19,9 +19,9 @@ BEVERLY_HILLBILLIES_S01E01_URL = (
 )
 
 MANIFEST = {
-    "id": "org.pocketstremio.open-media",
+    "id": "org.pocketcinema.open-media",
     "version": "1.1.0",
-    "name": "PocketStremio Open Media",
+    "name": "PocketCinema Open Media",
     "description": "Small legal-media source used to validate Stremio stream resolution.",
     "resources": ["stream"],
     "types": ["movie", "series"],
@@ -30,7 +30,7 @@ MANIFEST = {
 
 
 class OpenMediaAddonHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremioOpenMedia/1.0"
+    server_version = "PocketCinemaOpenMedia/1.0"
 
     def do_GET(self):
         path = urllib.parse.urlparse(self.path).path
@@ -51,7 +51,7 @@ class OpenMediaAddonHandler(BaseHTTPRequestHandler):
                         "url": NIGHT_OF_THE_LIVING_DEAD_URL,
                         "durationSeconds": 5752,
                         "behaviorHints": {
-                            "pocketstremio": {
+                            "pocketcinema": {
                                 "status": "confirmed",
                                 "message": "Confirmed H.264/AAC 320x240 profile",
                             }
@@ -71,7 +71,7 @@ class OpenMediaAddonHandler(BaseHTTPRequestHandler):
                         "url": BEVERLY_HILLBILLIES_S01E01_URL,
                         "durationSeconds": 1492,
                         "behaviorHints": {
-                            "pocketstremio": {
+                            "pocketcinema": {
                                 "status": "confirmed",
                                 "message": "Confirmed H.264/AAC 320x240 profile",
                             }
@@ -101,7 +101,7 @@ def create_server(host="127.0.0.1", port=8756):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PocketStremio legal open-media addon")
+    parser = argparse.ArgumentParser(description="PocketCinema legal open-media addon")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8756)
     args = parser.parse_args()

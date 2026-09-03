@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 DISCOVERY_PORT = 8754
+# The pre-release protocol marker is not shown to users. Keep it stable so the
+# renamed client can discover a deployed server without a protocol migration.
 DISCOVERY_REQUEST = b"POCKETSTREMIO_DISCOVER_V1\n"
 DISCOVERY_RESPONSE_PREFIX = "POCKETSTREMIO_PSS_V1"
 MAX_PACKET_BYTES = 1024
@@ -26,7 +28,7 @@ def public_url(host, port):
 def safe_name(value):
     cleaned = " ".join(str(value).split())
     cleaned = "".join(character for character in cleaned if 32 <= ord(character) < 127)
-    return cleaned[:48] or "PocketStremio"
+    return cleaned[:48] or "PocketCinema"
 
 
 def load_or_create_instance_id(path):
@@ -93,7 +95,7 @@ class DiscoveryResponder:
         self.bound_port = sock.getsockname()[1]
         self._socket = sock
         self._thread = threading.Thread(
-            target=self._serve, name="pocketstremio-discovery", daemon=True
+            target=self._serve, name="pocketcinema-discovery", daemon=True
         )
         self._thread.start()
         return self

@@ -1,4 +1,4 @@
-# PocketStremio Roadmap
+# PocketCinema Roadmap
 
 This is the canonical project roadmap. It separates behavior confirmed on the
 Miyoo Mini Plus from planned work and keeps each milestone independently
@@ -17,25 +17,25 @@ The current prototype completes this path:
 
 ```text
 OnionOS Apps
-  -> PocketStremio search
+  -> PocketCinema search
   -> controller-driven result selection
   -> media action selection
   -> stream selection
-  -> PocketStremio play session
+  -> PocketCinema play session
   -> FFplay video and audio
 ```
 
 Architectural boundaries:
 
 - The Miyoo remains a lightweight shell and SDL client.
-- PocketStremio uses direct HTTP by default and can use a configured HTTP proxy.
+- PocketCinema uses direct HTTP by default and can use a configured HTTP proxy.
 - Network providers such as Tailscale are operated independently from
-  PocketStremio.
-- PocketStremio server is the only service exposed to the Miyoo.
-- PocketStremio accesses Stremio Service only through `127.0.0.1:11470`; a
+  PocketCinema.
+- PocketCinema server is the only service exposed to the Miyoo.
+- PocketCinema accesses Stremio Service only through `127.0.0.1:11470`; a
   Windows Firewall block rule prevents remote access to the service ports.
-- PocketStremio persistent files remain under
-  `/mnt/SDCARD/App/PocketStremio/`; independent provider apps own their own app
+- PocketCinema persistent files remain under
+  `/mnt/SDCARD/App/PocketCinema/`; independent provider apps own their own app
   directories.
 - OnionOS core files and Tailscale persistent state are not modified.
 
@@ -48,7 +48,7 @@ Architectural boundaries:
 - ARMv7 hardware and available memory were measured.
 - OnionOS app layout, launch context, framebuffer, VT, and audio behavior were
   investigated.
-- Persistent application files are isolated under the PocketStremio app path.
+- Persistent application files are isolated under the PocketCinema app path.
 
 Evidence: [Miyoo hardware notes](miyoo-hardware.md)
 
@@ -58,7 +58,7 @@ Evidence: [Miyoo hardware notes](miyoo-hardware.md)
 
 - `tailscaled` runs in userspace networking mode.
 - The local HTTP proxy is reachable at `127.0.0.1:1055`.
-- State and logs remain inside the PocketStremio directory.
+- State and logs remain inside the PocketCinema directory.
 - Miyoo-to-gaming-PC HTTP traffic works across the tailnet.
 
 Evidence: [Tailscale userspace POC](../onion-tailscale/docs/poc.md)
@@ -90,7 +90,7 @@ Evidence: [FFplay playback POC](ffplay-playback-poc.md)
 
 **Status: Confirmed**
 
-- Cinemeta-backed movie search and metadata work through PocketStremio server.
+- Cinemeta-backed movie search and metadata work through PocketCinema server.
 - The server exposes `/api/streams`, `/api/play`, and private play sessions.
 - D-pad navigation, A selection, and B/back work in the custom SDL selector.
 - Big Buck Bunny can be selected manually and played through the full pipeline.
@@ -128,7 +128,7 @@ Evidence: [Subtitles and Continue Watching POC](subtitles-progress-poc.md)
 **Status: Confirmed**
 
 The public-domain *Night of the Living Dead* (1968) Internet Archive derivative
-is resolved through a localhost-only Stremio addon. PocketStremio hides the
+is resolved through a localhost-only Stremio addon. PocketCinema hides the
 upstream URL and relays redirects and byte ranges through Tailscale. Manual
 selection, visible and audible playback, acceptable initial smoothness,
 Menu-button exit, progress saving, and cleanup were physically confirmed from
@@ -145,7 +145,7 @@ Scope:
 - Identify one reproducible direct-URL stream source for a movie.
 - Resolve it behind `/api/streams/{type}/{id}` without exposing its upstream URL
   to the Miyoo.
-- Preserve loopback-only PocketStremio access and firewall containment for
+- Preserve loopback-only PocketCinema access and firewall containment for
   Stremio Service.
 - Handle common upstream redirects, Range requests, content types, and failures.
 - Show useful stream names and concise failure messages in the Miyoo client.
@@ -247,7 +247,7 @@ working OnionOS screen without stale processes or persistent-state damage.
 
 **Status: Confirmed**
 
-PocketStremio now requires an explicit server URL, uses direct HTTP when its
+PocketCinema now requires an explicit server URL, uses direct HTTP when its
 generic proxy setting is empty, and contains no Tailscale lifecycle or state
 knowledge. Direct and configured-proxy requests passed on the Miyoo. The normal
 Apps selector and B exit were physically confirmed after deployment, with clean
@@ -258,10 +258,10 @@ separate state migration were deliberately not deployed.
 
 Evidence: [Transport Independence and Tailscale Extraction](transport-independence.md)
 
-- Make PocketStremio direct HTTP the default and its HTTP proxy optional.
+- Make PocketCinema direct HTTP the default and its HTTP proxy optional.
 - Require an explicit server URL instead of shipping a provider-specific target.
 - Remove all Tailscale daemon lifecycle, socket, state, and status knowledge from
-  PocketStremio production and diagnostic clients.
+  PocketCinema production and diagnostic clients.
 - Isolate the userspace-networking proof under the self-contained
   `onion-tailscale/` subproject with `/mnt/SDCARD/App/Tailscale/` as its target.
 - Preserve the currently authenticated legacy state without moving, deleting,
@@ -269,10 +269,10 @@ Evidence: [Transport Independence and Tailscale Extraction](transport-independen
 - Keep the current remote Miyoo setup working by explicitly configuring its
   existing proxy until a separate Tailscale-app migration is physically tested.
 
-Acceptance criterion: PocketStremio can reach a server directly when `PROXY` is
+Acceptance criterion: PocketCinema can reach a server directly when `PROXY` is
 empty, can retain the confirmed remote path when a generic proxy is configured,
 and contains no code that starts or inspects Tailscale. The standalone
-Tailscale folder must be independently deployable without PocketStremio files.
+Tailscale folder must be independently deployable without PocketCinema files.
 
 ### 12. Real Series Stream Validation
 
@@ -368,7 +368,7 @@ has not been physically timed.
 
 **Status: Confirmed**
 
-PocketStremio now uses a dedicated, loopback-only backend adapter for Stremio
+PocketCinema now uses a dedicated, loopback-only backend adapter for Stremio
 Service Local Files. One allowlisted public-domain file resolved through the
 service, passed the existing compatibility preflight, remained hidden behind an
 opaque play session, and played visibly and audibly from the OnionOS Apps
@@ -379,16 +379,16 @@ Evidence: [Local Stremio Service Backend](local-stremio-service-backend.md)
 
 - Inspect and document the localhost Stremio Service API and runtime capabilities
   actually available at `127.0.0.1:11470`.
-- Add a bounded PocketStremio backend adapter instead of exposing the service to
+- Add a bounded PocketCinema backend adapter instead of exposing the service to
   the Miyoo or tailnet.
 - Route one legal test title through the service-backed metadata or stream path
   while preserving the current direct-addon regression fixtures.
 - Surface specific server-side diagnostics when the service is unavailable or
   has no usable addon result.
-- Confirm PocketStremio remains the Miyoo's only server endpoint and that raw
+- Confirm PocketCinema remains the Miyoo's only server endpoint and that raw
   upstream URLs remain private.
 
-Acceptance criterion: PocketStremio obtains a usable metadata or direct-stream
+Acceptance criterion: PocketCinema obtains a usable metadata or direct-stream
 result for one legal test item through the localhost Stremio Service, relays it
 through the existing opaque API, and completes an Apps-context playback without
 making port `11470` remotely reachable.
@@ -402,7 +402,7 @@ torrents, debrid, transcoding, external subtitle rendering, or a larger UI.
 
 The linked gaming-PC account exposes 15 normalized addons without credentials or
 transport URLs. Torrentio RD and AIOStreams results remain rejected. The Greek TV
-addon supplies ERT News through HLS; PocketStremio selects its compatible
+addon supplies ERT News through HLS; PocketCinema selects its compatible
 640x360 H.264/AAC rendition and converts only the transport from HLS segments to
 a continuous opaque MPEG-TS response. No transcoding or raw upstream URL reaches
 the Miyoo.
@@ -419,7 +419,7 @@ Evidence: [Stremio Account Addon Discovery](stremio-account-addons.md)
   Stremio without reading or copying opaque desktop application state.
 - Keep authentication material and private addon URLs on the gaming PC in
   ignored configuration; never send them to the Miyoo or commit them.
-- Normalize a read-only account addon list behind PocketStremio and report
+- Normalize a read-only account addon list behind PocketCinema and report
   per-source capability and availability without exposing manifest URLs.
 - Permit only direct HTTP(S) stream results through the existing compatibility
   and opaque play-session path.
@@ -428,7 +428,7 @@ Evidence: [Stremio Account Addon Discovery](stremio-account-addons.md)
 - Preserve Local Files, open-media, and deterministic fixtures as independent
   regression sources.
 
-Acceptance criterion: PocketStremio discovers the authenticated account's addon
+Acceptance criterion: PocketCinema discovers the authenticated account's addon
 collection server-side, resolves one legal direct-HTTP result through an account
 addon when available, and completes Apps-context playback without exposing an
 auth token, private addon URL, or raw stream URL to the Miyoo.
@@ -468,7 +468,7 @@ and existing movie and episode playback remain unchanged.
 The linked Torrentio RD and AIOStreams configurations return direct HTTPS media
 objects for normal movies and series. The user explicitly authorized using
 those account-bound results. Tokens and configured addon transports remain on
-the gaming PC behind opaque PocketStremio play sessions.
+the gaming PC behind opaque PocketCinema play sessions.
 
 - Accept a direct public HTTP(S) `url` even when its display text is debrid
   labeled.
@@ -489,7 +489,7 @@ readiness after 36 seconds, recorded 37 valid watched seconds, tracked a pause,
 exited cleanly, and saved progress.
 
 Acceptance criterion: a linked account addon resolves a direct HTTPS movie or
-episode, PocketStremio exposes only an opaque stream ID and play URL, and the
+episode, PocketCinema exposes only an opaque stream ID and play URL, and the
 media starts visibly and audibly on the Miyoo without exposing account or media
 tokens.
 
@@ -502,7 +502,7 @@ yet expose their movie and series catalogs. Add lightweight server-normalized
 catalog browsing without sending addon transports or tokens to the Miyoo.
 
 - List account catalogs by safe addon and catalog labels.
-- Browse bounded movie and series pages through opaque PocketStremio endpoints.
+- Browse bounded movie and series pages through opaque PocketCinema endpoints.
 - Reuse the current media details, season/episode, stream, playback, and back
   navigation paths.
 - Keep catalog extras, addon transports, tokens, posters, and raw responses on
@@ -532,13 +532,13 @@ was physically confirmed synchronized for *Invincible* S1E4, and two resumed
 runs confirmed correct progress accumulation. Stream browsing labels retained
 ffprobe results as `DIRECT`, `CONVERT`, or `CHECK`, and hides cached unsupported
 results without probing every candidate before showing the list.
-PSS also hides cached media that its actual container, video codec, or audio
+PCServer also hides cached media that its actual container, video codec, or audio
 codec preflight has rejected; it hides cached conversion-only streams if that
-PSS has no FFmpeg conversion service, and omits external subtitle choices when
+PCServer has no FFmpeg conversion service, and omits external subtitle choices when
 its FFmpeg build lacks subtitle burn-in support. Unprobed sources remain marked
 `CHECK` so opening a stream list never probes every addon result.
 
-On the split-host Mac PSS, the stock Homebrew FFmpeg lacked libass and was
+On the split-host Mac PCServer, the stock Homebrew FFmpeg lacked libass and was
 therefore correctly reported as unable to burn external subtitles. A separate
 Mac-local FFmpeg build with libass restored the production burn-in capability;
 the previously failing stream/subtitle pair then rendered burned-in subtitles
@@ -604,7 +604,7 @@ the wrapper acceptance criteria.
 Latest visual-isolation checkpoint: production burn-in passed without the
 artifact, while the candidate displayed it even with no subtitle selected. The
 deployed candidate matched the local rebuild byte-for-byte. Clearing its SDL
-surface removed stale top-of-screen PocketStremio pixels but not the bottom
+surface removed stale top-of-screen PocketCinema pixels but not the bottom
 artifact. The remaining investigation is ordered around candidate SDL versus
 Miyoo SDL, display geometry, and other candidate build/runtime differences.
 At this checkpoint, Milestone 20 remained In Progress and was not Confirmed.
@@ -623,7 +623,7 @@ content. The original candidate was restored after the comparison.
 The decisive candidate test then forced the SDL surface to 640x480 using
 app-local FFplay `-x 640 -y 480`, while preserving the approximately 640x360
 video rectangle. This removed the bottom artifact, prevented the partial
-PocketStremio title during exit, and produced smooth playback. The prior
+PocketCinema title during exit, and produced smooth playback. The prior
 candidate requested 640x360 and Miyoo SDL returned 640x400, leaving the bottom
 framebuffer area outside the surface. This display-surface fix is physically
 confirmed; candidate subtitle/audio acceptance remains separate.
@@ -650,7 +650,7 @@ confirmed smooth, synchronized A/V. The bounded output was 640x360 H.264 with
 AAC stereo. FFmpeg used 94,164--111,676 kB RSS and 153 CPU seconds across the
 run. The corrected Miyoo FFplay monitor recorded 1,168--17,048 kB RSS, zero
 process swap, at least 36,704 kB MemAvailable, and at least 129,212 kB
-SwapFree. Menu exit left zero active PSS conversions and no FFplay, stay-awake,
+SwapFree. Menu exit left zero active PCServer conversions and no FFplay, stay-awake,
 subtitle, pause, or FFplay-log temporary state. The user later clarified that
 the burn-in subtitle selected for this duration run was not the matching release.
 That is a subtitle-choice limitation, not a burn-in pipeline failure: earlier
@@ -671,36 +671,36 @@ cleans up every server and device process without exposing upstream tokens.
 
 The user-prioritized server-connectivity slice is implemented for split-host
 development. The home screen reports connected, offline, or unconfigured
-state without preventing access to Settings. Settings can discover PSS
+state without preventing access to Settings. Settings can discover PCServer
 instances by local UDP broadcast or accept a controller-keyboard HTTP(S)
 address manually, validates candidates through `/api/status`, and atomically
-updates only `SERVER_BASE` in the authoritative app-local config. Each PSS
+updates only `SERVER_BASE` in the authoritative app-local config. Each PCServer
 advertises one preferred address and a stable ignored instance identity, so a
-machine with both LAN and overlay addresses is not presented as multiple PSS
+machine with both LAN and overlay addresses is not presented as multiple PCServer
 instances. Choices are labeled `name - IP:port - network`; the transport label
-is explicit PSS configuration rather than Tailscale inspection. Device-shell
-and Apps-context scans displayed both the Mac and Windows PSS instances as two
+is explicit PCServer configuration rather than Tailscale inspection. Device-shell
+and Apps-context scans displayed both the Mac and Windows PCServer instances as two
 distinct name/address/network choices. Controller selection switched from Mac
 to Windows, atomically preserved the other live settings, and survived an app
-restart. With the configured Mac PSS intentionally stopped, the menu appeared
+restart. With the configured Mac PCServer intentionally stopped, the menu appeared
 immediately with no black screen and dynamically reported `Server: Offline`;
 selecting that row opened Settings, which restored the Windows connection.
 When the current Wi-Fi prevented direct LAN peer traffic and therefore UDP
-discovery, controller keyboard entry of the Mac PSS tailnet address passed
+discovery, controller keyboard entry of the Mac PCServer tailnet address passed
 `/api/status`, atomically saved `SERVER_BASE`, and returned to a connected home
 menu. Manual entry is therefore physically confirmed with the existing generic
 proxy configuration. A no-config first-run test then confirmed a tailnet gap:
-the client starts direct, so it discovered the Mac PSS but rejected both its
+the client starts direct, so it discovered the Mac PCServer but rejected both its
 manual address and discovery result during status validation because no proxy
 was available. The original device configuration was restored unchanged. A
 first-run proxy/onboarding design is required before tailnet first-run can be
 accepted. The proposed direct-first, generic-proxy remote route is documented
 in [Portable Connection and First-Run Onboarding Plan](portable-connection-onboarding-plan.md);
 the companion's endpoint-display phase is implemented, statically tested,
-deployed, and physically confirmed; the PocketStremio onboarding work is
+deployed, and physically confirmed; the PocketCinema onboarding work is
 implemented, automated/static-tested, deployed, and physically confirmed.
 Legacy startup and manual Local-only direct setup/search passed from
-OnionOS Apps; the hotspot scan also advertised the direct PSS and passed
+OnionOS Apps; the hotspot scan also advertised the direct PCServer and passed
 selection validation. Remote-only setup/search through the proxy and the
 found-but-unreachable Local validation case also passed, as did Remote proxy
 failure/default recovery and Remote-profile restart persistence. It now includes
@@ -715,28 +715,28 @@ bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
-testing confirmed the bounded generic PSS/provider category for a pre-readiness
+testing confirmed the bounded generic PCServer/provider category for a pre-readiness
 `502`. Controlled OnionOS Apps runs now also confirmed the specific,
-sanitized `Selected subtitle could not be downloaded` and `PSS conversion could
+sanitized `Selected subtitle could not be downloaded` and `PCServer conversion could
 not start` messages, each returning cleanly to stream selection. The
 device-local Quick Resume entry stores only
-the selected PSS address and opaque stream/subtitle IDs; it skips the prior
-menus while that PSS remains running, then clears the stale selection and
-returns to normal selection after a PSS restart or server change. Its first
+the selected PCServer address and opaque stream/subtitle IDs; it skips the prior
+menus while that PCServer remains running, then clears the stale selection and
+returns to normal selection after a PCServer restart or server change. Its first
 physical run resumed a converted movie at 165 seconds, reached video readiness,
 and saved progress at 185 seconds.
 
-- Show concise PocketStremio server reachability on the main screen.
+- Show concise PocketCinema server reachability on the main screen.
 - Edit the server host and port from an app-local Settings screen while keeping
-  `/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf` authoritative.
-- Discover one preferred address per PSS on the local network, deduplicate it
+  `/mnt/SDCARD/App/PocketCinema/config/pocketcinema.conf` authoritative.
+- Discover one preferred address per PCServer on the local network, deduplicate it
   by instance rather than interface, and show name, IP:port, and configured
   network label before selection.
-- Keep manual HTTP(S) entry available for routed hosts. Warn that PSS has no
+- Keep manual HTTP(S) entry available for routed hosts. Warn that PCServer has no
   public-facing authentication and must not be exposed directly without an
   authenticated gateway.
 - Offer Quick Resume for the last valid opaque stream selection on the current
-  PSS, with a normal-selection fallback when its in-memory IDs expire.
+  PCServer, with a normal-selection fallback when its in-memory IDs expire.
 - Store ordered audio-language and subtitle-language preferences with an
   explicit fallback choice; never infer language solely from a filename.
 - Apply preferences to server-normalized tracks and subtitle results without
@@ -793,7 +793,7 @@ can change an existing language's priority with its current position marked by
 an advanced escape hatch. Audio and subtitle orders are stored
 separately in the app-local config with explicit fallbacks: ask, first verified
 track, or stop for audio; ask or no subtitles for external subtitles. Empty
-preferences preserve the existing per-playback pickers. PSS canonicalizes
+preferences preserve the existing per-playback pickers. PCServer canonicalizes
 common language aliases, keeps the subtitle API English-only for older clients,
 and accepts at most five requested languages from updated clients. Automated
 coverage confirms canonical audio tags and deterministic requested subtitle
@@ -829,7 +829,7 @@ Apps-context testing confirmed the new audio filtering with *My Hero Academia*
 S1E1. The selected AIOStreams 1280x720 source exposed eight audio tracks:
 Spanish, French, German, Italian, Portuguese, Polish, Hungarian, and Japanese.
 The saved Japanese-first preference selected ordinal 7, and the user confirmed
-Japanese audio. FFplay exited cleanly after 19 valid watched seconds; PSS then
+Japanese audio. FFplay exited cleanly after 19 valid watched seconds; PCServer then
 reported zero active conversions and bridges, and the Miyoo retained no player,
 client helper, infoPanel, or temporary playback state.
 
@@ -845,38 +845,38 @@ The client now treats that cancellation as the existing title-screen back result
 An Apps-context retest confirmed it returns directly to the title action screen;
 the device log records `stream source selection canceled`.
 
-PSS now retains the already-sanitized response for an item’s stream request in a
+PCServer now retains the already-sanitized response for an item’s stream request in a
 bounded server-only cache (32 items, five minutes), so backtracking into the
 same title does not depend on a new provider response or a new preflight pass.
 The cache is automated-tested and keeps upstream URLs out of the cached device
 response. Apps-context navigation debugging reopened the same title repeatedly
 through the cache interval; the user reported its one returned source and stream
 choice stayed consistent. The device logged repeated resolution of that title,
-while PSS served later identical stream requests without a repeated addon fetch.
+while PCServer served later identical stream requests without a repeated addon fetch.
 The audio-language picker excludes `und`, which is unverified rather than a
 verified language; when it has no verified tags to offer, it explains the
-condition and proceeds to explicit stream selection. The normal PSS branch was
+condition and proceeds to explicit stream selection. The normal PCServer branch was
 physically exercised, but its original one-line notice was too long for the
 Miyoo display. All infoPanel message bodies now preserve explicit newlines,
 wrap at 32 characters, and show at most four lines with an ellipsis. An
-Apps-context PSS scan response rendered cleanly in two lines, physically
+Apps-context PCServer scan response rendered cleanly in two lines, physically
 confirming the wrapped-message presentation.
 
 The same run also regression-checked confirmed Milestone 22 after restoring the
-client and PSS Matroska mode flags. PSS packaged three selectable subtitle
+client and PCServer Matroska mode flags. PCServer packaged three selectable subtitle
 tracks, and the user pressed R1 and visibly reached the `Subtitles 2/3` notice.
 This confirms that the reported fixed-subtitle behavior was disabled
 configuration, not a loss of the established switching capability.
 
 Continue Watching now binds X to removal of the highlighted row while A keeps
-the normal open and resume flow. X opens a controller confirmation before PSS
+the normal open and resume flow. X opens a controller confirmation before PCServer
 deletes only the selected type-and-ID key through a bounded JSON endpoint and
 persists the remaining entries. The selector preserves stdout as the selected
 row and reports X through an app-local temporary action file. Automated server
 coverage confirms targeted, idempotent removal and rejects incomplete
 identities. Apps-context testing confirmed X as SDL key 304, the confirmation
 screen, removal of three individually highlighted movie and episode rows, and
-the refreshed list. The PSS list fell from 10 entries to 7 with only those IDs
+the refreshed list. The PCServer list fell from 10 entries to 7 with only those IDs
 absent. B then returned normally and app exit left no selector, FFplay,
 infoPanel, or temporary removal-action state behind.
 
@@ -899,7 +899,7 @@ offer a bounded set of release-matched English text tracks in a converted
 Matroska response, so the user can cycle tracks with R1 during playback.
 
 - Keep source URLs, subtitle URLs, account tokens, and FFmpeg inputs entirely
-  on the PSS host through the opaque relay.
+  on the PCServer host through the opaque relay.
 - Package no more than three server-normalized text tracks, with explicit track
   labels and deterministic ordering; reject image-only subtitle formats.
 - Use the app-local 640x480 SDL candidate only for this mode and retain the
@@ -909,8 +909,8 @@ Matroska response, so the user can cycle tracks with R1 during playback.
 - Do not change OnionOS files or the production MPEG-TS fallback.
 
 The normal-flow checkpoint now skips the redundant burn-in subtitle picker in
-Matroska mode. The client displays one continuous preparation status while PSS
-discovers English tracks, and PSS packages the first three deterministic
+Matroska mode. The client displays one continuous preparation status while PCServer
+discovers English tracks, and PCServer packages the first three deterministic
 matches automatically. A real account-backed playback completed this no-picker
 flow successfully on the Miyoo. The app-local candidate now also has a bounded
 top-right R1 notice (`Subtitles 1/3` through `3/3`, or `Subtitles off`) that is
@@ -918,7 +918,7 @@ removed after one second. Its physical display and expiry are confirmed: the
 user reported that it worked as expected, while the device log recorded all
 three track transitions, off, and back to the first track during 68 valid
 watched seconds. Menu exit returned FFplay status 0, saved progress, left zero
-active PSS conversions, and left no FFplay/client helpers, stay-awake marker,
+active PCServer conversions, and left no FFplay/client helpers, stay-awake marker,
 info-panel marker, or temporary subtitle package on the Miyoo.
 
 This confirms the no-picker, bounded-track, R1-notice, and cleanup checkpoint.
@@ -943,7 +943,7 @@ valid stream. A forced missing-candidate run confirmed the selector, burn-in,
 61 valid watched seconds, progress saving, and cleanup, but also reproduced the
 Onion player aspect defect; it is diagnostic evidence, not fallback acceptance.
 The corrected fallback was then physically exercised from Apps by connecting to
-a PSS with Matroska mode disabled. The normal picker selected the deterministic
+a PCServer with Matroska mode disabled. The normal picker selected the deterministic
 test subtitle, whose only cue runs from 0.5 to 4.5 seconds, and the unchanged
 production converter emitted 640x268 H.264/AAC MPEG-TS. The app-local player
 logged a centered `640x268` rectangle at `0,106` on its 640x480 surface, and the
@@ -958,15 +958,15 @@ progress from 766 to 876 seconds. Across 2,414 playback samples its mean
 absolute A/V delta was 0.015 seconds. Miyoo FFplay used 3,784--20,304 kB RSS
 with zero process swap and at least 45,940 kB MemAvailable; Mac FFmpeg used
 23,056--122,912 kB RSS with a measured peak of 40.8 percent CPU. Menu exit left
-no PSS conversion or bridge, FFplay/client helper, stay-awake or info-panel
+no PCServer conversion or bridge, FFplay/client helper, stay-awake or info-panel
 marker, or temporary subtitle package. Together with the earlier logged R1
 transitions through all three tracks, off, and back to the first track, this
 satisfies the acceptance criterion.
 
-The Mac PSS's default FFmpeg build does not include libass, so it cannot support
+The Mac PCServer's default FFmpeg build does not include libass, so it cannot support
 the normal MPEG-TS subtitle burn-in path. Selectable Matroska tracks do not need
 that filter: the Miyoo now explicitly requests that mode during subtitle
-discovery, and PSS accepts the request only while its Matroska mode is enabled.
+discovery, and PCServer accepts the request only while its Matroska mode is enabled.
 This retains the libass gate for ordinary subtitle selection. An Apps-context
 run discovered and packaged six tracks, downloaded the opaque package, switched
 from streams 2 to 3, 3 to 4, and 4 to 5 through R1, and saved progress at 200
@@ -975,13 +975,13 @@ not a claim that burn-in is available on that host.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
-smooth and synchronized, and a Menu exit cleans up the PSS and Miyoo state.
+smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.
 
-### 23. PocketStremio Server Desktop Distribution
+### 23. PocketCinema Server Desktop Distribution
 
 **Status: Next**
 
-Replace the developer-oriented PocketStremio server launch experience with a
+Replace the developer-oriented PocketCinema server launch experience with a
 small Windows-first desktop control application while preserving the existing
 Python server as the core implementation. Milestone 23 implementation must not
 begin until Milestone 21 is marked **Confirmed** and its device-facing
@@ -991,7 +991,7 @@ does not satisfy that gate.
 - Persist non-secret desktop settings in the platform-appropriate per-user
   application-data directory, separately from account credentials, private
   addon configuration, logs, and runtime data.
-- Expose PSS name, validated listen interface/address and port, a distinct
+- Expose PCServer name, validated listen interface/address and port, a distinct
   device-facing address, Stremio Service address/reachability, and
   FFmpeg/FFprobe detection with manual path selection.
 - Provide Stopped, Starting, Running, and Error states plus Start, Stop, Restart,
@@ -1011,10 +1011,10 @@ does not satisfy that gate.
   account linking, progress, Continue Watching, Resume, Menu cleanup, opaque
   upstream URLs, loopback-only Stremio Service access, and Tailscale independence.
 
-Design and release plan: [PocketStremio Server Desktop Distribution Plan](desktop-distribution-plan.md)
+Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop-distribution-plan.md)
 
 Acceptance criterion: a clean supported Windows PC can install or extract the
-actual PocketStremio Server release artifact, configure and persist the PSS
+actual PocketCinema Server release artifact, configure and persist the PCServer
 name, listen interface/address, port, advertised Miyoo address, and Stremio
 Service through the desktop application, detect or manually select FFmpeg and
 FFprobe, start and stop only its owned server, and connect a real Miyoo Mini Plus
@@ -1035,13 +1035,13 @@ action bolted onto FFplay:
 - expose progress, cancellation, retry/resume where the source supports Range,
   playback, and deletion;
 - preserve tokens and addon URLs on the gaming PC;
-- never make PocketStremio responsible for torrent or P2P ingestion.
+- never make PocketCinema responsible for torrent or P2P ingestion.
 
 Acceptance criterion: one compatible legal test video can be downloaded,
 played offline after networking is disabled, and deleted from the app without
 leaving a partial file or modifying OnionOS directories.
 
-### 25. Unified PocketStremio UI
+### 25. Unified PocketCinema UI
 
 **Status: Deferred**
 
@@ -1053,21 +1053,21 @@ initial API, state, and playback orchestrator; use one-shot UI processes that
 fully exit before FFplay rather than adding a resident framework.
 
 - Reproduce the concept's header, equal panes, strong dividers, focus treatment,
-  and bottom PSS-status area with fixed logical coordinates and simple drawing
+  and bottom PCServer-status area with fixed logical coordinates and simple drawing
   primitives.
 - Add the native home behind an opt-in fallback, then migrate bounded lists,
   the QWERTY keyboard, dialogs/loading states, and the existing secure QR flow
   one screen at a time.
-- Keep `pocketstremio-selector`, `kbinput`, and `infoPanel` available until each
+- Keep `pocketcinema-selector`, `kbinput`, and `infoPanel` available until each
   replacement passes Apps-context controller, memory, failure, and cleanup
   tests.
 - Surface only implemented behavior and server-normalized public data. Do not
   add History, posters, new settings semantics, or playback/network scope as UI
   work.
-- Preserve the authoritative app-local config, opaque PSS IDs and URLs, the
+- Preserve the authoritative app-local config, opaque PCServer IDs and URLs, the
   release playback path, and all current physical control behavior.
 
-Design and migration plan: [Unified PocketStremio UI Plan](ui-redesign-plan.md)
+Design and migration plan: [Unified PocketCinema UI Plan](ui-redesign-plan.md)
 
 Acceptance criterion: the unified UI renders correctly and readably at 640x480,
 all migrated screens preserve controller/back behavior and current features,

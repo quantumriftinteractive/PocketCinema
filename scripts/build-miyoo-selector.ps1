@@ -12,9 +12,9 @@ $gcc = Join-Path $compilerRootPath "bin\arm-none-linux-gnueabihf-gcc.exe"
 $source = Join-Path $root "client\miyoo\sdl_selector.c"
 $qrSource = Join-Path $root "client\miyoo\third_party\qrcodegen\qrcodegen.c"
 $qrInclude = Join-Path $root "client\miyoo\third_party\qrcodegen"
-$committed = Join-Path $root "client\miyoo\bin\pocketstremio-selector"
+$committed = Join-Path $root "client\miyoo\bin\pocketcinema-selector"
 $outputDir = Join-Path $root ".tmp\build-miyoo"
-$output = Join-Path $outputDir "pocketstremio-selector"
+$output = Join-Path $outputDir "pocketcinema-selector"
 
 if (-not (Test-Path -LiteralPath $gcc -PathType Leaf)) {
   throw "ARM compiler not found: $gcc"

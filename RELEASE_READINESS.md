@@ -1,4 +1,4 @@
-# PocketStremio Release Readiness
+# PocketCinema Release Readiness
 
 `PROJECT_STATE.md` owns current operational truth. This document converts that
 state into the gates for a conservative public v1.0 release, using `AGENTS.md`,
@@ -15,7 +15,7 @@ exit/cleanup. Remaining blockers are fresh-SD and final movie/episode/converted
 regressions, app-local player packaging and licensing, privacy review, and
 reproducible release artifacts. Whether selectable Matroska ships in v1.0 is
 still an explicit release-scope decision. Milestone 23 now makes a
-user-installable PocketStremio Server desktop distribution an explicit release
+user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
 Until Milestone 23 is implemented and accepted from the actual packaged
 artifact, the Python/PowerShell workflow below remains a developer/source path,
@@ -24,53 +24,53 @@ not the intended end-user v1.0 installation.
 ## Verified Connection and Onboarding Resolution
 
 The pre-Phase-3 no-config test measured a tailnet onboarding gap: direct startup
-could not validate a tailnet PSS through the optional generic proxy. Phase 3
+could not validate a tailnet PCServer through the optional generic proxy. Phase 3
 now supplies first-run Local, Remote, and Both/Automatic setup with atomically
 saved profiles, direct Local validation, Remote validation through the user
 configured proxy, and direct-first fallback. Its full Apps-context acceptance
 matrix, including a separate config-free installation that opened setup before
 home without altering the preserved live profile, is physically confirmed.
 
-This does not ask PocketStremio to manage Tailscale or any other network
+This does not ask PocketCinema to manage Tailscale or any other network
 provider. The completed transport-agnostic onboarding path:
 
 - tries direct LAN connection first without exposing unnecessary networking
   complexity to ordinary users;
 - offers a clearly optional generic HTTP-proxy route when direct validation
   fails or the user intentionally chooses remote connection;
-- validates and atomically saves the selected PSS endpoint and optional proxy;
+- validates and atomically saves the selected PCServer endpoint and optional proxy;
 - supports a future installer, profile, or setup-code handoff without copying
   credentials, runtime state, or private configuration; and
-- does not rely on public port forwarding, because the PSS has no public-facing
+- does not rely on public port forwarding, because the PCServer has no public-facing
   authentication and Stremio Service must remain loopback-only on its host.
 
-A future desktop PSS application can make server endpoint selection and setup
+A future desktop PCServer application can make server endpoint selection and setup
 information visible, but it cannot itself create the Miyoo's network route. The
 client still needs a direct route or a separately configured generic proxy.
 
 ### Confirmed v1 connection and onboarding direction
 
-The direct-first PocketStremio Local/Remote/Automatic profile is implemented,
-deployed, and physically confirmed. PocketStremio retains an editable generic
+The direct-first PocketCinema Local/Remote/Automatic profile is implemented,
+deployed, and physically confirmed. PocketCinema retains an editable generic
 HTTP proxy with supported default `http://127.0.0.1:1055`; it validates Local
 directly, validates Remote through the configured proxy, and keeps discovery
 separate from reachability. Remote setup therefore does not depend on UDP
 discovery. The standalone Miyoo Tailscale companion remains the sole owner of
 its networking, authentication, lifecycle, and displayed proxy endpoint;
-PocketStremio does not inspect or manage it. Phase 1 companion visibility,
+PocketCinema does not inspect or manage it. Phase 1 companion visibility,
 Phase 2 proxy controls, and Phase 3 onboarding are all physically confirmed.
 The architectural and packaging boundary remains recorded in
 [Portable Connection and First-Run Onboarding Plan](docs/portable-connection-onboarding-plan.md).
 
-PocketStremio's Phase 2 generic HTTP-proxy controls are implemented, statically
+PocketCinema's Phase 2 generic HTTP-proxy controls are implemented, statically
 validated, deployed, and physically confirmed. They retain direct transport
 for an absent or explicitly empty `PROXY`, and use the
-PocketStremio-owned editable restore default `http://127.0.0.1:1055`; they do
+PocketCinema-owned editable restore default `http://127.0.0.1:1055`; they do
 not inspect or control the companion. The first Apps launch exposed a strict
 validation regression for the preserved, previously supported
 `http://host:port/` spelling; a minimal deployed compatibility fix canonicalizes
 only that root-path form in memory. The subsequent Apps settings run confirmed
-proxy persistence but found stale PSS status after an effective transport
+proxy persistence but found stale PCServer status after an effective transport
 change; the monitor-refresh correction is physically confirmed. The disabled-
 state `Enable default (127.0.0.1:1055)` control, `1056` Offline, default
 Connected, disabled direct-route transitions, and a `friday` search after
@@ -80,16 +80,16 @@ Phase 3 first-run connection onboarding and two-endpoint routing are
 implemented, automated/static-validated, deployed, and physically confirmed.
 The client retains legacy single-server
 configuration unchanged; new
-profiles atomically store Local PSS, Remote PSS, and Automatic | Local only |
+profiles atomically store Local PCServer, Remote PCServer, and Automatic | Local only |
 Remote only mode. Legacy startup and manual Local-only setup/search are
 physically confirmed; normal UDP discovery and selection validation also passed
-against the hotspot PSS. Remote-only setup/search through the default proxy and
+against the hotspot PCServer. Remote-only setup/search through the default proxy and
 the found-but-unreachable Local validation case are also physically confirmed.
 Remote proxy failure at `127.0.0.1:1056` and immediate default-proxy recovery
 are also physically confirmed, as is Remote-profile restart persistence.
 Automatic's complete Local-unavailable → Remote → Local fallback is physically
 confirmed. Automatic probes Local directly, then Remote through the generic
-proxy, and all PSS requests use the resolved route. The Both/Automatic
+proxy, and all PCServer requests use the resolved route. The Both/Automatic
 three-second information message and pristine first run are physically
 confirmed. The release gate remains open for the separate remaining release
 requirements, not Phase 3 onboarding.
@@ -106,7 +106,7 @@ separate forced missing-candidate diagnostic reached the same burn-in flow but
 showed that Onion FFplay visibly distorts the correctly encoded output. A final
 110-second real-account run explicitly confirmed smooth, synchronized video,
 audio, and subtitles, bounded resource use, status-0 Menu exit, progress
-saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
+saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physically
 **Confirmed**.
 
 ## What v1.0 requires
@@ -129,11 +129,11 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   with credentials remaining on the gaming PC.
 - A fresh SD-card installation can be configured without copying private URLs,
   tokens, generated media, logs, or runtime state from the development machine.
-- First-run client onboarding succeeds for direct LAN PSS access and for an
+- First-run client onboarding succeeds for direct LAN PCServer access and for an
   explicitly selected optional generic HTTP-proxy route, without requiring a
-  pre-existing PocketStremio config file. The proxy URL is viewable and
+  pre-existing PocketCinema config file. The proxy URL is viewable and
   editable; the initial companion-oriented default is `http://127.0.0.1:1055`.
-- A normal Windows user can install or extract the PocketStremio Server desktop
+- A normal Windows user can install or extract the PocketCinema Server desktop
   application, configure it, and operate its owned server without installing
   Python, running PowerShell, cloning the repository, or preparing environment
   variables.
@@ -148,8 +148,8 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
 - Do not begin Milestone 23 implementation until `docs/roadmap.md` marks
   Milestone 21 **Confirmed** and its controller/device acceptance evidence is
   complete. Code presence is not completion evidence.
-- A clean supported Windows PC can install or extract the actual PocketStremio
-  Server artifact, configure and persist PSS name, listen interface/address,
+- A clean supported Windows PC can install or extract the actual PocketCinema
+  Server artifact, configure and persist PCServer name, listen interface/address,
   port, device-facing address, and Stremio Service through the desktop UI,
   verify or select FFmpeg and FFprobe, start the server, and connect a Miyoo
   Mini Plus without Python, PowerShell, repository knowledge, or manual
@@ -167,12 +167,12 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   is actually present on a fresh installation.
 - A fresh-SD test passes with a clean account or explicitly documented no-account
   mode.
-- A fresh Miyoo can discover or enter a direct-LAN PSS address, and can select
-  an optional generic proxy before validating a routed PSS address. Discovery
+- A fresh Miyoo can discover or enter a direct-LAN PCServer address, and can select
+  an optional generic proxy before validating a routed PCServer address. Discovery
   must distinguish a received local advertisement from direct reachability;
   remote setup must not depend on UDP discovery. This must be physically tested
   without starting, stopping, inspecting, or configuring the independent
-  network provider from PocketStremio.
+  network provider from PocketCinema.
 - A normal direct-play movie, a series episode, a converted subtitle case, and
   a server restart/recovery case pass from Apps.
 - A converted multi-audio stream allows choosing a verified audio track before
@@ -205,7 +205,7 @@ expanded:
 - an integrated FFplay pause menu;
 - support for arbitrary codecs, HDR, HEVC, AV1, multichannel audio, encrypted
   HLS, fragmented MP4 HLS, or unmeasured containers;
-- Tailscale account replacement/removal from the remote PocketStremio UI.
+- Tailscale account replacement/removal from the remote PocketCinema UI.
 
 Deferred work must remain outside the active milestone and receive its own
 acceptance criteria before implementation.
@@ -219,11 +219,11 @@ This is the required v1.0 direction, not a currently available artifact.
 #### Windows
 
 - A supported Windows version and the signed or clearly labeled development
-  PocketStremio Server application bundle.
-- Network access from the Miyoo to the selected PSS interface/address. Direct
+  PocketCinema Server application bundle.
+- Network access from the Miyoo to the selected PCServer interface/address. Direct
   LAN HTTP is supported; Tailscale remains optional, independent transport.
 - Stremio/Stremio Service only where required by the existing account or Local
-  Files architecture, with PSS access remaining loopback-only.
+  Files architecture, with PCServer access remaining loopback-only.
 - FFmpeg and FFprobe detected automatically or selected through the desktop UI.
   They are not to be bundled until redistribution provenance and licensing are
   approved.
@@ -240,14 +240,14 @@ not optional release polish.
 
 ### Developer/source installation
 
-#### PSS host
+#### PCServer host
 
 - Windows with PowerShell and Python available on `PATH`, or macOS with the
   documented shell/Python prerequisites.
 - The repository checked out to a stable directory.
 - `ffprobe.exe` and `ffmpeg.exe` available, normally from the installed
   Stremio runtime or explicit `-FFprobePath`/`-FFmpegPath` arguments.
-- The PocketStremio server host address reachable from the Miyoo. Direct LAN
+- The PocketCinema server host address reachable from the Miyoo. Direct LAN
   HTTP is supported; Tailscale is optional transport infrastructure.
 - Optional Stremio Service installed and reachable locally at
   `http://127.0.0.1:11470`.
@@ -263,8 +263,8 @@ not optional release polish.
 - SD card with sufficient free space for app files, logs, and any explicitly
   bounded local data.
 - Wi-Fi configured and connectivity to the server address.
-- PocketStremio persistent files under
-  `/mnt/SDCARD/App/PocketStremio/` only.
+- PocketCinema persistent files under
+  `/mnt/SDCARD/App/PocketCinema/` only.
 - Onion-provided `curl`, `jq`, `kbinput`, `infoPanel`, SDL 1.2, and FFplay.
 - SSH access for deployment and log collection during testing.
 - Do not overwrite the live config during deployment.
@@ -279,11 +279,11 @@ normal user to edit JSON.
 1. Install and start the gaming-PC server with no account key present.
 2. Configure only the required server host, port, and legal addon manifests.
 3. Verify `GET /api/status` locally and from the intended Miyoo transport.
-4. On the Miyoo, install the tracked PocketStremio app files and create the
-   app-local config from `client/miyoo/pocketstremio.conf.example`.
+4. On the Miyoo, install the tracked PocketCinema app files and create the
+   app-local config from `client/miyoo/pocketcinema.conf.example`.
 5. Set `SERVER_BASE` to the gaming-PC address. Set `PROXY` only if the
    independently managed network provider requires it.
-6. Open PocketStremio and confirm status/search before linking an account.
+6. Open PocketCinema and confirm status/search before linking an account.
 7. Choose **Stremio Account -> Connect Account**. Scan or open the one-time
    official link, approve it, then press A to poll.
 8. Confirm that the Miyoo receives only the approval UI and sanitized account
@@ -298,24 +298,24 @@ normal user to edit JSON.
 
 ## Fresh release test checklists
 
-### Clean Windows PSS and fresh Miyoo
+### Clean Windows PCServer and fresh Miyoo
 
 Run this from the actual Milestone 23 release artifact, never from the
 development working tree:
 
-- [ ] Start with a supported Windows environment that has no PocketStremio
+- [ ] Start with a supported Windows environment that has no PocketCinema
       development checkout and does not rely on a separately installed Python
       or PowerShell lifecycle commands.
 - [ ] Install or extract only the release artifact and verify its SHA-256
       checksum.
-- [ ] Launch PocketStremio Server and confirm that its per-user directories are
+- [ ] Launch PocketCinema Server and confirm that its per-user directories are
       created outside the application bundle.
-- [ ] Configure the PSS name, listen interface/address, port, advertised Miyoo
+- [ ] Configure the PCServer name, listen interface/address, port, advertised Miyoo
       address, and Stremio Service in the UI; restart the app and verify that
       non-secret settings persist.
 - [ ] Confirm FFmpeg and FFprobe automatic detection and manual selection, then
       verify useful missing-tool handling without a traceback in the primary UI.
-- [ ] Start PSS, verify `/api/status`, and copy the displayed device-reachable
+- [ ] Start PCServer, verify `/api/status`, and copy the displayed device-reachable
       URL. Confirm that a wildcard bind never displays `0.0.0.0` as that URL.
 - [ ] Test an invalid port, occupied port, disappeared interface, and unreachable
       Stremio Service; each must produce a concise actionable state and preserve
@@ -323,11 +323,11 @@ development working tree:
 - [ ] Connect a clean/fresh Miyoo installation to the displayed address.
 - [ ] Test direct playback, converted/downscaled playback, subtitles, Continue
       Watching, Resume, Play from Start, progress saving, and Menu cleanup.
-- [ ] Restart PSS and the desktop application; confirm intended configuration,
+- [ ] Restart PCServer and the desktop application; confirm intended configuration,
       account state, Continue Watching, and probe cache persistence, plus expiry
       of ephemeral play sessions.
 - [ ] Stop or exit the application according to its documented behavior and
-      confirm that only its owned PSS process is stopped. Unrelated Python,
+      confirm that only its owned PCServer process is stopped. Unrelated Python,
       FFmpeg, Stremio, and Tailscale processes must be untouched.
 - [ ] Test removal/uninstall behavior. Preserve or explicitly offer removal of
       user data; never silently delete credentials or user-owned configuration.
@@ -340,12 +340,12 @@ development working tree:
 - [ ] Use a freshly formatted or disposable SD card and the target OnionOS
       version.
 - [ ] Install only the release files and the documented OnionOS app metadata.
-- [ ] Confirm no app files are written outside PocketStremio’s app directory,
+- [ ] Confirm no app files are written outside PocketCinema’s app directory,
       except the separately documented Tailscale startup hook when Tailscale is
       installed.
-- [ ] Create `config/pocketstremio.conf` from the example and set `SERVER_BASE`.
+- [ ] Create `config/pocketcinema.conf` from the example and set `SERVER_BASE`.
 - [ ] Verify direct transport; verify proxy transport separately if supported.
-- [ ] Open Apps -> PocketStremio and test B cancellation on every selector.
+- [ ] Open Apps -> PocketCinema and test B cancellation on every selector.
 - [ ] Search and play the deterministic compatibility fixture.
 - [ ] Play one direct legal movie and one series episode.
 - [ ] Test Continue Watching, Resume, Play from Start, pause tracking, and
@@ -371,7 +371,7 @@ development working tree:
 This checklist becomes actionable only after Milestone 23 produces a packaged
 artifact:
 
-- [ ] Download and verify the PocketStremio Server release artifact.
+- [ ] Download and verify the PocketCinema Server release artifact.
 - [ ] Install or extract it and launch the desktop application.
 - [ ] Choose a listen interface and confirm the separately displayed Miyoo
       address.
@@ -380,17 +380,17 @@ artifact:
 - [ ] Verify FFmpeg and FFprobe detection or select their executable paths.
 - [ ] Connect a Stremio account through the existing official approval flow if
       desired; never manually copy an auth key into the application bundle.
-- [ ] Start PSS, confirm Running status, and configure the Miyoo with the copied
+- [ ] Start PCServer, confirm Running status, and configure the Miyoo with the copied
       address.
-- [ ] Stop/restart PSS from the UI and verify clean owned-process lifecycle and
+- [ ] Stop/restart PCServer from the UI and verify clean owned-process lifecycle and
       persisted settings.
 
 ### Developer/source installation
 
 - [ ] Clone the repository and read `AGENTS.md` and `docs/roadmap.md`.
-- [ ] Run `python -m py_compile server/pocketstremio_server.py`.
-- [ ] Run `python -m unittest server.test_stremio_account server.test_pocketstremio_server -v`.
-- [ ] Configure `POCKETSTREMIO_HOST` or pass `-HostAddress` to
+- [ ] Run `python -m py_compile server/pocketcinema_server.py`.
+- [ ] Run `python -m unittest server.test_stremio_account server.test_pocketcinema_server -v`.
+- [ ] Configure `POCKETCINEMA_HOST` or pass `-HostAddress` to
       `server/manage-server.ps1`.
 - [ ] Start with `server/manage-server.ps1 start`; use `status`, `restart`, and
       `stop` for lifecycle operations.
@@ -407,18 +407,18 @@ artifact:
 
 ## Tailscale setup checklist
 
-- [ ] Treat Tailscale as an independent provider app, not a PocketStremio
+- [ ] Treat Tailscale as an independent provider app, not a PocketCinema
       dependency or lifecycle component.
 - [ ] Install the standalone app under `/mnt/SDCARD/App/Tailscale/`.
 - [ ] Preserve its authenticated `state/tailscaled.state` and logs; never copy
       them into a release archive.
-- [ ] Preserve the original PocketStremio rollback state and never run two
+- [ ] Preserve the original PocketCinema rollback state and never run two
       daemons simultaneously.
 - [ ] Connect a new account only through the Tailscale app’s official QR/login
-      flow; do not use PocketStremio to manage identity.
+      flow; do not use PocketCinema to manage identity.
 - [ ] Confirm the Tailscale app shows Enabled and the assigned IP.
 - [ ] Confirm the local proxy at `127.0.0.1:1055` if proxy transport is used.
-- [ ] Confirm PocketStremio can reach the server through the proxy.
+- [ ] Confirm PocketCinema can reach the server through the proxy.
 - [ ] Test Disable/Enable and reboot autostart only in the Tailscale app.
 - [ ] Do not alter OnionOS core files; the only supported startup extension is
       the app-owned hook documented by the Tailscale subproject.
@@ -431,25 +431,25 @@ artifact:
       upstream media URL, subtitle URL, or Tailscale state appears in the
       Miyoo API, logs, process arguments, Git history, or release archive.
 - [ ] Desktop preferences, Stremio account credentials, private addon
-      configuration, persistent PSS data, and logs use separate per-user paths.
+      configuration, persistent PCServer data, and logs use separate per-user paths.
       Secrets are never stored in the ordinary UI preferences file.
 - [ ] A desktop migration does not silently discover or copy credentials or
-      private addon configuration from a repository checkout or another PSS
+      private addon configuration from a repository checkout or another PCServer
       host. Any future migration is explicit, preserves the source, restricts
       destination permissions, and never displays the values.
 - [ ] The desktop lifecycle manager tracks the exact child it started and never
       kills a process merely because its name contains Python, FFmpeg, Stremio,
-      PocketStremio, or Tailscale.
+      PocketCinema, or Tailscale.
 - [ ] `/api/streams` returns opaque stream IDs; `/api/play` returns opaque play
       URLs/session IDs.
 - [ ] Account media is limited to safe direct HTTP(S) results; reject P2P,
       external-player, local/private-address, credential-in-URL, and unsafe
       schemes.
-- [ ] Stremio Service remains loopback-only from PocketStremio’s perspective,
+- [ ] Stremio Service remains loopback-only from PocketCinema’s perspective,
       with the Windows Firewall inbound block preserved.
 - [ ] Local Files allowlisting remains explicit and never broadens to general
       user directories.
-- [ ] HTTP proxy settings are optional and never cause PocketStremio to start,
+- [ ] HTTP proxy settings are optional and never cause PocketCinema to start,
       stop, inspect, or reauthenticate Tailscale.
 - [ ] QR payloads are passed through stdin or local rendering paths rather than
       process arguments or third-party QR services.
@@ -465,7 +465,7 @@ artifact:
 The server is intended for a trusted LAN/tailnet deployment, not an internet-
 facing public service. Access control, TLS termination, addon trust, media
 legality, and the security of the host operating system remain deployment
-responsibilities. Do not expose the PocketStremio port publicly without a
+responsibilities. Do not expose the PocketCinema port publicly without a
 separately reviewed authentication and transport design.
 
 ## Known limitations
@@ -505,9 +505,9 @@ confirm every version actually shipped and include the applicable notices.
 
 ### Repository and runtime inventory
 
-- PocketStremio server/client scripts: repository-authored code; retain the
+- PocketCinema server/client scripts: repository-authored code; retain the
   repository’s chosen license file if one is added before release.
-- PocketStremio Server desktop application, bundled Python interpreter,
+- PocketCinema Server desktop application, bundled Python interpreter,
   application GUI runtime, and packaging bootloader: record exact versions,
   source/provenance, licenses, build options, and whether each component is
   redistributed in the Windows directory or macOS `.app`.
@@ -557,7 +557,7 @@ confirm every version actually shipped and include the applicable notices.
       `.app` on macOS; do not claim cross-platform support from source-only tests.
 - [ ] Include the bundled Python/GUI runtime and application assets required for
       normal use without including writable preferences, credentials, private
-      addon configuration, PSS data, logs, or local media.
+      addon configuration, PCServer data, logs, or local media.
 - [ ] Record exact build-environment and packaging-tool versions and publish
       reproducible build instructions/specification.
 - [ ] State code-signing, installer, macOS architecture, hardened-runtime, and

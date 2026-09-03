@@ -66,7 +66,7 @@ case "$checkpoint_reachable:$sync" in
   *) remote_handoff=UNVERIFIED ;;
 esac
 
-printf '%s\n' 'PocketStremio Development State'
+printf '%s\n' 'PocketCinema Development State'
 printf 'Machine/OS: macOS or Unix / %s\n' "$(uname -s 2>/dev/null || printf unknown)"
 printf 'Branch: %s\nLocal HEAD: %s\nRemote HEAD: %s\nProduction baseline: %s\n' "$branch" "$head" "${remote_head:-UNAVAILABLE}" "$baseline"
 printf 'Working tree: %s\nAhead: %s\nBehind: %s\nDiverged: %s\nActive milestone: %s\n' "$( [ "$dirty" -eq 1 ] && printf DIRTY || printf CLEAN )" "$ahead" "$behind" "$diverged" "$milestone"

@@ -1,10 +1,10 @@
 #!/bin/sh
 
-BASE_DIR=/mnt/SDCARD/App/PocketStremio
+BASE_DIR=/mnt/SDCARD/App/PocketCinema
 LOG_FILE="${1:-$BASE_DIR/logs/compatibility-resources.log}"
-MAX_SECONDS="${POCKETSTREMIO_MONITOR_SECONDS:-1200}"
-PID_FILE=/tmp/pocketstremio-compat-monitor.pid
-LOCK_DIR=/tmp/pocketstremio-compat-monitor.lock
+MAX_SECONDS="${POCKETCINEMA_MONITOR_SECONDS:-1200}"
+PID_FILE=/tmp/pocketcinema-compat-monitor.pid
+LOCK_DIR=/tmp/pocketcinema-compat-monitor.lock
 
 cleanup() {
   rm -f "$PID_FILE"
@@ -33,7 +33,7 @@ while [ "$(date +%s)" -lt "$end_time" ]; do
       print $1 " system"
       exit
     }
-    /\/mnt\/SDCARD\/App\/PocketStremio\/experiments\/ffplay\/bin\/ffplay/ && !/awk/ {
+    /\/mnt\/SDCARD\/App\/PocketCinema\/experiments\/ffplay\/bin\/ffplay/ && !/awk/ {
       print $1 " candidate"
       exit
     }

@@ -70,7 +70,7 @@ try {
     'UNVERIFIED'
   }
 
-  Write-Output 'PocketStremio Development State'
+  Write-Output 'PocketCinema Development State'
   Write-Output "Machine/OS: Windows / $([System.Environment]::OSVersion.VersionString)"
   Write-Output "Branch: $branch"
   Write-Output "Local HEAD: $head"

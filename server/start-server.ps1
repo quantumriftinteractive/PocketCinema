@@ -20,7 +20,7 @@ if (-not $FFprobePath) {
   }
 }
 if (-not $StremioLocalMediaRoot) {
-  $candidate = Join-Path $env:USERPROFILE "Videos\PocketStremio"
+  $candidate = Join-Path $env:USERPROFILE "Videos\PocketCinema"
   if (Test-Path -LiteralPath $candidate -PathType Container) {
     $StremioLocalMediaRoot = $candidate
   }
@@ -33,7 +33,7 @@ if (-not $FFmpegPath) {
 }
 
 $arguments = @(
-  (Join-Path $PSScriptRoot "pocketstremio_server.py")
+  (Join-Path $PSScriptRoot "pocketcinema_server.py")
   "--host", $HostAddress
   "--port", $Port
   "--public-host", $PublicHost
@@ -43,7 +43,7 @@ $arguments = @(
 if ($EnableFieldTest) {
   $arguments += "--enable-field-test"
 }
-if (-not $DisableMatroskaSubtitles -and $env:POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES -ne "0") {
+if (-not $DisableMatroskaSubtitles -and $env:POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES -ne "0") {
   $arguments += "--enable-matroska-subtitles"
 }
 if ($StremioLocalMediaRoot) {

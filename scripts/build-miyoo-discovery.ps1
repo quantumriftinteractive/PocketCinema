@@ -9,10 +9,10 @@ $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
 $compilerRootPath = Join-Path $root $CompilerRoot
 $sysrootPath = Join-Path $root $Sysroot
 $gcc = Join-Path $compilerRootPath "bin\arm-none-linux-gnueabihf-gcc.exe"
-$source = Join-Path $root "client\miyoo\pocketstremio_discovery.c"
-$committed = Join-Path $root "client\miyoo\bin\pocketstremio-discovery"
+$source = Join-Path $root "client\miyoo\pocketcinema_discovery.c"
+$committed = Join-Path $root "client\miyoo\bin\pocketcinema-discovery"
 $outputDir = Join-Path $root ".tmp\build-miyoo"
-$output = Join-Path $outputDir "pocketstremio-discovery"
+$output = Join-Path $outputDir "pocketcinema-discovery"
 
 if (-not (Test-Path -LiteralPath $gcc -PathType Leaf)) {
   throw "ARM compiler not found: $gcc"

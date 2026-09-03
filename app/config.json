@@ -1,6 +1,6 @@
 {
-  "label": "PocketStremio",
+  "label": "PocketCinema",
   "icon": "/mnt/SDCARD/Icons/Default/app/ffplay.png",
   "launch": "launch.sh",
-  "description": "PocketStremio playback proof"
+  "description": "PocketCinema playback proof"
 }

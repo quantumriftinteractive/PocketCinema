@@ -1,10 +1,10 @@
 #!/bin/sh
 set -eu
 
-URL="${1:-${POCKETSTREMIO_VIDEO_URL:-}}"
+URL="${1:-${POCKETCINEMA_VIDEO_URL:-}}"
 PROXY="${HTTP_PROXY:-}"
 FFPLAY="${FFPLAY:-/mnt/SDCARD/.tmp_update/bin/ffplay}"
-LOG_DIR="${POCKETSTREMIO_LOG_DIR:-/mnt/SDCARD/App/PocketStremio/experiments/logs}"
+LOG_DIR="${POCKETCINEMA_LOG_DIR:-/mnt/SDCARD/App/PocketCinema/experiments/logs}"
 LOG_FILE="$LOG_DIR/ffplay-network.log"
 
 mkdir -p "$LOG_DIR"

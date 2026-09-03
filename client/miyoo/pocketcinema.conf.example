@@ -1,6 +1,6 @@
-# Copy this file to config/pocketstremio.conf on the Miyoo.
+# Copy this file to config/pocketcinema.conf on the Miyoo.
 # Environment variables still take precedence over these values.
-# Legacy single PSS URL. Existing configurations remain supported unchanged.
+# Legacy single PCServer URL. Existing configurations remain supported unchanged.
 SERVER_BASE=
 # Leave empty for direct LAN or other system-provided connectivity. Settings can
 # restore the supported generic HTTP-proxy default.
@@ -8,8 +8,8 @@ PROXY=
 # New connection profile. Leave all three endpoint/mode fields empty to retain
 # legacy SERVER_BASE behavior. Automatic tries Local directly, then Remote
 # through PROXY. Remote setup requires a separately configured generic proxy.
-LOCAL_PSS=
-REMOTE_PSS=
+LOCAL_PCSERVER=
+REMOTE_PCSERVER=
 CONNECTION_MODE=
 DEFAULT_QUERY=big buck bunny
 AUTO_FIRST=0
@@ -24,9 +24,9 @@ AUDIO_LANGUAGES=
 AUDIO_FALLBACK=ask
 SUBTITLE_LANGUAGES=
 SUBTITLE_FALLBACK=ask
-# Selectable app-local Matroska subtitle tracks. PSS selects up to this many
+# Selectable app-local Matroska subtitle tracks. PCServer selects up to this many
 # tracks per preferred language (bounded to 3); use
 # R1 during playback to cycle them and off. Setup failure returns to the normal
 # subtitle selector and unchanged MPEG-TS burn-in path.
 MAX_SUBTITLES_PER_LANGUAGE=3
-POCKETSTREMIO_MATROSKA_SUBTITLES=0
+POCKETCINEMA_MATROSKA_SUBTITLES=0

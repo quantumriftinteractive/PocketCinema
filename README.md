@@ -1,4 +1,4 @@
-# PocketStremio for Miyoo Mini Plus
+# PocketCinema for Miyoo Mini Plus
 
 A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
 
@@ -7,14 +7,14 @@ A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running O
 The current prototype completes this controller-driven OnionOS flow:
 
 ```text
-Apps -> PocketStremio -> search -> select media or episode -> Play -> select stream -> FFplay
+Apps -> PocketCinema -> search -> select media or episode -> Play -> select stream -> FFplay
 ```
 
 It uses direct HTTP or an optional configured HTTP proxy, a lightweight SDL 1.2
 selector, a Python server on the gaming PC, and the PC's localhost-only Stremio
-Service as an optional backend. The PSS can also run on macOS while reaching a
+Service as an optional backend. The PCServer can also run on macOS while reaching a
 Windows Stremio Service through a loopback-only SSH tunnel. Tailscale is an
-independent network provider, not a PocketStremio runtime dependency. The
+independent network provider, not a PocketCinema runtime dependency. The
 known-compatible Big Buck Bunny test
 stream plays as H.264 640x360 with AAC audio. See
 `docs/vertical-slice.md`, `docs/ffplay-playback-poc.md`, and
@@ -27,6 +27,10 @@ Normal server operations use `server/manage-server.ps1` on Windows or
 `server/manage-server.sh` on macOS. Tracked Miyoo app files can be upgraded with
 `scripts/deploy-miyoo.ps1`; the deployment preserves the app's real config,
 logs, networking-provider state, and OnionOS core files.
+
+For the pre-Milestone-23 development-device rename and its intentionally
+limited configuration migration, see
+[PocketCinema Rename Migration](docs/pocketcinema-rename-migration.md).
 
 The goal is to turn the Miyoo Mini Plus into a small remote streaming client that can browse media, search for content, select episodes or movies, and play them using the device's existing video playback capabilities.
 
@@ -41,7 +45,7 @@ The basic architecture is:
 │   Miyoo Mini Plus    │
 │      OnionOS         │
 │                      │
-│  PocketStremio UI    │
+│  PocketCinema UI    │
 │        │             │
 │        ▼             │
 │   HTTP / REST API    │
@@ -56,7 +60,7 @@ The basic architecture is:
 ┌──────────────────────┐
 │  Gaming PC or Mac    │
 │                      │
-│ PocketStremio Server │
+│ PocketCinema Server │
 │        │             │
 │        ├─ Stremio    │
 │        ├─ Addons     │
@@ -108,7 +112,7 @@ Miyoo
   │
   │ GET /api/search?q=alien
   ▼
-PocketStremio Server
+PocketCinema Server
   │
   ▼
 Stremio / Addons
@@ -124,7 +128,7 @@ Miyoo
   │
   │ GET /api/play/<media-id>
   ▼
-PocketStremio Server
+PocketCinema Server
   │
   ├─ Resolve source
   ├─ Determine compatibility
@@ -191,7 +195,7 @@ Miyoo Mini Plus
  Gaming PC
 ```
 
-This would allow the PocketStremio client to connect to the gaming PC without exposing the server directly to the public internet.
+This would allow the PocketCinema client to connect to the gaming PC without exposing the server directly to the public internet.
 
 A major early objective of this project is determining the best method of running Tailscale on OnionOS / Miyoo Mini Plus.
 
@@ -205,7 +209,7 @@ Possible approaches include:
 
 ## Proposed Components
 
-### PocketStremio Client
+### PocketCinema Client
 
 Runs on:
 
@@ -230,7 +234,7 @@ Responsibilities:
 
 The client should contain as little Stremio-specific logic as possible.
 
-### PocketStremio Server
+### PocketCinema Server
 
 Runs on:
 
@@ -315,13 +319,13 @@ Playback response:
 
 ## UI Concept
 
-PocketStremio should be designed around the Miyoo controls rather than attempting to reproduce the desktop Stremio interface.
+PocketCinema should be designed around the Miyoo controls rather than attempting to reproduce the desktop Stremio interface.
 
 Example:
 
 ```text
 ┌──────────────────────┐
-│    POCKETSTREMIO     │
+│    POCKETCINEMA     │
 ├──────────────────────┤
 │ > Continue Watching  │
 │   Movies             │
@@ -428,7 +432,7 @@ Confirm:
 * controls
 * Wi-Fi performance
 
-### Phase 4: PocketStremio Server
+### Phase 4: PocketCinema Server
 
 Implement the initial server API.
 
@@ -484,7 +488,7 @@ Potential features:
 ## Repository Structure
 
 ```text
-PocketStremio/
+PocketCinema/
 ├── app/
 ├── client/miyoo/
 │
@@ -523,7 +527,7 @@ through the same opaque server pipeline. Its Continue Watching label, Resume,
 Play from Start, progress replacement, B navigation, and Menu exit are also
 physically confirmed. The standalone Tailscale app now shows connection state
 and IP, supports controller-driven enable/disable, and starts through an
-app-owned OnionOS boot hook. The active PocketStremio milestone is localhost
+app-owned OnionOS boot hook. The active PocketCinema milestone is localhost
 Stremio Service backend integration. See
 [docs/roadmap.md](docs/roadmap.md) for
 details.
@@ -542,7 +546,7 @@ The original priority sequence was:
         ↓
 3. Remote FFplay playback
         ↓
-4. PocketStremio Server
+4. PocketCinema Server
         ↓
 5. Stremio integration
         ↓
@@ -555,12 +559,12 @@ The project should avoid implementing later stages until the underlying networki
 
 This project is inspired by lightweight network-based applications created for the Miyoo Mini Plus, particularly projects demonstrating that OnionOS applications can retrieve remote media and hand playback to FFplay.
 
-PocketStremio is not intended to be a port of the official Stremio application.
+PocketCinema is not intended to be a port of the official Stremio application.
 
 Instead, it aims to provide a purpose-built controller-first interface suited to the capabilities and limitations of the Miyoo Mini Plus.
 
 ## Disclaimer
 
-PocketStremio is an independent experimental project and is not affiliated with Stremio, OnionOS, Miyoo, or Tailscale.
+PocketCinema is an independent experimental project and is not affiliated with Stremio, OnionOS, Miyoo, or Tailscale.
 
 Users are responsible for the media sources and services they configure and for complying with applicable laws and service terms.

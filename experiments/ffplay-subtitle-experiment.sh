@@ -1,18 +1,18 @@
 #!/bin/sh
 
 # Runs the app-local libass FFplay experiment against the deterministic fixture.
-# The production Onion FFplay and PocketStremio playback path are untouched.
-BASE_DIR=/mnt/SDCARD/App/PocketStremio
+# The production Onion FFplay and PocketCinema playback path are untouched.
+BASE_DIR=/mnt/SDCARD/App/PocketCinema
 SYS_DIR=/mnt/SDCARD/.tmp_update
 MIYOO_DIR=/mnt/SDCARD/miyoo
-CONFIG_FILE="$BASE_DIR/config/pocketstremio.conf"
+CONFIG_FILE="$BASE_DIR/config/pocketcinema.conf"
 LOG_FILE="$BASE_DIR/logs/ffplay-subtitle-experiment.log"
 FFPLAY="$BASE_DIR/experiments/ffplay/bin/ffplay"
 FFPLAY_DIR="$BASE_DIR/experiments/ffplay"
 LIB_DIR="$BASE_DIR/experiments/ffplay/lib"
 PADSP=/mnt/SDCARD/miyoo/lib/libpadsp.so
-SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
-PROXY="${POCKETSTREMIO_PROXY:-}"
+SERVER_BASE="${POCKETCINEMA_SERVER:-}"
+PROXY="${POCKETCINEMA_PROXY:-}"
 
 rm -f "$BASE_DIR/config/ffplay-subtitle-experiment.mode"
 
@@ -54,19 +54,19 @@ if [ -n "$PROXY" ]; then
 fi
 
 URL="$SERVER_BASE/media/compatibility/subtitle-switch-fixture.mkv"
-FIXTURE_FILE=/tmp/pocketstremio-subtitle-fixture.mkv
+FIXTURE_FILE=/tmp/pocketcinema-subtitle-fixture.mkv
 SHIFTED_SUBTITLE_FILE="$BASE_DIR/experiments/ffplay/subtitle-offset-fixture.mkv"
 if ! "$SYS_DIR/bin/curl" -fsS --max-time 60 -o "$FIXTURE_FILE" "$URL" >> "$LOG_FILE" 2>&1; then
   printf '%s\n' "Fixture download failed" >> "$LOG_FILE"
   exit 1
 fi
-trap 'rm -f /tmp/stay_awake /tmp/dismiss_info_panel /tmp/pocketstremio-subtitle-fixture.mkv' EXIT
+trap 'rm -f /tmp/stay_awake /tmp/dismiss_info_panel /tmp/pocketcinema-subtitle-fixture.mkv' EXIT
 export LD_LIBRARY_PATH="$LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export FONTCONFIG_PATH="$FFPLAY_DIR"
 export FONTCONFIG_FILE="$FFPLAY_DIR/fonts.conf"
-export POCKETSTREMIO_FONTCONFIG_FILE="$FFPLAY_DIR/fonts.conf"
-export POCKETSTREMIO_DEFAULT_FONT="$FFPLAY_DIR/fonts/PocketStremio.ttf"
-export POCKETSTREMIO_SUBTITLE_FILE="$SHIFTED_SUBTITLE_FILE"
+export POCKETCINEMA_FONTCONFIG_FILE="$FFPLAY_DIR/fonts.conf"
+export POCKETCINEMA_DEFAULT_FONT="$FFPLAY_DIR/fonts/PocketCinema.ttf"
+export POCKETCINEMA_SUBTITLE_FILE="$SHIFTED_SUBTITLE_FILE"
 
 printf '%s\n' "Starting deterministic subtitle timing test: source-cue=8..12 shifted-to=0..4 seek=8" >> "$LOG_FILE"
 if [ -f "$PADSP" ]; then

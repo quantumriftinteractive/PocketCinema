@@ -1,8 +1,8 @@
-# PocketStremio Server Desktop Distribution Plan
+# PocketCinema Server Desktop Distribution Plan
 
-This document queues the desktop distribution work that should begin immediately
-after Milestone 21 is completed. It records a release architecture and acceptance
-plan only; no desktop implementation or packaged artifact exists yet.
+This document records the desktop distribution architecture and acceptance plan.
+Milestone 21 is confirmed and Milestone 23 is Next, but no desktop
+implementation or packaged artifact exists yet.
 
 ## Milestone gate and sequencing
 
@@ -15,17 +15,17 @@ Implementation must not begin until all of the following are true:
 3. Any device-facing criteria are supported by physical Miyoo Mini Plus evidence,
    not only source code or automated tests.
 
-At the time this plan was written, Milestone 21 is **Next** and its acceptance
-criteria are incomplete. Milestone 23 therefore remains planned and queued.
+Milestone 21 is now **Confirmed**. Milestone 23 is the sole **Next** milestone,
+and this plan remains planning-only until implementation is explicitly started.
 Milestone 22 retains its existing number and confirmed evidence. Desktop
 Distribution is Milestone 23, ahead of Milestone 24 Offline Downloads and
-Milestone 25 Unified PocketStremio UI.
+Milestone 25 Unified PocketCinema UI.
 
 ## Current architecture
 
-The existing PocketStremio server should remain the core implementation.
+The existing PocketCinema server should remain the core implementation.
 
-- `server/pocketstremio_server.py` is a dependency-free Python CLI using the
+- `server/pocketcinema_server.py` is a dependency-free Python CLI using the
   standard library HTTP server. It already separates the bind address from the
   address advertised to the Miyoo.
 - `server/manage-server.ps1` and `server/manage-server.sh` own background process
@@ -62,7 +62,7 @@ existing server entry point:
 Desktop UI
   -> validated non-secret preferences
   -> reusable lifecycle and interface-selection modules
-  -> existing PocketStremio server core
+  -> existing PocketCinema server core
   -> per-user data, logs, addon config, and separate account credential
 ```
 
@@ -101,14 +101,14 @@ PowerShell.
 Use platform APIs to resolve a per-user root, with these intended locations:
 
 ```text
-Windows: %APPDATA%\PocketStremio\
-macOS:   ~/Library/Application Support/PocketStremio/
+Windows: %APPDATA%\PocketCinema\
+macOS:   ~/Library/Application Support/PocketCinema/
 ```
 
 Keep ordinary preferences separate from credentials and runtime data:
 
 ```text
-PocketStremio/
+PocketCinema/
   config.json                  non-secret desktop preferences
   credentials/
     stremio_account.json       auth key; restricted permissions
@@ -133,7 +133,7 @@ Normal preferences should initially contain only non-secret fields, for example:
 ```json
 {
   "schema_version": 1,
-  "server_name": "PocketStremio Server",
+  "server_name": "PocketCinema Server",
   "listen_address": "127.0.0.1",
   "listen_port": 8755,
   "advertised_address": "127.0.0.1",
@@ -174,14 +174,14 @@ Safe initial behavior:
 - Retain Custom for routed HTTP(S) deployments.
 - Revalidate the selected local address before startup and report when it is no
   longer assigned.
-- Continue warning that PSS has no public-facing authentication and is supported
+- Continue warning that PCServer has no public-facing authentication and is supported
   only on a trusted LAN, tailnet/VPN, or authenticated gateway.
 
 ## Desktop UI scope
 
 The initial control panel should expose only:
 
-- PSS name;
+- PCServer name;
 - listening interface/address and port;
 - advertised Miyoo address;
 - Stremio Service address and reachable/unreachable state;
@@ -277,16 +277,16 @@ PowerShell workflow, or manually prepared environment variables to:
 
 1. install or extract the actual release artifact;
 2. launch the control panel;
-3. persist PSS name, interface, port, and Stremio Service settings;
+3. persist PCServer name, interface, port, and Stremio Service settings;
 4. detect or manually configure FFmpeg and FFprobe;
-5. start PSS and show the correct device-reachable URL;
+5. start PCServer and show the correct device-reachable URL;
 6. connect a real Miyoo Mini Plus from OnionOS Apps;
 7. pass direct, converted/downscaled, subtitle, Continue Watching, Resume, and
    Play from Start regressions;
-8. restart the desktop app/server and retain intended configuration and PSS data;
+8. restart the desktop app/server and retain intended configuration and PCServer data;
 9. handle invalid port, missing FFmpeg/FFprobe, unreachable Stremio Service, a
    disappeared interface, and startup failure cleanly;
-10. stop only the managed PSS process and remove the application without deleting
+10. stop only the managed PCServer process and remove the application without deleting
     unrelated or user-owned data unexpectedly;
 11. confirm that credentials, addon URLs/tokens, upstream URLs, development files,
     and private logs are absent from the release and normal diagnostics.

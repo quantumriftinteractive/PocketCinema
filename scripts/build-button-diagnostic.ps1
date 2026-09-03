@@ -10,7 +10,7 @@ $sysrootPath = Join-Path $root $Sysroot
 $gcc = Join-Path $compilerRootPath "bin\arm-none-linux-gnueabihf-gcc.exe"
 $source = Join-Path $root "experiments\button-diagnostic.c"
 $outputDir = Join-Path $root ".tmp\build-miyoo"
-$output = Join-Path $outputDir "pocketstremio-button-diagnostic"
+$output = Join-Path $outputDir "pocketcinema-button-diagnostic"
 
 if (-not (Test-Path -LiteralPath $gcc -PathType Leaf)) {
   throw "ARM compiler not found: $gcc"

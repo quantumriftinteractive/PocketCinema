@@ -2,12 +2,12 @@
 
 # App-local, bounded playback metrics. Receives the FFplay PID from the UI and
 # never inspects unrelated processes.
-BASE_DIR=/mnt/SDCARD/App/PocketStremio
+BASE_DIR=/mnt/SDCARD/App/PocketCinema
 LOG_FILE="${1:-$BASE_DIR/logs/playback-resources.log}"
 PLAYER_PID="${2:-}"
 PLAYER_KIND="${3:-unknown}"
-MAX_SECONDS="${POCKETSTREMIO_MONITOR_SECONDS:-10800}"
-INTERVAL_SECONDS="${POCKETSTREMIO_MONITOR_INTERVAL:-5}"
+MAX_SECONDS="${POCKETCINEMA_MONITOR_SECONDS:-10800}"
+INTERVAL_SECONDS="${POCKETCINEMA_MONITOR_INTERVAL:-5}"
 MAX_BYTES=262144
 
 case "$PLAYER_PID" in ''|*[!0-9]*) exit 2 ;; esac

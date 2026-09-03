@@ -35,23 +35,23 @@ DATA_DIR="$SCRIPT_DIR/data"
 PID_FILE="$DATA_DIR/server.pid"
 STDOUT_LOG="$DATA_DIR/server.stdout.log"
 STDERR_LOG="$DATA_DIR/server.stderr.log"
-SERVER_SCRIPT="$SCRIPT_DIR/pocketstremio_server.py"
+SERVER_SCRIPT="$SCRIPT_DIR/pocketcinema_server.py"
 
-HOST_ADDRESS="${POCKETSTREMIO_HOST:-127.0.0.1}"
-PORT="${POCKETSTREMIO_PORT:-8755}"
-PUBLIC_HOST="${POCKETSTREMIO_PUBLIC_HOST:-}"
-SERVER_NAME="${POCKETSTREMIO_SERVER_NAME:-$(hostname)}"
-NETWORK_NAME="${POCKETSTREMIO_NETWORK_NAME:-Network}"
-DISCOVERY_PORT="${POCKETSTREMIO_DISCOVERY_PORT:-8754}"
-DISABLE_DISCOVERY="${POCKETSTREMIO_DISABLE_DISCOVERY:-0}"
-STREMIO_SERVICE_URL="${POCKETSTREMIO_STREMIO_SERVICE_URL:-http://127.0.0.1:11470}"
-OPEN_MEDIA_ADDON_PORT="${POCKETSTREMIO_OPEN_MEDIA_ADDON_PORT:-8756}"
-FFPROBE_PATH="${POCKETSTREMIO_FFPROBE:-}"
-FFMPEG_PATH="${POCKETSTREMIO_FFMPEG:-}"
-LOCAL_MEDIA_ROOT="${POCKETSTREMIO_LOCAL_MEDIA_ROOT:-}"
-ENABLE_FIELD_TEST="${POCKETSTREMIO_ENABLE_FIELD_TEST:-0}"
-ENABLE_MATROSKA_SUBTITLES="${POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES:-1}"
-PYTHON="${POCKETSTREMIO_PYTHON:-}"
+HOST_ADDRESS="${POCKETCINEMA_HOST:-127.0.0.1}"
+PORT="${POCKETCINEMA_PORT:-8755}"
+PUBLIC_HOST="${POCKETCINEMA_PUBLIC_HOST:-}"
+SERVER_NAME="${POCKETCINEMA_SERVER_NAME:-$(hostname)}"
+NETWORK_NAME="${POCKETCINEMA_NETWORK_NAME:-Network}"
+DISCOVERY_PORT="${POCKETCINEMA_DISCOVERY_PORT:-8754}"
+DISABLE_DISCOVERY="${POCKETCINEMA_DISABLE_DISCOVERY:-0}"
+STREMIO_SERVICE_URL="${POCKETCINEMA_STREMIO_SERVICE_URL:-http://127.0.0.1:11470}"
+OPEN_MEDIA_ADDON_PORT="${POCKETCINEMA_OPEN_MEDIA_ADDON_PORT:-8756}"
+FFPROBE_PATH="${POCKETCINEMA_FFPROBE:-}"
+FFMPEG_PATH="${POCKETCINEMA_FFMPEG:-}"
+LOCAL_MEDIA_ROOT="${POCKETCINEMA_LOCAL_MEDIA_ROOT:-}"
+ENABLE_FIELD_TEST="${POCKETCINEMA_ENABLE_FIELD_TEST:-0}"
+ENABLE_MATROSKA_SUBTITLES="${POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES:-1}"
+PYTHON="${POCKETCINEMA_PYTHON:-}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -89,15 +89,15 @@ if [ "$DISCOVERY_PORT" -lt 1 ] || [ "$DISCOVERY_PORT" -gt 65535 ]; then
 fi
 case "$ENABLE_FIELD_TEST" in
   0|1) ;;
-  *) printf '%s\n' "POCKETSTREMIO_ENABLE_FIELD_TEST must be 0 or 1" >&2; exit 2 ;;
+  *) printf '%s\n' "POCKETCINEMA_ENABLE_FIELD_TEST must be 0 or 1" >&2; exit 2 ;;
 esac
 case "$ENABLE_MATROSKA_SUBTITLES" in
   0|1) ;;
-  *) printf '%s\n' "POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES must be 0 or 1" >&2; exit 2 ;;
+  *) printf '%s\n' "POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES must be 0 or 1" >&2; exit 2 ;;
 esac
 case "$DISABLE_DISCOVERY" in
   0|1) ;;
-  *) printf '%s\n' "POCKETSTREMIO_DISABLE_DISCOVERY must be 0 or 1" >&2; exit 2 ;;
+  *) printf '%s\n' "POCKETCINEMA_DISABLE_DISCOVERY must be 0 or 1" >&2; exit 2 ;;
 esac
 
 [ -n "$PUBLIC_HOST" ] || PUBLIC_HOST="$HOST_ADDRESS"
@@ -117,7 +117,7 @@ managed_pid() {
     ''|*[!0-9]*) return 1 ;;
   esac
   kill -0 "$saved_pid" 2>/dev/null || return 1
-  ps -p "$saved_pid" -o command= 2>/dev/null | grep -F 'pocketstremio_server.py' >/dev/null \
+  ps -p "$saved_pid" -o command= 2>/dev/null | grep -F 'pocketcinema_server.py' >/dev/null \
     || return 1
   printf '%s\n' "$saved_pid"
 }
@@ -143,11 +143,11 @@ wait_for_health() {
 start_server() {
   clear_stale_pid
   if managed_pid >/dev/null 2>&1; then
-    printf '%s\n' "PSS is already running" >&2
+    printf '%s\n' "PCServer is already running" >&2
     return 1
   fi
   if curl -fsS --max-time 2 "$health_url" >/dev/null 2>&1; then
-    printf '%s\n' "An unmanaged PSS already answers at $health_url" >&2
+    printf '%s\n' "An unmanaged PCServer already answers at $health_url" >&2
     return 1
   fi
 
@@ -184,17 +184,17 @@ start_server() {
     kill "$server_pid" 2>/dev/null || true
     wait "$server_pid" 2>/dev/null || true
     rm -f "$PID_FILE"
-    printf '%s\n' "PSS did not become healthy at $health_url" >&2
+    printf '%s\n' "PCServer did not become healthy at $health_url" >&2
     return 1
   fi
-  printf 'PSS started: PID %s at %s\n' "$server_pid" "$health_url"
+  printf 'PCServer started: PID %s at %s\n' "$server_pid" "$health_url"
 }
 
 stop_server() {
   clear_stale_pid
   server_pid=$(managed_pid 2>/dev/null || true)
   if [ -z "$server_pid" ]; then
-    printf '%s\n' "PSS is not running"
+    printf '%s\n' "PCServer is not running"
     return 0
   fi
   kill "$server_pid"
@@ -207,21 +207,21 @@ stop_server() {
     kill -KILL "$server_pid"
   fi
   rm -f "$PID_FILE"
-  printf 'PSS stopped: PID %s\n' "$server_pid"
+  printf 'PCServer stopped: PID %s\n' "$server_pid"
 }
 
 status_server() {
   clear_stale_pid
   server_pid=$(managed_pid 2>/dev/null || true)
   if [ -z "$server_pid" ]; then
-    printf '%s\n' "PSS is not running"
+    printf '%s\n' "PCServer is not running"
     return 1
   fi
   if ! wait_for_health; then
-    printf 'PSS process %s is running but health failed at %s\n' "$server_pid" "$health_url" >&2
+    printf 'PCServer process %s is running but health failed at %s\n' "$server_pid" "$health_url" >&2
     return 1
   fi
-  printf 'PSS running: PID %s at %s\n' "$server_pid" "$health_url"
+  printf 'PCServer running: PID %s at %s\n' "$server_pid" "$health_url"
 }
 
 cd "$ROOT_DIR"

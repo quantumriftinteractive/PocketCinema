@@ -139,7 +139,7 @@ class StremioAccountBackend:
         self._lock = threading.Lock()
 
     def _read_auth_key(self):
-        env_key = os.environ.get("POCKETSTREMIO_STREMIO_AUTH_KEY", "").strip()
+        env_key = os.environ.get("POCKETCINEMA_STREMIO_AUTH_KEY", "").strip()
         if env_key:
             return env_key
         try:
@@ -159,7 +159,7 @@ class StremioAccountBackend:
             data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
-                "User-Agent": "PocketStremio/0.11",
+                "User-Agent": "PocketCinema/0.11",
             },
             method="POST",
         )
@@ -169,7 +169,7 @@ class StremioAccountBackend:
     def _fetch_json(self, url):
         request = urllib.request.Request(
             url,
-            headers={"User-Agent": "PocketStremio/0.11"},
+            headers={"User-Agent": "PocketCinema/0.11"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode("utf-8"))

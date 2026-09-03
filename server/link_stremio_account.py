@@ -18,7 +18,7 @@ DEFAULT_LINK_TTL = 5 * 60
 def fetch_json(url, timeout=10):
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "PocketStremio/0.11"},
+        headers={"User-Agent": "PocketCinema/0.11"},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
@@ -132,7 +132,7 @@ def main():
     args = parser.parse_args()
 
     code, link = create_link()
-    print("Approve PocketStremio using this temporary Stremio link:", flush=True)
+    print("Approve PocketCinema using this temporary Stremio link:", flush=True)
     print(link, flush=True)
     if not args.no_browser:
         webbrowser.open(link)

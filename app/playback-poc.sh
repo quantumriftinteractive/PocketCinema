@@ -1,17 +1,17 @@
 #!/bin/sh
 
-BASE_DIR=/mnt/SDCARD/App/PocketStremio
+BASE_DIR=/mnt/SDCARD/App/PocketCinema
 SYS_DIR=/mnt/SDCARD/.tmp_update
 MIYOO_DIR=/mnt/SDCARD/miyoo
 LOG_DIR="$BASE_DIR/logs"
 LOG_FILE="$LOG_DIR/app-playback.log"
 RESOURCE_LOG="$LOG_DIR/app-resource.log"
 
-SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
-VIDEO_URL="${POCKETSTREMIO_VIDEO_URL:-}"
+SERVER_BASE="${POCKETCINEMA_SERVER:-}"
+VIDEO_URL="${POCKETCINEMA_VIDEO_URL:-}"
 [ -n "$VIDEO_URL" ] || [ -z "$SERVER_BASE" ] || VIDEO_URL="$SERVER_BASE/media/test-video.mp4"
-PROXY="${POCKETSTREMIO_PROXY:-}"
-FFPLAY="${POCKETSTREMIO_FFPLAY:-$SYS_DIR/bin/ffplay}"
+PROXY="${POCKETCINEMA_PROXY:-}"
+FFPLAY="${POCKETCINEMA_FFPLAY:-$SYS_DIR/bin/ffplay}"
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 CURL="$SYS_DIR/bin/curl"
 
@@ -20,7 +20,7 @@ mkdir -p "$LOG_DIR"
 : > "$RESOURCE_LOG"
 
 if [ -z "$VIDEO_URL" ]; then
-  echo "Set POCKETSTREMIO_SERVER or POCKETSTREMIO_VIDEO_URL" >>"$LOG_FILE"
+  echo "Set POCKETCINEMA_SERVER or POCKETCINEMA_VIDEO_URL" >>"$LOG_FILE"
   exit 2
 fi
 
@@ -84,7 +84,7 @@ monitor_resources() {
   done
 }
 
-log "PocketStremio OnionOS playback launcher"
+log "PocketCinema OnionOS playback launcher"
 log "server=$SERVER_BASE"
 log "video=$VIDEO_URL"
 log "proxy=${PROXY:-none}"
@@ -102,14 +102,14 @@ if [ ! -x "$CURL" ]; then
   exit 1
 fi
 
-if ! curl_request -fsS -o /tmp/pocketstremio-video-check.mp4 -r 0-4095 --max-time 20 "$VIDEO_URL" >> "$LOG_FILE" 2>&1; then
+if ! curl_request -fsS -o /tmp/pocketcinema-video-check.mp4 -r 0-4095 --max-time 20 "$VIDEO_URL" >> "$LOG_FILE" 2>&1; then
   log "ERROR video check failed"
   exit 1
 fi
 
 log "video check ok"
 
-if [ "${POCKETSTREMIO_SKIP_PLAYBACK:-0}" = "1" ]; then
+if [ "${POCKETCINEMA_SKIP_PLAYBACK:-0}" = "1" ]; then
   log "skip playback requested"
   measure_once "after-skip"
   exit 0

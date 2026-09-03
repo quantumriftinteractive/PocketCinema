@@ -1,7 +1,7 @@
 param(
   [ValidateSet("start", "stop", "restart", "status")]
   [string]$Action = "status",
-  [string]$HostAddress = $env:POCKETSTREMIO_HOST,
+  [string]$HostAddress = $env:POCKETCINEMA_HOST,
   [int]$Port = 8755,
   [string]$PublicHost = "",
   [string]$ServerName = $env:COMPUTERNAME,
@@ -20,7 +20,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 if (-not $HostAddress -and $Action -ne "stop") {
-  throw "Set POCKETSTREMIO_HOST or pass -HostAddress"
+  throw "Set POCKETCINEMA_HOST or pass -HostAddress"
 }
 if (-not $PublicHost) {
   $PublicHost = $HostAddress
@@ -30,7 +30,7 @@ $dataDir = Join-Path $PSScriptRoot "data"
 $pidFile = Join-Path $dataDir "server.pid"
 $stdoutLog = Join-Path $dataDir "server.stdout.log"
 $stderrLog = Join-Path $dataDir "server.stderr.log"
-$serverScript = Join-Path $PSScriptRoot "pocketstremio_server.py"
+$serverScript = Join-Path $PSScriptRoot "pocketcinema_server.py"
 $healthUrl = "http://${HostAddress}:$Port/api/status"
 
 function Get-ManagedProcess {
@@ -43,7 +43,7 @@ function Get-ManagedProcess {
     return $null
   }
   $process = Get-CimInstance Win32_Process -Filter "ProcessId = $savedPid" -ErrorAction SilentlyContinue
-  if (-not $process -or $process.CommandLine -notlike "*pocketstremio_server.py*") {
+  if (-not $process -or $process.CommandLine -notlike "*pocketcinema_server.py*") {
     Remove-Item -LiteralPath $pidFile -Force
     return $null
   }
@@ -62,12 +62,12 @@ function Wait-ForHealth {
       Start-Sleep -Milliseconds 250
     }
   }
-  throw "PocketStremio did not become healthy at $healthUrl"
+  throw "PocketCinema Server did not become healthy at $healthUrl"
 }
 
 function Start-ManagedServer {
   if (Get-ManagedProcess) {
-    throw "PocketStremio server is already running"
+    throw "PocketCinema Server is already running"
   }
   $unmanagedHealth = $null
   try {
@@ -76,7 +76,7 @@ function Start-ManagedServer {
     $unmanagedHealth = $null
   }
   if ($unmanagedHealth -and $unmanagedHealth.status -eq "ok") {
-    throw "A PocketStremio server already answers at $healthUrl but is not owned by this manager"
+    throw "A PocketCinema Server already answers at $healthUrl but is not owned by this manager"
   }
   New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
   if (-not $FFprobePath) {
@@ -92,7 +92,7 @@ function Start-ManagedServer {
     }
   }
   if (-not $StremioLocalMediaRoot) {
-    $candidate = Join-Path $env:USERPROFILE "Videos\PocketStremio"
+    $candidate = Join-Path $env:USERPROFILE "Videos\PocketCinema"
     if (Test-Path -LiteralPath $candidate -PathType Container) {
       $script:StremioLocalMediaRoot = $candidate
     }
@@ -113,7 +113,7 @@ function Start-ManagedServer {
   if ($EnableFieldTest) {
     $arguments += "--enable-field-test"
   }
-  if (-not $DisableMatroskaSubtitles -and $env:POCKETSTREMIO_ENABLE_MATROSKA_SUBTITLES -ne "0") {
+  if (-not $DisableMatroskaSubtitles -and $env:POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES -ne "0") {
     $arguments += "--enable-matroska-subtitles"
   }
   if ($DisableDiscovery) {
@@ -141,13 +141,13 @@ function Start-ManagedServer {
     Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
     throw
   }
-  Write-Output "PocketStremio started: PID $($process.Id), version $($health.version)"
+  Write-Output "PocketCinema Server started: PID $($process.Id), version $($health.version)"
 }
 
 function Stop-ManagedServer {
   $process = Get-ManagedProcess
   if (-not $process) {
-    Write-Output "PocketStremio is not running"
+    Write-Output "PocketCinema Server is not running"
     return
   }
   Stop-Process -Id $process.ProcessId
@@ -158,7 +158,7 @@ function Stop-ManagedServer {
     Wait-Process -Id $process.ProcessId -Timeout 5 -ErrorAction SilentlyContinue
   }
   Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
-  Write-Output "PocketStremio stopped: PID $($process.ProcessId)"
+  Write-Output "PocketCinema Server stopped: PID $($process.ProcessId)"
 }
 
 switch ($Action) {
@@ -171,10 +171,10 @@ switch ($Action) {
   "status" {
     $process = Get-ManagedProcess
     if (-not $process) {
-      Write-Output "PocketStremio is not running"
+      Write-Output "PocketCinema Server is not running"
       exit 1
     }
     $health = Wait-ForHealth -Attempts 1
-    Write-Output "PocketStremio running: PID $($process.ProcessId), version $($health.version), uptime $($health.uptime_seconds)s"
+    Write-Output "PocketCinema Server running: PID $($process.ProcessId), version $($health.version), uptime $($health.uptime_seconds)s"
   }
 }

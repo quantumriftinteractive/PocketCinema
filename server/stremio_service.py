@@ -112,7 +112,7 @@ class StremioServiceBackend:
     def _fetch_json(self, path):
         request = urllib.request.Request(
             self.base_url + path,
-            headers={"User-Agent": "PocketStremio/1.0"},
+            headers={"User-Agent": "PocketCinema/1.0"},
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode("utf-8"))

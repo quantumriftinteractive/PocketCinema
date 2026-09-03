@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
 $candidate = Join-Path $root ".tmp\ffmpeg-2.4.14\ffplay"
 $sysroot = Join-Path $root ".tmp\toolchain\mmiyoo\arm-buildroot-linux-gnueabihf\sysroot"
-$destination = "/mnt/SDCARD/App/PocketStremio/experiments/ffplay"
+$destination = "/mnt/SDCARD/App/PocketCinema/experiments/ffplay"
 $sshOptions = @(
   "-o", "MACs=+hmac-sha1",
   "-o", "StrictHostKeyChecking=accept-new"
@@ -56,13 +56,13 @@ foreach ($library in $libraries) {
 }
 
 $launcher = Join-Path $root "experiments\ffplay-subtitle-experiment.sh"
-Invoke-Checked "scp" ($sshOptions + @($launcher, "${DeviceHost}:/mnt/SDCARD/App/PocketStremio/experiments/ffplay-subtitle-experiment.sh"))
+Invoke-Checked "scp" ($sshOptions + @($launcher, "${DeviceHost}:/mnt/SDCARD/App/PocketCinema/experiments/ffplay-subtitle-experiment.sh"))
 $fontConfig = Join-Path $root "experiments\ffplay\fonts.conf"
 Invoke-Checked "scp" ($sshOptions + @($fontConfig, "${DeviceHost}:$destination/fonts.conf"))
-$verify = "chmod +x /mnt/SDCARD/App/PocketStremio/experiments/ffplay/bin/ffplay /mnt/SDCARD/App/PocketStremio/experiments/ffplay-subtitle-experiment.sh"
+$verify = "chmod +x /mnt/SDCARD/App/PocketCinema/experiments/ffplay/bin/ffplay /mnt/SDCARD/App/PocketCinema/experiments/ffplay-subtitle-experiment.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
 if ($Enable) {
-  Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch /mnt/SDCARD/App/PocketStremio/config/ffplay-subtitle-experiment.mode"))
-  Write-Output "Subtitle FFplay experiment enabled for the next PocketStremio Apps launch"
+  Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch /mnt/SDCARD/App/PocketCinema/config/ffplay-subtitle-experiment.mode"))
+  Write-Output "Subtitle FFplay experiment enabled for the next PocketCinema Apps launch"
 }
 Write-Output "App-local subtitle FFplay candidate deployed; Onion FFplay was not modified"

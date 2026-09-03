@@ -43,7 +43,7 @@ SERVER_VERSION = "0.17.0-device-discovery"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
-TEST_SERIES_ID = "pocketstremio-test-series"
+TEST_SERIES_ID = "pocketcinema-test-series"
 MAX_CONTINUE_ITEMS = 50
 DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
@@ -64,7 +64,7 @@ MAX_STREAM_LIST_PREFLIGHT_WORKERS = 4
 COMPATIBILITY_FIXTURES = (
     {
         "filename": "test-video.mp4",
-        "name": "PocketStremio hosted test video",
+        "name": "PocketCinema hosted test video",
         "description": "H.264 High/AAC MP4 | 640x360 | 30 fps | 1.58 Mb/s",
         "duration_seconds": 6,
         "compatibility": {
@@ -120,7 +120,7 @@ COMPATIBILITY_FIXTURE_NAMES = {
 TEST_SERIES_META = {
     "id": TEST_SERIES_ID,
     "type": "series",
-    "name": "PocketStremio Test Series",
+    "name": "PocketCinema Test Series",
     "releaseInfo": "2026",
     "description": "Deterministic offline fixture for season and episode browsing.",
     "videos": [
@@ -172,14 +172,14 @@ TEST_SERIES_EPISODES = {
 
 
 def fetch_json(url, timeout=DEFAULT_TIMEOUT):
-    req = urllib.request.Request(url, headers={"User-Agent": "PocketStremio/0.1"})
+    req = urllib.request.Request(url, headers={"User-Agent": "PocketCinema/0.1"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
 def load_stream_addons(config_path):
     addons = []
-    raw = os.environ.get("POCKETSTREMIO_STREAM_ADDONS", "").strip()
+    raw = os.environ.get("POCKETCINEMA_STREAM_ADDONS", "").strip()
     if raw:
         addons.extend(
             {"name": "env addon", "manifest_url": item.strip()}
@@ -393,7 +393,7 @@ def normalize_test_episode(item_id):
         "id": item_id,
         "imdb_id": "",
         "type": "series",
-        "title": f"PocketStremio Test Series S{season}E{episode}: {video['name']}",
+        "title": f"PocketCinema Test Series S{season}E{episode}: {video['name']}",
         "year": release_year(video.get("released")),
         "poster": "",
         "description": video.get("overview") or "",
@@ -860,14 +860,14 @@ class ProgressStore:
             return removed
 
 
-class PocketStremioHandler(BaseHTTPRequestHandler):
-    server_version = "PocketStremio/0.9"
+class PocketCinemaHandler(BaseHTTPRequestHandler):
+    server_version = "PocketCinema/0.9"
 
     def refresh_generic_progress_titles(self, items):
         """Repair old client records that saved the app name as the title."""
         refreshed = []
         for item in items:
-            if str(item.get("title") or "").strip().casefold() != "pocketstremio":
+            if str(item.get("title") or "").strip().casefold() != "pocketcinema":
                 refreshed.append(item)
                 continue
             item = dict(item)
@@ -917,9 +917,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json(
                 {
                     "status": "ok",
-                    "service": "pocketstremio-server",
+                    "service": "pocketcinema-server",
                     "version": SERVER_VERSION,
-                    "message": "PocketStremio server is reachable",
+                    "message": "PocketCinema Server is reachable",
                     "discovery": {
                         "enabled": bool(
                             getattr(self.server, "discovery_responder", None)
@@ -1234,7 +1234,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.write_json(
                 {
                     "error": "subtitle_burn_in_unavailable",
-                    "message": "This PSS cannot burn subtitles with its FFmpeg build",
+                    "message": "This PCServer cannot burn subtitles with its FFmpeg build",
                 },
                 status=409,
             )
@@ -1408,7 +1408,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             return
 
         if query.lower() in {
-            "pocketstremio test series",
+            "pocketcinema test series",
             "test series",
             "offline test series",
         }:
@@ -1725,7 +1725,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                         "duration_seconds": fixture["duration_seconds"],
                         "playable": path.is_file(),
                         "compatibility": fixture["compatibility"],
-                        "source": "pocketstremio-compatibility-fixture",
+                        "source": "pocketcinema-compatibility-fixture",
                         "url": stream_url if path.is_file() else "",
                     }
                 )
@@ -1748,7 +1748,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                     "duration_seconds": fixture["duration_seconds"],
                     "playable": path.is_file(),
                     "compatibility": fixture["compatibility"],
-                    "source": "pocketstremio-series-fixture",
+                    "source": "pocketcinema-series-fixture",
                     "url": stream_url if path.is_file() else "",
                 }
             )
@@ -1838,9 +1838,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 stream.get("compatibility") or {}
             )
             # A cached probe is authoritative for the source's actual
-            # container and tracks.  Do not offer a stream that PSS already
+            # container and tracks.  Do not offer a stream that PCServer already
             # knows cannot be decoded, or one that requires conversion when
-            # this PSS has no FFmpeg conversion service.  Unprobed candidates
+            # this PCServer has no FFmpeg conversion service.  Unprobed candidates
             # remain visible as CHECK rather than blocking the stream list on
             # probes for every addon result.
             if stream["playback_mode"] == "blocked":
@@ -1984,7 +1984,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 {
                     "count": 0,
                     "items": [],
-                    "unavailable_reason": "This PSS cannot burn external subtitles with its FFmpeg build",
+                    "unavailable_reason": "This PCServer cannot burn external subtitles with its FFmpeg build",
                 }
             )
             return
@@ -1999,9 +1999,9 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
                 subtitles.append(
                     {
                         "id": f"sample-sub-{BIG_BUCK_BUNNY_ID}",
-                        "name": "English (PocketStremio test)",
+                        "name": "English (PocketCinema test)",
                         "lang": "eng",
-                        "source": "pocketstremio-sample",
+                        "source": "pocketcinema-sample",
                         "url": f"http://{self.server.public_host}:{self.server.server_port}/media/test-subtitle.srt",
                         "local_path": str(fixture.resolve()),
                         "item_type": item_type,
@@ -2225,7 +2225,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def download_transcode_subtitle(self, url, local_path=""):
         headers = {
-            "User-Agent": "PocketStremio/0.16",
+            "User-Agent": "PocketCinema/0.16",
             "Accept-Encoding": "identity",
         }
         if local_path:
@@ -2438,7 +2438,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def fetch_hls_playlist(self, url):
         headers = {
-            "User-Agent": "PocketStremio/0.13",
+            "User-Agent": "PocketCinema/0.13",
             "Accept-Encoding": "identity",
         }
         with open_media_url(
@@ -2471,7 +2471,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
     def open_hls_segment_with_retry(self, url, attempts=3):
         headers = {
-            "User-Agent": "PocketStremio/0.13",
+            "User-Agent": "PocketCinema/0.13",
             "Accept-Encoding": "identity",
         }
         last_error = None
@@ -2782,7 +2782,7 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
             self.close_connection = True
 
     def proxy_remote_url(self, url):
-        headers = {"User-Agent": "PocketStremio/0.4", "Accept-Encoding": "identity"}
+        headers = {"User-Agent": "PocketCinema/0.4", "Accept-Encoding": "identity"}
         if self.headers.get("Range"):
             headers["Range"] = self.headers["Range"]
 
@@ -2894,14 +2894,14 @@ class PocketStremioHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Minimal PocketStremio server")
+    parser = argparse.ArgumentParser(description="Minimal PocketCinema Server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8755)
     parser.add_argument("--public-host", default=None)
     parser.add_argument(
         "--server-name",
         default=socket.gethostname(),
-        help="Friendly PSS name shown by device discovery",
+        help="Friendly PCServer name shown by device discovery",
     )
     parser.add_argument(
         "--network-name",
@@ -2912,7 +2912,7 @@ def main():
         "--discovery-port",
         type=int,
         default=discovery.DISCOVERY_PORT,
-        help="UDP port used for local PSS discovery",
+        help="UDP port used for local PCServer discovery",
     )
     parser.add_argument("--disable-discovery", action="store_true")
     parser.add_argument("--stremio-service-url", default="http://127.0.0.1:11470")
@@ -2933,12 +2933,12 @@ def main():
     parser.add_argument("--disable-open-media-addon", action="store_true")
     parser.add_argument(
         "--ffprobe",
-        default=os.environ.get("POCKETSTREMIO_FFPROBE", ""),
+        default=os.environ.get("POCKETCINEMA_FFPROBE", ""),
         help="Optional ffprobe executable used for media preflight",
     )
     parser.add_argument(
         "--ffmpeg",
-        default=os.environ.get("POCKETSTREMIO_FFMPEG", ""),
+        default=os.environ.get("POCKETCINEMA_FFMPEG", ""),
         help="Optional ffmpeg executable used for bounded conversion",
     )
     parser.add_argument(
@@ -2991,7 +2991,7 @@ def main():
     if args.discovery_port < 1 or args.discovery_port > 65535:
         parser.error("--discovery-port must be between 1 and 65535")
 
-    httpd = ThreadingHTTPServer((args.host, args.port), PocketStremioHandler)
+    httpd = ThreadingHTTPServer((args.host, args.port), PocketCinemaHandler)
     httpd.media_dir = media_dir
     httpd.fixture_dir = fixture_dir
     httpd.public_host = args.public_host or args.host
@@ -3020,7 +3020,7 @@ def main():
         open_media_thread.start()
         httpd.stream_addons.append(
             {
-                "name": "PocketStremio Open Media",
+                "name": "PocketCinema Open Media",
                 "manifest_url": f"http://127.0.0.1:{args.open_media_addon_port}/manifest.json",
             }
         )
@@ -3074,15 +3074,15 @@ def main():
             ).start()
         except OSError as error:
             print(
-                f"PSS discovery unavailable on UDP {args.discovery_port}: {error}",
+                f"PCServer discovery unavailable on UDP {args.discovery_port}: {error}",
                 flush=True,
             )
 
-    print(f"PocketStremio server listening on http://{args.host}:{args.port}", flush=True)
+    print(f"PocketCinema Server listening on http://{args.host}:{args.port}", flush=True)
     print(f"Public host: {httpd.public_host}", flush=True)
     if httpd.discovery_responder:
         print(
-            f"PSS discovery: {httpd.discovery_name} | "
+            f"PCServer discovery: {httpd.discovery_name} | "
             f"{httpd.discovery_network} | {advertised_url} | UDP {args.discovery_port}",
             flush=True,
         )

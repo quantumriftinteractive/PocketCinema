@@ -1,16 +1,16 @@
 #!/bin/sh
 set -eu
 
-SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
+SERVER_BASE="${POCKETCINEMA_SERVER:-}"
 PROXY="${HTTP_PROXY:-}"
 CURL="${CURL:-/mnt/SDCARD/.tmp_update/bin/curl}"
-LOG_DIR="${POCKETSTREMIO_LOG_DIR:-/mnt/SDCARD/App/PocketStremio/client/logs}"
+LOG_DIR="${POCKETCINEMA_LOG_DIR:-/mnt/SDCARD/App/PocketCinema/client/logs}"
 LOG_FILE="$LOG_DIR/json-client.log"
 
 mkdir -p "$LOG_DIR"
 
 if [ -z "$SERVER_BASE" ]; then
-  echo "Set POCKETSTREMIO_SERVER to the PocketStremio server URL"
+  echo "Set POCKETCINEMA_SERVER to the PocketCinema server URL"
   exit 2
 fi
 
@@ -46,7 +46,7 @@ fetch() {
   fi
 }
 
-log "PocketStremio Miyoo JSON client"
+log "PocketCinema Miyoo JSON client"
 log "server=$SERVER_BASE"
 log "proxy=${PROXY:-none}"
 
@@ -72,7 +72,7 @@ printf '%s\n' "$SEARCH_JSON" |
 
 log "json-client=ok"
 
-if [ "${POCKETSTREMIO_HOLD_SECONDS:-0}" != "0" ]; then
-  log "hold_seconds=$POCKETSTREMIO_HOLD_SECONDS"
-  sleep "$POCKETSTREMIO_HOLD_SECONDS"
+if [ "${POCKETCINEMA_HOLD_SECONDS:-0}" != "0" ]; then
+  log "hold_seconds=$POCKETCINEMA_HOLD_SECONDS"
+  sleep "$POCKETCINEMA_HOLD_SECONDS"
 fi

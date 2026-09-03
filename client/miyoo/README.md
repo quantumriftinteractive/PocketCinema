@@ -1,8 +1,8 @@
 # Miyoo Client
 
-`pocketstremio-ui.sh` is the current controller-driven OnionOS client. It:
+`pocketcinema-ui.sh` is the current controller-driven OnionOS client. It:
 
-- calls PocketStremio directly or through an optional generic HTTP proxy;
+- calls PocketCinema directly or through an optional generic HTTP proxy;
 - uses OnionOS `kbinput` for search text and the bundled SDL 1.2 selector for lists;
 - supports D-pad navigation, A selection, and B/back in selector screens;
 - parses API responses with OnionOS `jq`;
@@ -23,14 +23,14 @@
 - shows persistent OnionOS loading panels during stream discovery and server-side
   media compatibility inspection.
 - excludes network startup and A-button pause intervals from reported progress
-  with the app-local `pocketstremio-pause-monitor` helper.
+  with the app-local `pocketcinema-pause-monitor` helper.
 
 Inside FFplay, the Miyoo Menu button exits playback. B advances one frame; it is
 not the playback exit control on the confirmed OnionOS FFplay build.
 
-The prebuilt ARMv7 selector is `bin/pocketstremio-selector`; its source is
+The prebuilt ARMv7 selector is `bin/pocketcinema-selector`; its source is
 `sdl_selector.c`. Manual selection is the default. Set
-`POCKETSTREMIO_AUTO_FIRST=1` to restore the development auto-select path.
+`POCKETCINEMA_AUTO_FIRST=1` to restore the development auto-select path.
 
 The selector's QR mode uses the vendored Project Nayuki C encoder and SDL 1.2;
 it adds no PNG, SDL_image, font, or online QR-service dependency. Approval links
@@ -39,14 +39,14 @@ arrive through stdin and only the literal `refresh` action is emitted on stdout.
 The production UI optionally reads app-local non-secret settings from:
 
 ```text
-/mnt/SDCARD/App/PocketStremio/config/pocketstremio.conf
+/mnt/SDCARD/App/PocketCinema/config/pocketcinema.conf
 ```
 
-Use `pocketstremio.conf.example` as the template. Environment variables take
+Use `pocketcinema.conf.example` as the template. Environment variables take
 precedence over the file. `SERVER_BASE` is required and may use a LAN or overlay
 network address. Leave `PROXY` empty for direct HTTP, or set it to an HTTP proxy
 such as `http://127.0.0.1:1055/`. The client validates settings and reports
-PocketStremio server connectivity failures without knowing which network
+PocketCinema server connectivity failures without knowing which network
 provider is in use.
 
 From the repository root, deploy tracked app files without replacing the real
@@ -62,15 +62,15 @@ Rebuild and compare the selector with the committed ARMv7 binary using:
 .\scripts\build-miyoo-selector.ps1 -VerifyCommitted
 ```
 
-The pause observer is `bin/pocketstremio-pause-monitor`; its source is
+The pause observer is `bin/pocketcinema-pause-monitor`; its source is
 `pause_monitor.c`. It opens `/dev/input/event0` as an additional reader and does
 not grab, transform, or consume controller events.
 
 Confirmed device flow:
 
 ```text
-Apps -> PocketStremio -> search -> result -> Play -> stream -> FFplay
-Apps -> PocketStremio -> search -> series -> season -> episode -> Play -> stream -> FFplay
+Apps -> PocketCinema -> search -> result -> Play -> stream -> FFplay
+Apps -> PocketCinema -> search -> series -> season -> episode -> Play -> stream -> FFplay
 ```
 
 The standalone `json-client.sh` remains as the lightweight structured JSON
@@ -92,7 +92,7 @@ HTTP_PROXY=http://127.0.0.1:1055/
 Run on the Miyoo after the selected network path is available:
 
 ```sh
-cd /mnt/SDCARD/App/PocketStremio/client
+cd /mnt/SDCARD/App/PocketCinema/client
 chmod +x json-client.sh
 ./json-client.sh
 ```
@@ -100,5 +100,5 @@ chmod +x json-client.sh
 The client writes parsed values to:
 
 ```text
-/mnt/SDCARD/App/PocketStremio/client/logs/json-client.log
+/mnt/SDCARD/App/PocketCinema/client/logs/json-client.log
 ```

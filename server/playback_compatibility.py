@@ -15,7 +15,7 @@ SUPPORTED_CONTAINERS = {
     "webm",
 }
 SUPPORTED_VIDEO_CODECS = {"h264", "hevc", "mpeg4", "vp8", "vp9"}
-# These are bounded PSS input codecs, not a claim that every one can be sent
+# These are bounded PCServer input codecs, not a claim that every one can be sent
 # directly to Miyoo FFplay.  Candidate profiles are converted to AAC first.
 SUPPORTED_AUDIO_CODECS = {"aac", "ac3", "eac3", "mp3", "vorbis"}
 LANGUAGE_ALIASES = {
@@ -349,7 +349,7 @@ def classify_probe(data):
 
 
 def declared_compatibility(hints):
-    declared = (hints or {}).get("pocketstremio") or {}
+    declared = (hints or {}).get("pocketcinema") or {}
     status = str(declared.get("status") or "candidate").lower()
     if status not in {"confirmed", "candidate", "unsupported"}:
         status = "candidate"

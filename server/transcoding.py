@@ -47,7 +47,7 @@ def needs_downscale(compatibility):
     profile = str(compatibility.get("video_profile") or "").lower()
     video_codec = str(compatibility.get("video_codec") or "").lower()
     audio_codec = str(compatibility.get("audio_codec") or "").lower()
-    # These codecs are acceptable bounded PSS inputs but not direct Miyoo
+    # These codecs are acceptable bounded PCServer inputs but not direct Miyoo
     # profiles.  HLS remains on its independently confirmed MPEG-TS bridge.
     codec_conversion = video_codec in {"hevc", "vp9", "mpeg4"} or audio_codec == "eac3"
     return (
@@ -96,7 +96,7 @@ def subtitle_suffix(payload):
 def normalize_subtitle_payload(ffmpeg_path, payload, directory):
     """Store SRT/WebVTT directly or convert other text subtitle formats to SRT.
 
-    The conversion input and output stay in PSS's app-local transcode directory;
+    The conversion input and output stay in PCServer's app-local transcode directory;
     neither an upstream subtitle URL nor arbitrary source path reaches FFmpeg.
     Image-based subtitles are deliberately not OCR'd and fail as unsupported.
     """

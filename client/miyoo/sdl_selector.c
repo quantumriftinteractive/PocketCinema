@@ -172,7 +172,7 @@ static void draw_menu(SDL_Surface *screen, const char *title, const char *bottom
     Uint32 accent = SDL_MapRGB(screen->format, 255, 222, 120);
     SDL_FillRect(screen, NULL, bg);
 
-    draw_text(screen, title ? title : "POCKETSTREMIO", 20, 18, 3, white, 32);
+    draw_text(screen, title ? title : "POCKETCINEMA", 20, 18, 3, white, 32);
 
     int multiline = 0;
     for (int i = 0; i < count; i++) {
@@ -241,8 +241,9 @@ static void draw_qr(SDL_Surface *screen, const char *title, const char *bottom,
 
 int main(int argc, char **argv) {
     int qr_mode = argc > 1 && strcmp(argv[1], "--qr") == 0;
-    const char *title = argc > (qr_mode ? 2 : 1) ? argv[qr_mode ? 2 : 1] : "PocketStremio";
+    const char *title = argc > (qr_mode ? 2 : 1) ? argv[qr_mode ? 2 : 1] : "PocketCinema";
     const char *bottom = argc > (qr_mode ? 3 : 2) ? argv[qr_mode ? 3 : 2] : "Up/Down move  A select  B back";
+    /* Retained compiled-helper ABI; not a user configuration key. */
     const char *log_path = getenv("POCKETSTREMIO_SELECTOR_LOG");
     const char *dynamic_first_item_path =
         getenv("POCKETSTREMIO_DYNAMIC_FIRST_ITEM_FILE");

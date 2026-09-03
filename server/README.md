@@ -1,11 +1,11 @@
-# PocketStremio Server POC
+# PocketCinema Server POC
 
 Minimal stdlib-only Python server for the Miyoo JSON communication proof.
 
 Run on the gaming PC Tailscale address:
 
 ```powershell
-python .\server\pocketstremio_server.py --host 100.85.171.67 --port 8755
+python .\server\pocketcinema_server.py --host 100.85.171.67 --port 8755
 ```
 
 or:
@@ -17,7 +17,7 @@ or:
 For normal background operation, use the health-checked lifecycle manager:
 
 ```powershell
-$env:POCKETSTREMIO_HOST = "TAILSCALE_IP_OR_INTERFACE_ADDRESS"
+$env:POCKETCINEMA_HOST = "TAILSCALE_IP_OR_INTERFACE_ADDRESS"
 .\server\manage-server.ps1 start
 .\server\manage-server.ps1 status
 .\server\manage-server.ps1 restart
@@ -33,12 +33,12 @@ On macOS, the equivalent lifecycle manager discovers Homebrew `python3`,
 `ffprobe`, and `ffmpeg` from `PATH`:
 
 ```sh
-POCKETSTREMIO_HOST=100.x.y.z ./server/manage-server.sh start
+POCKETCINEMA_HOST=100.x.y.z ./server/manage-server.sh start
 ./server/manage-server.sh status --host 100.x.y.z
 ./server/manage-server.sh stop
 ```
 
-PSS advertises one preferred device-facing address on UDP `8754` for the
+PCServer advertises one preferred device-facing address on UDP `8754` for the
 Miyoo's local-network scan. Give each instance a short machine name and a
 descriptive transport label:
 
@@ -46,21 +46,21 @@ descriptive transport label:
 ./server/manage-server.sh start \
   --host 100.x.y.z \
   --public-host 100.x.y.z \
-  --server-name "Mac PSS" \
+  --server-name "Mac PCServer" \
   --network-name "Tailscale"
 ```
 
 The scan displays `name - IP:port - network`. A machine with both LAN and
-overlay addresses still appears once because the PSS advertises only its
+overlay addresses still appears once because the PCServer advertises only its
 configured `--public-host`; repeated replies are deduplicated by a persistent,
-ignored PSS instance ID. Use `--disable-discovery` where UDP broadcast is not
+ignored PCServer instance ID. Use `--disable-discovery` where UDP broadcast is not
 wanted. Discovery exposes no Stremio ports, addon transports, media URLs, or
 account credentials, and each reply must pass `/api/status` validation before
 the Miyoo offers it.
 
 For a split-host development setup, keep Stremio Service on the Windows host
 and forward it through an externally managed SSH tunnel bound only to macOS
-loopback. PSS remains transport-agnostic and does not expose or manage the raw
+loopback. PCServer remains transport-agnostic and does not expose or manage the raw
 Stremio Service ports:
 
 ```sh
@@ -71,13 +71,13 @@ ssh -N -L 127.0.0.1:21470:127.0.0.1:11470 user@windows-host
   --stremio-service-url http://127.0.0.1:21470
 ```
 
-Do not supply a Windows `file://` media root to a macOS PSS. Link the Stremio
-account separately on each PSS host instead of copying the ignored auth-key
+Do not supply a Windows `file://` media root to a macOS PCServer. Link the Stremio
+account separately on each PCServer host instead of copying the ignored auth-key
 file between machines. Continue Watching and probe-cache state are likewise
-owned by the active PSS host.
+owned by the active PCServer host.
 
 The Miyoo Settings screen can also accept `host:port` or a full HTTP(S) URL.
-PSS does not currently provide public-facing authentication, so do not expose
+PCServer does not currently provide public-facing authentication, so do not expose
 it directly to the internet without an authenticated gateway. A trusted LAN,
 VPN, or other access-controlled network is the supported security boundary.
 
@@ -112,7 +112,7 @@ top-level status fields remain available for client compatibility.
 
 The media endpoint supports single HTTP byte-range requests because FFplay seeks inside MP4 files.
 
-To link the gaming PC to a Stremio account without giving PocketStremio an email
+To link the gaming PC to a Stremio account without giving PocketCinema an email
 address or password:
 
 ```powershell
@@ -141,12 +141,12 @@ used directly with `/api/streams/series/{video_id}`.
 The server uses a dedicated backend for Stremio Service Local Files at
 `http://127.0.0.1:11470`. Only direct local files inside an allowed media root
 are accepted; desktop paths remain behind opaque play sessions. If the dedicated
-`%USERPROFILE%\Videos\PocketStremio` directory exists, the PowerShell launchers
+`%USERPROFILE%\Videos\PocketCinema` directory exists, the PowerShell launchers
 allow it automatically. Override the root explicitly when needed:
 
 ```powershell
 .\server\start-server.ps1 `
-  -StremioLocalMediaRoot "D:\PocketStremio Media"
+  -StremioLocalMediaRoot "D:\PocketCinema Media"
 ```
 
 The installed Stremio runtime listens beyond loopback, so a Windows Firewall
@@ -161,7 +161,7 @@ Copy-Item .\server\config\stream_addons.example.json .\server\config\stream_addo
 notepad .\server\config\stream_addons.json
 ```
 
-`stream_addons.json` is ignored by git. You can also set `POCKETSTREMIO_STREAM_ADDONS` to a comma-separated list of manifest URLs.
+`stream_addons.json` is ignored by git. You can also set `POCKETCINEMA_STREAM_ADDONS` to a comma-separated list of manifest URLs.
 
 For playback compatibility measurements, generate the ignored local fixtures
 from the hosted Big Buck Bunny clip:
@@ -202,5 +202,5 @@ at most 50 entries and removes completed items.
 Run the automated server checks with:
 
 ```powershell
-python -m unittest server.test_stremio_account server.test_pocketstremio_server -v
+python -m unittest server.test_stremio_account server.test_pocketcinema_server -v
 ```

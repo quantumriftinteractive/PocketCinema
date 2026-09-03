@@ -20,7 +20,7 @@ server/media/test-video.mp4
 Run on the Miyoo:
 
 ```sh
-cd /mnt/SDCARD/App/PocketStremio/experiments/ffplay
+cd /mnt/SDCARD/App/PocketCinema/experiments/ffplay
 chmod +x network-playback.sh
 ./network-playback.sh
 ```
@@ -29,7 +29,7 @@ Then capture:
 
 ```sh
 /mnt/SDCARD/App/Tailscale/scripts/resource.sh
-tail -n 80 /mnt/SDCARD/App/PocketStremio/experiments/logs/ffplay-network.log
+tail -n 80 /mnt/SDCARD/App/PocketCinema/experiments/logs/ffplay-network.log
 ```
 
 ## App-local candidate patches
