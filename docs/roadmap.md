@@ -706,9 +706,9 @@ found-but-unreachable Local validation case also passed, as did Remote proxy
 failure/default recovery and Remote-profile restart persistence. It now includes
 first-run Local/Remote/Both setup, separate direct discovery/reachability
 handling, and direct-first Automatic routing through the existing generic
-proxy; its complete Local-unavailable → Remote → Local fallback is physically
-confirmed. The Both/Automatic acknowledgment layout and pristine first-run
-remain pending. Playback failure reporting now classifies
+proxy; its complete Local-unavailable → Remote → Local fallback and its
+three-second Both/Automatic information message are physically confirmed.
+Pristine first run remains pending. Playback failure reporting now classifies
 bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart

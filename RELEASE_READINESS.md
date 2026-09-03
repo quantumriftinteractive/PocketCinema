@@ -93,8 +93,9 @@ are also physically confirmed, as is Remote-profile restart persistence.
 Automatic's complete Local-unavailable → Remote → Local fallback is physically
 confirmed. Automatic probes Local directly, then Remote through the generic
 proxy, and all PSS requests use the resolved route. The Both/Automatic
-acknowledgment layout and pristine first-run remain pending; the release gate
-remains open until the remaining Apps-context acceptance matrix passes.
+three-second information message is physically confirmed; pristine first run
+remains pending, so the release gate remains open until the remaining
+Apps-context acceptance matrix passes.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

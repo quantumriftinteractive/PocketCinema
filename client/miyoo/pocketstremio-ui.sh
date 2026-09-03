@@ -300,7 +300,6 @@ message() {
   body="$2"
   message_mode="${3:-auto}"
   message_max_lines=4
-  [ "$message_mode" = acknowledge ] && message_max_lines=7
   if [ "${POCKETSTREMIO_HEADLESS:-0}" = "1" ]; then
     log "message mode=$message_mode title=$title body=$body"
     return 0
@@ -316,7 +315,17 @@ message() {
       }
     }
   ')
-  if [ "$message_mode" = acknowledge ]; then
+  if [ "$message_mode" = timed ]; then
+    rm -f /tmp/dismiss_info_panel
+    "$INFOPANEL" --title "$title" --message "$display_body" --persistent >/dev/null 2>&1 &
+    timed_message_pid=$!
+    sleep 3
+    if kill -0 "$timed_message_pid" 2>/dev/null; then
+      touch /tmp/dismiss_info_panel
+      wait "$timed_message_pid" 2>/dev/null || true
+    fi
+    rm -f /tmp/dismiss_info_panel
+  elif [ "$message_mode" = acknowledge ]; then
     "$INFOPANEL" --title "$title" --message "$display_body" >/dev/null 2>&1 || true
   else
     "$INFOPANEL" --title "$title" --message "$display_body" --auto >/dev/null 2>&1 || true
@@ -1889,15 +1898,11 @@ connection_setup_flow() {
         return $?
         ;;
       "Both / automatic")
-        automatic_ack_spacer=" "
         message "Automatic connection" \
           "Both addresses will be saved.
 Automatic prefers Local first.
 If it is unavailable, Remote
-uses the configured proxy.
-$automatic_ack_spacer
-$automatic_ack_spacer
-A = OK" acknowledge
+uses the configured proxy." timed
         choose_local_endpoint || continue
         both_local="$SETUP_PSS_URL"
         message "Remote connection" "Use a separately configured network helper."

@@ -181,10 +181,10 @@ available again, the saved Automatic profile returned without edits to
 `Connected (Local)`. The complete direct-first Local → Remote → Local
 Automatic fallback is physically confirmed.
 
-The Both/Automatic setup now has an implemented, automated-tested blocking
-acknowledgment explaining that both endpoints are saved and that Local is
-preferred before Remote/proxy routing. It is deployed and parses on-device;
-the revised two-blank-line separation before `A = OK` awaits Apps confirmation.
+The Both/Automatic setup now shows a physically confirmed three-second
+information panel explaining that both endpoints are saved and that Local is
+preferred before Remote/proxy routing, then opens Local setup. It uses an
+app-owned persistent panel and clears its dismissal flag after closing.
 
 ## Last Completed Work
 
@@ -198,9 +198,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Complete the remaining Phase 3 Apps-context acknowledgment-layout and
-pristine-first-run checks. Update the roadmap, evidence, and this file together
-only when the milestone is actually accepted.
+Complete the remaining Phase 3 Apps-context pristine-first-run check. Update
+the roadmap, evidence, and this file together only when the milestone is
+actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -235,6 +235,10 @@ Completed:
   Tailnet endpoint through the default proxy and report `Connected (Remote)`;
   restoring the direct hotspot address returned it to `Connected (Local)` with
   no profile edits.
+- Confirmed the Both/Automatic three-second information message from OnionOS
+  Apps. It explained Local priority and Remote/proxy fallback, then opened the
+  Local picker; the app-owned `/tmp/dismiss_info_panel` flag was clean after it
+  closed.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
@@ -360,10 +364,6 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
-- The Both/Automatic setup acknowledgment is implemented and static-tested. It
-  requires A acknowledgment and explains that both endpoints are saved and
-  Local has priority; its revised A-label spacing is deployed and awaits Apps
-  confirmation.
 - Phase 3 first-run/profile routing: Local/Remote endpoints, Automatic | Local
   only | Remote only modes, direct-first fallback, per-route status, manual
   remote validation through the generic proxy, and direct discovery candidate
@@ -384,15 +384,11 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- From OnionOS Apps, check the revised Both/Automatic acknowledgment layout:
-  it must keep visible separation before `A = OK`. Then run the
-  pristine-first-run check. Do not begin desktop PSS or release-installer work.
+- Run the pristine-first-run check. Do not begin desktop PSS or
+  release-installer work.
 
 Required next physical test:
-- A. In `Settings -> Connection setup -> Both / automatic`, verify the blocking
-  acknowledgment leaves visible vertical separation before `A = OK`; press A,
-  then back out without changing the saved profile. B. On a separate
-  pristine installation/config, launch from OnionOS Apps and
+- On a separate pristine installation/config, launch from OnionOS Apps and
   confirm the setup controller opens before the home screen; do not modify the
   preserved legacy config on the development Miyoo merely to simulate first run.
 
