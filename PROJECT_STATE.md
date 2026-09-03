@@ -1,6 +1,6 @@
 # PocketCinema Current Project State
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
@@ -65,6 +65,11 @@ required Apps-context smoke test, so this rename is **Implemented/tested but not
 physically confirmed**. Milestones 21 and 22 remain physically confirmed under
 their historical PocketStremio evidence.
 
+The canonical source artwork for the independent OnionOS Tailscale companion is
+tracked at `UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png`. It is
+not wired into `onion-tailscale/config.json`; that remains a separate packaging
+and UI decision with no effect on the companion's application identity.
+
 ## Intentional Legacy Identifiers
 
 - `POCKETSTREMIO_DISCOVER_V1` and `POCKETSTREMIO_PSS_V1` remain the private UDP
@@ -91,8 +96,8 @@ test in `docs/pocketcinema-rename-migration.md`:
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `a8c6c42222980a1ce77388c7ef2f7cbb301b0bdb`
-Remote verified: YES (`a8c6c42` is reachable from `origin/main`)
+Checkpoint commit: `965273d353f3a24a99ead5dbd6691a8e5ac2391a`
+Remote verified: pending push
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
@@ -103,6 +108,8 @@ Completed:
   redesign and no Tailscale lifecycle change.
 - Explicit Miyoo configuration/state migration, current documentation updates,
   and canonical client/server artwork documentation.
+- Canonical independent OnionOS Tailscale companion source artwork tracked,
+  documented, and left unwired.
 - Python compilation, 70 server unit tests, shell syntax and focused
   connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
   Range verification, and `git diff --check`.
@@ -113,3 +120,5 @@ Pending:
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
   retained and documented.
+- Any companion icon metadata or packaging update; `onion-tailscale/config.json`
+  still uses its existing default terminal icon.
