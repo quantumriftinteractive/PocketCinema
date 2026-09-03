@@ -204,7 +204,7 @@ only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `9ef8d8b1e7318df8cbc39bfdbe82cf442d2e4fb0`
+Checkpoint commit: `1901304533e8a54c9613cb7b54c99cb36bfdf2cb`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
