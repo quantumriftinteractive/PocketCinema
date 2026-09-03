@@ -48,20 +48,19 @@ A future desktop PSS application can make server endpoint selection and setup
 information visible, but it cannot itself create the Miyoo's network route. The
 client still needs a direct route or a separately configured generic proxy.
 
-### Proposed v1 direction (not implemented)
+### Confirmed v1 connection and onboarding direction
 
-The agreed planning direction is a direct-first PocketStremio setup with a
-separately selectable remote route. The standalone Miyoo Tailscale companion
-will remain the owner of its userspace networking and will display its HTTP
-proxy endpoint. PocketStremio will retain a generic, editable HTTP-proxy URL
-(initial default `http://127.0.0.1:1055`) and will not inspect or control the
-companion. The proposed two-endpoint profile, automatic route behavior,
-packaging boundary, and required tests are recorded in
+The direct-first PocketStremio Local/Remote/Automatic profile is implemented,
+deployed, and physically confirmed. PocketStremio retains an editable generic
+HTTP proxy with supported default `http://127.0.0.1:1055`; it validates Local
+directly, validates Remote through the configured proxy, and keeps discovery
+separate from reachability. Remote setup therefore does not depend on UDP
+discovery. The standalone Miyoo Tailscale companion remains the sole owner of
+its networking, authentication, lifecycle, and displayed proxy endpoint;
+PocketStremio does not inspect or manage it. Phase 1 companion visibility,
+Phase 2 proxy controls, and Phase 3 onboarding are all physically confirmed.
+The architectural and packaging boundary remains recorded in
 [Portable Connection and First-Run Onboarding Plan](docs/portable-connection-onboarding-plan.md).
-The companion endpoint-display phase is implemented, statically validated,
-deployed, and physically confirmed; the remaining onboarding design is not
-implemented. Nothing in this direction changes PocketStremio ownership of, or
-control over, the independent companion.
 
 PocketStremio's Phase 2 generic HTTP-proxy controls are implemented, statically
 validated, deployed, and physically confirmed. They retain direct transport
