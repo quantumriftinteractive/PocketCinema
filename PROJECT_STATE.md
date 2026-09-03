@@ -3,7 +3,7 @@
 Last updated: 2026-09-03
 Last updated by machine: macOS development checkout
 Current branch: `main`
-Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
+Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
 Active milestone: Milestone 23 — PocketStremio Server Desktop Distribution
 Release state: Not release-ready; Milestones 21 and 22 are physically confirmed, while
@@ -211,7 +211,7 @@ until the clean-PC and Miyoo acceptance gates are met.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `207ca48fd566612e898ad2c2d98160cf24cf9163`
+Checkpoint commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
