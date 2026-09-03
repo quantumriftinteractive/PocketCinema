@@ -149,6 +149,11 @@ The first-run local/remote onboarding design is documented in
 phase is implemented, statically validated, deployed, and physically confirmed
 from OnionOS Apps; no PocketStremio client or network behavior changed.
 
+Phase 2 adds PocketStremio-owned editable generic HTTP-proxy controls. It is
+implemented, statically validated, and deployed but not yet physically
+confirmed; it preserves direct transport for absent/empty `PROXY` and does not
+inspect or control the companion.
+
 ## Last Completed Work
 
 Milestone 22 selectable Matroska subtitles was accepted as Confirmed. The
@@ -241,6 +246,11 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
+- Phase 2 HTTP-proxy Settings controls: view/edit, restore the editable
+  `http://127.0.0.1:1055` default, or persistently disable proxy use. The
+  generic proxy helper normalizes HTTP host:port input, rejects credentials and
+  malformed values, preserves unrelated config, and is awaiting Apps-context
+  confirmation after deployment.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -252,13 +262,14 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Await explicit direction to begin Phase 2: PocketStremio's editable generic
-  proxy controls. Phase 1 is complete and does not authorize Phase 2 by itself.
+- Run the Phase 2 Apps-context proxy-settings persistence and existing
+proxy-aware request test.
 
 Required next physical test:
-- After Phase 2 is implemented, test editable generic-proxy configuration and
-  persistence from PocketStremio Settings without provider inspection or
-  lifecycle control.
+- From PocketStremio Settings, edit the HTTP proxy to a temporary valid value,
+  confirm persistence after app restart, restore `http://127.0.0.1:1055`, clear
+  it and confirm persistent direct mode, then restore the default and verify an
+  existing PSS request succeeds through the independently enabled companion.
 
 DO NOT:
 

@@ -64,6 +64,12 @@ The companion endpoint-display phase is implemented, statically validated,
 deployed, and physically confirmed; the remaining onboarding design is not
 implemented. Nothing in this direction changes PocketStremio ownership of, or
 control over, the independent companion.
+
+PocketStremio's Phase 2 generic HTTP-proxy controls are implemented, statically
+validated, and deployed but not yet physically confirmed. They retain direct
+transport for an absent or explicitly empty `PROXY`, and use the
+PocketStremio-owned editable restore default `http://127.0.0.1:1055`; they do
+not inspect or control the companion.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

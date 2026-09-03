@@ -67,6 +67,9 @@ When disabled, retain it as setup information but label it `HTTP proxy when enab
 
 ### 2. Add minimal PocketStremio proxy controls
 
+**Implementation status:** Implemented, statically validated, and deployed;
+pending the required Apps-context test.
+
 Preserve the HTTP-URL format. Add a `Connection settings` screen with:
 
 - `Remote proxy: <current host:port or Off>`;

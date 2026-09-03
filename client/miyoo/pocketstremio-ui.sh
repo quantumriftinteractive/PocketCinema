@@ -13,6 +13,8 @@ SERVER_BASE="${POCKETSTREMIO_SERVER:-}"
 SERVER_ENV_OVERRIDE=0
 [ -n "${POCKETSTREMIO_SERVER:-}" ] && SERVER_ENV_OVERRIDE=1
 PROXY="${POCKETSTREMIO_PROXY:-}"
+PROXY_ENV_OVERRIDE=0
+[ -n "${POCKETSTREMIO_PROXY:-}" ] && PROXY_ENV_OVERRIDE=1
 AUTO_FIRST="${POCKETSTREMIO_AUTO_FIRST:-}"
 DEFAULT_QUERY="${POCKETSTREMIO_DEFAULT_QUERY:-}"
 AUDIO_GAIN="${POCKETSTREMIO_AUDIO_GAIN:-}"
@@ -40,6 +42,7 @@ PAUSE_MONITOR="$BASE_DIR/bin/pocketstremio-pause-monitor"
 PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
 RESOURCE_MONITOR="$BASE_DIR/client/pocketstremio-resource-monitor.sh"
 DISCOVERY_CLIENT="$BASE_DIR/bin/pocketstremio-discovery"
+PROXY_HELPER="$BASE_DIR/client/pocketstremio-proxy.sh"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 APP_LOCAL_PLAYER="${POCKETSTREMIO_APP_LOCAL_PLAYER:-1}"
@@ -80,6 +83,11 @@ FAILED_STREAM_IDS=""
 STREAM_RETRY_SUBTITLE_ID=""
 
 mkdir -p "$LOG_DIR"
+[ -r "$PROXY_HELPER" ] || {
+  printf 'Missing PocketStremio HTTP proxy helper\n' >&2
+  exit 1
+}
+. "$PROXY_HELPER"
 rm -f "$PREVIOUS_LOG_FILE.tmp"
 if [ -s "$LOG_FILE" ]; then
   tail -c 262144 "$LOG_FILE" >"$PREVIOUS_LOG_FILE.tmp" 2>/dev/null \
@@ -146,8 +154,12 @@ case "$SERVER_BASE" in
   *) SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="SERVER_BASE must be an HTTP URL" ;;
 esac
 case "$PROXY" in
-  ''|http://*) ;;
-  *) CONFIG_ERROR="PROXY must be empty or an HTTP URL" ;;
+  '') ;;
+  *)
+    normalized_proxy=$(pocketstremio_normalize_http_proxy "$PROXY") ||
+      CONFIG_ERROR="PROXY must be an HTTP host:port URL without credentials"
+    [ -n "${normalized_proxy:-}" ] && PROXY="$normalized_proxy"
+    ;;
 esac
 case "$AUTO_FIRST" in
   0|1) ;;
@@ -215,7 +227,7 @@ cleanup() {
     /tmp/pocketstremio-live-tv.tsv \
     /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv \
     /tmp/pocketstremio-discovery-status.json \
-    /tmp/pocketstremio-settings.tsv \
+    /tmp/pocketstremio-settings.tsv /tmp/pocketstremio-proxy.tsv \
     /tmp/pocketstremio-continue-action \
     /tmp/pocketstremio-remove-confirm.tsv \
     /tmp/pocketstremio-language-action.tsv \
@@ -422,6 +434,13 @@ ffplay_has_subtitles() {
 }
 
 playback_setup_error() {
+  if [ -n "$PROXY" ]; then
+    case "$1" in
+      5) printf '%s\n' "Configured HTTP proxy could not be resolved"; return 0 ;;
+      7) printf '%s\n' "Configured HTTP proxy could not be reached"; return 0 ;;
+      28) printf '%s\n' "Configured HTTP proxy timed out"; return 0 ;;
+    esac
+  fi
   case "$1" in
     5|6) printf '%s\n' "PSS address could not be resolved" ;;
     7) printf '%s\n' "PSS is offline or refused the connection" ;;
@@ -870,6 +889,71 @@ save_server_base() {
   }
   mv "$config_temp" "$CONFIG_FILE" || return 1
   chmod 644 "$CONFIG_FILE"
+}
+
+proxy_display_value() {
+  if [ -n "$PROXY" ]; then
+    printf '%s' "${PROXY#http://}"
+  else
+    printf '%s' "Disabled"
+  fi
+}
+
+save_http_proxy() {
+  pocketstremio_save_http_proxy "$CONFIG_FILE" "$1"
+}
+
+activate_http_proxy() {
+  new_proxy="$1"
+  if ! save_http_proxy "$new_proxy"; then
+    message "HTTP Proxy" "Could not save proxy setting"
+    return 1
+  fi
+  if [ "$PROXY_ENV_OVERRIDE" -eq 1 ]; then
+    message "HTTP Proxy" "Saved. Environment override remains active."
+    return 0
+  fi
+  PROXY="$new_proxy"
+  if [ -n "$PROXY" ]; then
+    log "saved HTTP proxy enabled"
+    message "HTTP Proxy" "Proxy saved"
+  else
+    log "saved HTTP proxy disabled"
+    message "HTTP Proxy" "Proxy disabled; direct connections only"
+  fi
+}
+
+http_proxy_flow() {
+  while :; do
+    current_proxy=$(proxy_display_value)
+    printf 'Edit HTTP proxy\nRestore default (127.0.0.1:1055)\nDisable proxy\nBack\n' \
+      >/tmp/pocketstremio-proxy.tsv
+    proxy_action=$(select_from_file "HTTP proxy: $current_proxy" \
+      /tmp/pocketstremio-proxy.tsv)
+    case "$proxy_action" in
+      "Edit HTTP proxy")
+        proxy_initial="$PROXY"
+        [ -n "$proxy_initial" ] || proxy_initial="$POCKETSTREMIO_DEFAULT_HTTP_PROXY"
+        raw_proxy=$(read_keyboard "$proxy_initial" "HTTP proxy host:port")
+        raw_proxy=$(printf '%s' "$raw_proxy" | tr -d '\r\n')
+        [ -n "$raw_proxy" ] || continue
+        normalized_proxy=$(pocketstremio_normalize_http_proxy "$raw_proxy") || {
+          message "HTTP Proxy" "Use HTTP host:port without credentials"
+          continue
+        }
+        activate_http_proxy "$normalized_proxy"
+        ;;
+      "Restore default "*)
+        activate_http_proxy "$POCKETSTREMIO_DEFAULT_HTTP_PROXY"
+        ;;
+      "Disable proxy")
+        printf 'Disable proxy\tclear\nCancel\tcancel\n' >/tmp/pocketstremio-proxy.tsv
+        clear_action=$(select_from_file "Disable HTTP proxy?" /tmp/pocketstremio-proxy.tsv)
+        [ "$clear_action" = "Disable proxy" ] && activate_http_proxy ""
+        ;;
+      *) return 0 ;;
+    esac
+  done
 }
 
 save_audio_gain() {
@@ -1508,12 +1592,13 @@ enter_server_manually() {
 
 settings_flow() {
   while :; do
-    printf 'Scan for PSS\nEnter Manually\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
+    printf 'Scan for PSS\nEnter Manually\nHTTP proxy\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
       >/tmp/pocketstremio-settings.tsv
     settings_action=$(select_from_file "Settings" /tmp/pocketstremio-settings.tsv)
     case "$settings_action" in
       "Scan for PSS") scan_for_pss ;;
       "Enter Manually") enter_server_manually ;;
+      "HTTP proxy") http_proxy_flow ;;
       "Audio gain") audio_gain_flow ;;
       "Audio languages") audio_language_flow ;;
       "Subtitle languages") subtitle_language_flow ;;
@@ -2611,7 +2696,7 @@ select_subtitle() {
 
 cd "$SYS_DIR" || exit 1
 if [ -n "$PROXY" ]; then
-  transport="proxy:$PROXY"
+  transport="proxy"
 else
   transport="direct"
 fi
