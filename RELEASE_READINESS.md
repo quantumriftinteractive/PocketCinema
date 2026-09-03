@@ -69,7 +69,10 @@ PocketStremio's Phase 2 generic HTTP-proxy controls are implemented, statically
 validated, and deployed but not yet physically confirmed. They retain direct
 transport for an absent or explicitly empty `PROXY`, and use the
 PocketStremio-owned editable restore default `http://127.0.0.1:1055`; they do
-not inspect or control the companion.
+not inspect or control the companion. The first Apps launch exposed a strict
+validation regression for the preserved, previously supported
+`http://host:port/` spelling; a minimal deployed compatibility fix canonicalizes
+only that root-path form in memory and remains pending physical confirmation.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

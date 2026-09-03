@@ -152,7 +152,11 @@ from OnionOS Apps; no PocketStremio client or network behavior changed.
 Phase 2 adds PocketStremio-owned editable generic HTTP-proxy controls. It is
 implemented, statically validated, and deployed but not yet physically
 confirmed; it preserves direct transport for absent/empty `PROXY` and does not
-inspect or control the companion.
+inspect or control the companion. Its first Apps launch exposed a startup
+compatibility regression for the preserved, previously supported
+`http://host:port/` spelling. The deployed fix canonicalizes only that root
+path form in memory without rewriting the live config; Apps confirmation is
+still required.
 
 ## Last Completed Work
 
@@ -178,6 +182,12 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Deployed a Phase 2 startup-compatibility fix after the first Apps test found
+  that the preserved `PROXY=http://127.0.0.1:1055/` was rejected by the new
+  strict validator. The helper now accepts and canonicalizes the old root-path
+  form while retaining rejection of credentials and non-root paths. The device
+  config line and unrelated settings were left unchanged; physical retest is
+  pending.
 - Implemented and deployed Phase 2 generic HTTP-proxy controls. The live
   PocketStremio config was preserved; new helper/UI scripts parse on-device.
   Automated checks pass, while Apps-context settings and real proxy-use tests
@@ -253,8 +263,9 @@ Implemented/tested but not physically confirmed:
 - Phase 2 HTTP-proxy Settings controls: view/edit, restore the editable
   `http://127.0.0.1:1055` default, or persistently disable proxy use. The
   generic proxy helper normalizes HTTP host:port input, rejects credentials and
-  malformed values, preserves unrelated config, and is awaiting Apps-context
-  confirmation after deployment.
+  malformed values, preserves unrelated config, and accepts the prior valid
+  `http://host:port/` root-path spelling without an interactive startup error.
+  It is awaiting Apps-context confirmation after deployment.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -262,18 +273,25 @@ Implemented/tested but not physically confirmed:
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
+- Phase 2 is not physically confirmed: its initial Apps launch exposed the
+  legacy root-path proxy validation regression. The minimal compatibility fix
+  is deployed and must first prove a clean startup before the full proxy test.
 - Tailnet first-run onboarding is blocked until the app can obtain its generic
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Run the Phase 2 Apps-context proxy-settings persistence and existing
-proxy-aware request test.
+- From OnionOS Apps, launch PocketStremio once with the preserved
+  `PROXY=http://127.0.0.1:1055/` and confirm it reaches the home UI without a
+  validation dialog; then run the full Phase 2 proxy-settings persistence and
+  existing proxy-aware request test.
 
 Required next physical test:
-- From PocketStremio Settings, edit the HTTP proxy to a temporary valid value,
-  confirm persistence after app restart, restore `http://127.0.0.1:1055`, clear
-  it and confirm persistent direct mode, then restore the default and verify an
-  existing PSS request succeeds through the independently enabled companion.
+- First launch PocketStremio from Apps using the preserved root-path proxy
+  value and confirm no validation dialog. Then from Settings edit the HTTP
+  proxy to a temporary valid value, confirm persistence after app restart,
+  restore `http://127.0.0.1:1055`, clear it and confirm persistent direct mode,
+  then restore the default and verify an existing PSS request succeeds through
+  the independently enabled companion.
 
 DO NOT:
 

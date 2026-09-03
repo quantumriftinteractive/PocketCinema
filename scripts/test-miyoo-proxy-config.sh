@@ -27,9 +27,11 @@ assert_equal "$(pocketstremio_normalize_http_proxy 127.0.0.1:1055)" \
   "http://127.0.0.1:1055"
 assert_equal "$(pocketstremio_normalize_http_proxy http://proxy.example:8080)" \
   "http://proxy.example:8080"
+assert_equal "$(pocketstremio_normalize_http_proxy http://127.0.0.1:1055/)" \
+  "http://127.0.0.1:1055"
 for invalid_proxy in '' 'http://:1055' '127.0.0.1' '127.0.0.1:0' \
   '127.0.0.1:65536' 'https://127.0.0.1:1055' 'http://user@127.0.0.1:1055' \
-  'http://127.0.0.1:1055/path' '127.0.0.1:10 55'; do
+  'http://127.0.0.1:1055/path' 'http://127.0.0.1:1055//' '127.0.0.1:10 55'; do
   assert_invalid "$invalid_proxy"
 done
 

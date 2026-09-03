@@ -9,7 +9,15 @@ pocketstremio_normalize_http_proxy() {
   [ -n "$proxy_value" ] || return 1
   case "$proxy_value" in
     *[[:space:]]*|*'?'*|*'%'*|*'@'*) return 1 ;;
-    http://*) proxy_endpoint=${proxy_value#http://} ;;
+    http://*)
+      proxy_endpoint=${proxy_value#http://}
+      # Legacy configs were passed straight to curl, which accepts the
+      # conventional root-path spelling. Canonicalize only that one harmless
+      # trailing slash; non-root paths remain unsupported.
+      case "$proxy_endpoint" in
+        */) proxy_endpoint=${proxy_endpoint%/} ;;
+      esac
+      ;;
     *://*) return 1 ;;
     *) proxy_endpoint=$proxy_value ;;
   esac

@@ -68,7 +68,10 @@ When disabled, retain it as setup information but label it `HTTP proxy when enab
 ### 2. Add minimal PocketStremio proxy controls
 
 **Implementation status:** Implemented, statically validated, and deployed;
-pending the required Apps-context test.
+pending the required Apps-context test. The first launch found that a preserved
+legacy `http://host:port/` value (valid under the prior curl-only handling) was
+too strictly rejected. The deployed compatibility fix canonicalizes only that
+root-path spelling in memory; physical confirmation remains pending.
 
 Preserve the HTTP-URL format. Add a `Connection settings` screen with:
 
