@@ -334,6 +334,9 @@ Required next physical test:
   `Remote proxy unavailable`, then restore the default. F. Confirm a found but
   direct-unreachable discovery candidate is labelled/handled as unreachable.
   G. Restart and confirm endpoints, mode, proxy, and the selected route persist.
+  H. On a separate pristine installation/config, launch from OnionOS Apps and
+  confirm the setup controller opens before the home screen; do not modify the
+  preserved legacy config on the development Miyoo merely to simulate first run.
 
 DO NOT:
 

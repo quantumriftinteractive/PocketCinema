@@ -138,5 +138,7 @@ assert_ui_contains 'pocketstremio_save_connection_profile "$CONFIG_FILE"'
 assert_ui_contains 'start_server_monitor'
 assert_ui_contains 'ensure_active_route()'
 assert_ui_count 'ensure_active_route || return 1' 5
+assert_ui_contains 'if [ "$SERVER_URL_VALID" -ne 1 ]; then'
+assert_ui_contains '  connection_setup_flow'
 
 printf 'Miyoo connection profile tests passed\n'
