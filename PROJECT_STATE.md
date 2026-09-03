@@ -168,8 +168,10 @@ that direct PSS, and selection completed a separate direct validation. The
 Remote-only setup is also confirmed: it saved the Tailnet endpoint, showed
 `Connected (Remote)`, and returned a Miyoo `friday` search through the proxy.
 The Local scan of that Tailnet advertisement correctly failed direct validation
-as the negative discovery case. Automatic fallback, proxy-failure/restore,
-restart persistence, and pristine-first-run remain pending.
+as the negative discovery case. Changing the Remote-only proxy to
+`127.0.0.1:1056` reported `Remote proxy unavailable`; restoring the default
+immediately returned to `Connected (Remote)`. Automatic fallback, restart
+persistence, and pristine-first-run remain pending.
 
 ## Last Completed Work
 
@@ -208,6 +210,10 @@ Completed:
   `friday` search returned HTTP 200 through that route. Scanning the same
   Tailnet-advertised endpoint under Local setup then failed the required direct
   validation, confirming the found-but-unreachable negative case.
+- Confirmed Phase 3 Remote-only proxy recovery. Editing the proxy to
+  `127.0.0.1:1056` restarted the status monitor and reported `Remote proxy
+  unavailable`; Restore default saved `127.0.0.1:1055`, restarted the monitor,
+  and returned to `Connected (Remote)` without an app restart.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
@@ -338,8 +344,8 @@ Implemented/tested but not physically confirmed:
   remote validation through the generic proxy, and direct discovery candidate
   validation. Legacy, manual Local-only, and normal discovery/validation are
   physically confirmed; Remote-only and the found-but-unreachable discovery
-  case are also confirmed. Automatic, proxy-failure, restart, and
-  pristine-first-run checks remain pending.
+  case are also confirmed. Remote proxy-failure/default recovery is confirmed.
+  Automatic, restart, and pristine-first-run checks remain pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -351,18 +357,15 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Complete the Remote-only proxy-failure/default-restore and restart-persistence
-  Apps checks while the Mac PSS is Tailnet-bound. Then run Automatic fallback
-  with usable Local and Remote endpoints. Do not begin desktop PSS or
-  release-installer work.
+- Restart PocketStremio and confirm the Remote endpoint, mode, proxy, and
+  selected route persist. Then run Automatic fallback with usable Local and
+  Remote endpoints. Do not begin desktop PSS or release-installer work.
 
 Required next physical test:
-- A. Set the Remote-only proxy to `127.0.0.1:1056` and confirm `Remote proxy
-  unavailable`, then restore the default and confirm `Connected (Remote)` plus
-  a `friday` search. B. Restart and confirm the Remote endpoint, mode, proxy,
-  and selected route persist. C. Configure both: verify local is Connected
+- A. Restart and confirm the Remote endpoint, mode, proxy, and selected route
+  persist. B. Configure both: verify local is Connected
   (Local), make it unavailable, verify Connected (Remote), then restore local
-  and verify the next cycle returns to Local. D. On a separate
+  and verify the next cycle returns to Local. C. On a separate
   pristine installation/config, launch from OnionOS Apps and
   confirm the setup controller opens before the home screen; do not modify the
   preserved legacy config on the development Miyoo merely to simulate first run.

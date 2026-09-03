@@ -88,9 +88,11 @@ Remote only mode. Legacy startup and manual Local-only setup/search are
 physically confirmed; normal UDP discovery and selection validation also passed
 against the hotspot PSS. Remote-only setup/search through the default proxy and
 the found-but-unreachable Local validation case are also physically confirmed.
-Automatic probes Local directly, then Remote through the generic proxy, and all
-PSS requests use the resolved route. The release gate remains open until the
-remaining Apps-context acceptance matrix passes.
+Remote proxy failure at `127.0.0.1:1056` and immediate default-proxy recovery
+are also physically confirmed. Automatic probes Local directly, then Remote
+through the generic proxy, and all PSS requests use the resolved route. The
+release gate remains open until the remaining Apps-context acceptance matrix
+passes.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
