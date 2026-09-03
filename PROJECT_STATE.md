@@ -167,13 +167,17 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `7af07d6b1b9d0f9aa29e514d941f82abe4a5c5fc`
+Checkpoint commit: `541f56abfb42047e348277ac6d7f0cb81ba3b6ea`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Added a normal deployer reuse mode for tracked companion upgrades when the
+  ignored local Tailscale binaries are absent. It verifies and preserves the
+  installed device binaries, state, and logs; deployment and the enabled-screen
+  endpoint display have been observed, with recovery testing still pending.
 - Implemented the companion-only HTTP proxy endpoint display. The shared
   listener source preserves the `127.0.0.1:1055` default and the existing
   launch-time overrides; shell/static checks pass and the change was deployed
