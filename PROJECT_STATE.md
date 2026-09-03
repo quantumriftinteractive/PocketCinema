@@ -160,8 +160,12 @@ Phase 3 first-run connection onboarding, discovery/reachability separation,
 and two-endpoint routing are implemented, automated/static-validated, and
 deployed. They preserve legacy `SERVER_BASE`/`PROXY` behavior without automatic
 migration, add atomically saved Local/Remote/Mode profile fields, and use one
-active direct-or-proxied route for all client requests. Apps-context acceptance
-is pending.
+active direct-or-proxied route for all client requests. Apps-context evidence
+partially confirms legacy startup and the manual Local direct route: the Miyoo
+saved `172.20.10.3:8755` as Local-only, showed `Connected (Local)`, and returned
+`friday` search results through that direct route. Discovery was attempted
+before the persistent hotspot PSS listener was available, so it remains
+untested; the remaining route-mode checks are also pending.
 
 ## Last Completed Work
 
@@ -175,7 +179,8 @@ inputs are unavailable.
 
 ## Next Action
 
-Run the remaining settings/preference Apps-context checks. Update the roadmap,
+Complete the remaining Phase 3 Apps-context route-mode, proxy-failure,
+discovery, persistence, and pristine-first-run checks. Update the roadmap,
 evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
@@ -187,6 +192,12 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Partially confirmed Phase 3 from OnionOS Apps. The preserved legacy route
+  started normally. On the iPhone hotspot, manually entering the Mac PSS's
+  direct address saved `LOCAL_PSS`, selected Local-only mode, showed
+  `Connected (Local)`, and returned `friday` search results directly from the
+  Miyoo. An earlier scan ran before the persistent hotspot listener existed;
+  discovery therefore remains untested rather than failed.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
@@ -259,6 +270,11 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
+- Phase 3 partial acceptance: legacy startup and manual Local-only setup are
+  confirmed. The direct hotspot PSS route was selected, persisted, reported
+  `Connected (Local)`, and served a Miyoo `friday` search. UDP scan did not
+  run against the persistent hotspot listener; direct device-to-PSS HTTP was
+  separately verified, so discovery remains unconfirmed.
 - Phase 2 generic HTTP-proxy controls: the settings UI accepts a legacy
   `http://host:port/` value at startup; explicit disable and enable-default
   actions persist correctly; proxy changes immediately invalidate the old PSS
@@ -307,8 +323,9 @@ Implemented/tested but not physically confirmed:
 - Phase 3 first-run/profile routing: Local/Remote endpoints, Automatic | Local
   only | Remote only modes, direct-first fallback, per-route status, manual
   remote validation through the generic proxy, and direct discovery candidate
-  validation. It is deployed with the legacy config preserved and awaits the
-  required Apps-context acceptance matrix.
+  validation. Legacy and manual Local-only flow are physically confirmed; the
+  Remote-only, Automatic, proxy-failure, restart, pristine-first-run, and
+  discovery checks remain pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -320,21 +337,22 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Run the Phase 3 Apps-context local, remote, automatic-routing, proxy-failure,
-  discovery-separation, and persistence acceptance checks. Do not begin
-  desktop PSS or release-installer work.
+- Rebind the Mac PSS to its Tailnet address and complete Remote-only, proxy
+  failure/default restore, and persistence Apps checks. First retry UDP
+  discovery against the running hotspot PSS. Do not begin desktop PSS or
+  release-installer work.
 
 Required next physical test:
-- A. Launch with the preserved legacy config and confirm normal startup/Search.
-  B. Configure a direct Local-only PSS, validate, and Search. C. Configure a
-  Remote-only tailnet PSS with the default proxy, validate without discovery,
-  and Search. D. Configure both: verify local is Connected (Local), make it
-  unavailable, verify Connected (Remote), then restore local and verify the
-  next cycle returns to Local. E. Set proxy `127.0.0.1:1056` and confirm
-  `Remote proxy unavailable`, then restore the default. F. Confirm a found but
+- A. Configure a Remote-only tailnet PSS with the default proxy, validate
+  without discovery, and Search. B. Configure both: verify local is Connected
+  (Local), make it unavailable, verify Connected (Remote), then restore local
+  and verify the next cycle returns to Local. C. Set proxy `127.0.0.1:1056`
+  and confirm `Remote proxy unavailable`, then restore the default. D. Retry
+  UDP discovery against the running hotspot PSS, then confirm a found but
   direct-unreachable discovery candidate is labelled/handled as unreachable.
-  G. Restart and confirm endpoints, mode, proxy, and the selected route persist.
-  H. On a separate pristine installation/config, launch from OnionOS Apps and
+  E. Restart and confirm
+  endpoints, mode, proxy, and the selected route persist. F. On a separate
+  pristine installation/config, launch from OnionOS Apps and
   confirm the setup controller opens before the home screen; do not modify the
   preserved legacy config on the development Miyoo merely to simulate first run.
 

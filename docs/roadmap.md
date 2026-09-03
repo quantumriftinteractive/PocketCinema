@@ -698,8 +698,10 @@ accepted. The proposed direct-first, generic-proxy remote route is documented
 in [Portable Connection and First-Run Onboarding Plan](portable-connection-onboarding-plan.md);
 the companion's endpoint-display phase is implemented, statically tested,
 deployed, and physically confirmed; the remaining PocketStremio onboarding work
-is implemented, automated/static-tested, and deployed but not physically
-confirmed. It now includes first-run Local/Remote/Both setup, separate direct
+is implemented, automated/static-tested, deployed, and partially physically
+confirmed. Legacy startup and manual Local-only direct setup/search passed from
+OnionOS Apps; discovery remains untested against the persistent hotspot PSS.
+It now includes first-run Local/Remote/Both setup, separate direct
 discovery/reachability handling, and direct-first Automatic routing through the
 existing generic proxy. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback

@@ -80,13 +80,15 @@ Connected, disabled direct-route transitions, and a `friday` search after
 restoring the default all passed from Apps.
 
 Phase 3 first-run connection onboarding and two-endpoint routing are
-implemented, automated/static-validated, and deployed but not physically
-confirmed. The client retains legacy single-server configuration unchanged;
-new profiles atomically store Local PSS, Remote PSS, and Automatic | Local only
-| Remote only mode. Automatic probes Local directly, then Remote through the
-generic proxy, and all PSS requests use the resolved route. This closes the
-implementation gap but not the release gate until the Apps-context acceptance
-matrix passes.
+implemented, automated/static-validated, deployed, and partially physically
+confirmed, but not accepted. The client retains legacy single-server
+configuration unchanged; new
+profiles atomically store Local PSS, Remote PSS, and Automatic | Local only |
+Remote only mode. Legacy startup and manual Local-only setup/search are
+physically confirmed; discovery remains untested against the now-running
+hotspot PSS. Automatic probes Local directly, then Remote through the generic
+proxy, and all PSS requests use the resolved route. The release gate remains
+open until the remaining Apps-context acceptance matrix passes.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
