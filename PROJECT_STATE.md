@@ -176,8 +176,8 @@ pristine-first-run remain pending.
 
 The Both/Automatic setup now has an implemented, automated-tested blocking
 acknowledgment explaining that both endpoints are saved and that Local is
-preferred before Remote/proxy routing. Device deployment and Apps confirmation
-are pending while the Miyoo's hotspot-side SSH connection is unavailable.
+preferred before Remote/proxy routing. It is deployed and parses on-device;
+Apps confirmation of the required A acknowledgment is pending.
 
 ## Last Completed Work
 
@@ -350,7 +350,7 @@ Physically confirmed:
 Implemented/tested but not physically confirmed:
 - The Both/Automatic setup acknowledgment is implemented and static-tested. It
   requires A acknowledgment and explains that both endpoints are saved and
-  Local has priority; its device deployment/Apps confirmation is pending.
+  Local has priority; it is deployed and awaits Apps confirmation.
 - Phase 3 first-run/profile routing: Local/Remote endpoints, Automatic | Local
   only | Remote only modes, direct-first fallback, per-route status, manual
   remote validation through the generic proxy, and direct discovery candidate
