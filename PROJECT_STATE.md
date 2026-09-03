@@ -211,7 +211,7 @@ until the clean-PC and Miyoo acceptance gates are met.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
+Checkpoint commit: `8c573e7d68c8aac88082b17783d6b5218195d100`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
