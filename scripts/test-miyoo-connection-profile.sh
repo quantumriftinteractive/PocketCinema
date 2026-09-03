@@ -140,5 +140,8 @@ assert_ui_contains 'ensure_active_route()'
 assert_ui_count 'ensure_active_route || return 1' 5
 assert_ui_contains 'if [ "$SERVER_URL_VALID" -ne 1 ]; then'
 assert_ui_contains '  connection_setup_flow'
+assert_ui_contains 'message "Automatic connection"'
+assert_ui_contains 'Automatic prefers Local first.'
+assert_ui_contains 'uses the configured proxy. A=OK" acknowledge'
 
 printf 'Miyoo connection profile tests passed\n'

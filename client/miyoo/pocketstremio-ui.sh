@@ -298,8 +298,9 @@ log() {
 message() {
   title="$1"
   body="$2"
+  message_mode="${3:-auto}"
   if [ "${POCKETSTREMIO_HEADLESS:-0}" = "1" ]; then
-    log "message title=$title body=$body"
+    log "message mode=$message_mode title=$title body=$body"
     return 0
   fi
   display_body=$(printf '%s\n' "$body" | tr '\r' ' ' | fold -s -w 32 | awk '
@@ -312,7 +313,11 @@ message() {
       }
     }
   ')
-  "$INFOPANEL" --title "$title" --message "$display_body" --auto >/dev/null 2>&1 || true
+  if [ "$message_mode" = acknowledge ]; then
+    "$INFOPANEL" --title "$title" --message "$display_body" >/dev/null 2>&1 || true
+  else
+    "$INFOPANEL" --title "$title" --message "$display_body" --auto >/dev/null 2>&1 || true
+  fi
 }
 
 start_loading() {
@@ -1881,6 +1886,11 @@ connection_setup_flow() {
         return $?
         ;;
       "Both / automatic")
+        message "Automatic connection" \
+          "Both addresses will be saved.
+Automatic prefers Local first.
+If it is unavailable, Remote
+uses the configured proxy. A=OK" acknowledge
         choose_local_endpoint || continue
         both_local="$SETUP_PSS_URL"
         message "Remote connection" "Use a separately configured network helper."
