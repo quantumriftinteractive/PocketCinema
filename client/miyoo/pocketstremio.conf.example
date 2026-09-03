@@ -3,7 +3,7 @@
 # Required PocketStremio server URL, using a LAN or overlay-network address.
 SERVER_BASE=
 # Leave empty for direct LAN or other system-provided connectivity. Settings can
-# restore the supported generic HTTP-proxy default: http://127.0.0.1:1055.
+# restore the supported generic HTTP-proxy default.
 PROXY=
 DEFAULT_QUERY=big buck bunny
 AUTO_FIRST=0

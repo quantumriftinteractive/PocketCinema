@@ -926,8 +926,9 @@ activate_http_proxy() {
 http_proxy_flow() {
   while :; do
     current_proxy=$(proxy_display_value)
-    printf 'Edit HTTP proxy\nRestore default (127.0.0.1:1055)\nDisable proxy\nBack\n' \
-      >/tmp/pocketstremio-proxy.tsv
+    default_proxy_display=${POCKETSTREMIO_DEFAULT_HTTP_PROXY#http://}
+    printf 'Edit HTTP proxy\nRestore default (%s)\nDisable proxy\nBack\n' \
+      "$default_proxy_display" >/tmp/pocketstremio-proxy.tsv
     proxy_action=$(select_from_file "HTTP proxy: $current_proxy" \
       /tmp/pocketstremio-proxy.tsv)
     case "$proxy_action" in
