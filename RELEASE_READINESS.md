@@ -20,6 +20,35 @@ requirement, but its implementation is gated on Milestone 21 completion.
 Until Milestone 23 is implemented and accepted from the actual packaged
 artifact, the Python/PowerShell workflow below remains a developer/source path,
 not the intended end-user v1.0 installation.
+
+## Verified Connection and Onboarding Blocker
+
+First-run Miyoo onboarding is not release-ready for every supported transport.
+The client correctly defaults to direct HTTP, but its first-run UI currently
+cannot configure the optional generic HTTP proxy before it scans for or validates
+a PSS. In the measured development environment, the PSS was listening on its
+tailnet address and the shared Wi-Fi blocked peer UDP discovery. The Miyoo did
+receive a PSS discovery response, but could not validate that PSS or a manually
+entered tailnet address because the saved app-local proxy configuration had
+been intentionally removed for the first-run test. The original configuration
+was restored unchanged after the test.
+
+This is not a request for PocketStremio to manage Tailscale or any other
+network provider. The product gap is a transport-agnostic onboarding path that:
+
+- tries direct LAN connection first without exposing unnecessary networking
+  complexity to ordinary users;
+- offers a clearly optional generic HTTP-proxy route when direct validation
+  fails or the user intentionally chooses remote connection;
+- validates and atomically saves the selected PSS endpoint and optional proxy;
+- supports a future installer, profile, or setup-code handoff without copying
+  credentials, runtime state, or private configuration; and
+- does not rely on public port forwarding, because the PSS has no public-facing
+  authentication and Stremio Service must remain loopback-only on its host.
+
+A future desktop PSS application can make server endpoint selection and setup
+information visible, but it cannot itself create the Miyoo's network route. The
+client still needs a direct route or a separately configured generic proxy.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
@@ -56,6 +85,9 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   with credentials remaining on the gaming PC.
 - A fresh SD-card installation can be configured without copying private URLs,
   tokens, generated media, logs, or runtime state from the development machine.
+- First-run client onboarding succeeds for direct LAN PSS access and for an
+  explicitly selected optional generic HTTP-proxy route, without requiring a
+  pre-existing PocketStremio config file.
 - A normal Windows user can install or extract the PocketStremio Server desktop
   application, configure it, and operate its owned server without installing
   Python, running PowerShell, cloning the repository, or preparing environment
@@ -90,6 +122,10 @@ saving, and complete PSS/Miyoo cleanup. Milestone 22 is therefore physically
   is actually present on a fresh installation.
 - A fresh-SD test passes with a clean account or explicitly documented no-account
   mode.
+- A fresh Miyoo can discover or enter a direct-LAN PSS address, and can select
+  an optional generic proxy before validating a routed PSS address. This must
+  be physically tested without starting, stopping, inspecting, or configuring
+  the independent network provider from PocketStremio.
 - A normal direct-play movie, a series episode, a converted subtitle case, and
   a server restart/recovery case pass from Apps.
 - A converted multi-audio stream allows choosing a verified audio track before
