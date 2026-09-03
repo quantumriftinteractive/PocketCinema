@@ -166,13 +166,17 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `022da8986ce9d28b7ea828f7521704d2427542e1`
+Checkpoint commit: `7af07d6b1b9d0f9aa29e514d941f82abe4a5c5fc`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Implemented the companion-only HTTP proxy endpoint display. The shared
+  listener source preserves the `127.0.0.1:1055` default and the existing
+  launch-time overrides; shell/static checks pass, while the Apps test remains
+  pending because no Miyoo SSH host was available for deployment.
 - Recorded the proposed portable local/remote connection design, including the
   independent companion proxy display, editable generic proxy, first-run flow,
   two-route automatic behavior, release packaging boundary, and acceptance
