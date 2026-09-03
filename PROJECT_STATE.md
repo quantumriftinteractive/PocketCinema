@@ -171,13 +171,17 @@ evidence, and this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `7b553c4b0b12340ec579448968518206b79e53ac`
+Checkpoint commit: `e74def272ddb1a087d0a793804e445b66e68eb87`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Implemented and deployed Phase 2 generic HTTP-proxy controls. The live
+  PocketStremio config was preserved; new helper/UI scripts parse on-device.
+  Automated checks pass, while Apps-context settings and real proxy-use tests
+  remain pending.
 - Physically confirmed the companion endpoint display in both Enabled and
   Disabled states. The controller Disable -> Enable recovery restored the
   expected proxy listeners and tailnet IP, then B exited cleanly.
