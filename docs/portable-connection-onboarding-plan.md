@@ -74,6 +74,8 @@ too strictly rejected. The deployed compatibility fix canonicalizes only that
 root-path spelling in memory. The subsequent persistence run found that the
 existing PSS status monitor was not restarted after proxy changes; the minimal
 deployed correction restarts that same monitor and awaits physical confirmation.
+The disabled-state `Enable default (127.0.0.1:1055)` action is physically
+observed; the full status-transition sequence remains pending.
 
 Preserve the HTTP-URL format. Add a `Connection settings` screen with:
 

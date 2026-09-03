@@ -158,7 +158,8 @@ compatibility regression for the preserved, previously supported
 path form in memory without rewriting the live config. The later Apps settings
 run confirmed persistence but found that a proxy change left the existing PSS
 monitor result stale until restart. The minimal refresh fix is implemented and
-awaits physical retest.
+awaits physical retest. The disabled-state activation menu is physically
+confirmed; the remaining transition checks are still required.
 
 ## Last Completed Work
 
@@ -187,8 +188,8 @@ Completed:
 - Corrected the disabled Phase 2 proxy menu after Apps testing showed it still
   offered a redundant `Disable proxy` action. The deployed disabled state now
   offers the explicit `Enable default (127.0.0.1:1055)` action, manual edit,
-  and Back; Disable appears only when a proxy is enabled. Physical retest is
-  pending.
+  and Back; Disable appears only when a proxy is enabled. Apps confirmation
+  selected the new action and restored the saved default proxy.
 - Implemented the Phase 2 stale-status correction after physical testing found
   that proxy edit, default restore, and disable kept the PSS monitor result
   from the previous transport. A successful effective proxy change now restarts
@@ -242,6 +243,10 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
+- With `PROXY=` saved, the Phase 2 HTTP-proxy menu showed `Enable default
+  (127.0.0.1:1055)`. Selecting it saved `PROXY=http://127.0.0.1:1055` and
+  restarted the existing PSS status monitor. The full transition sequence is
+  still pending, so Phase 2 is not confirmed.
 - The companion's Enabled and Disabled Apps screens visibly show its HTTP proxy
   endpoint. A controller Disable -> Enable cycle restored its
   `127.0.0.1:1055` listeners and `100.97.46.26` IP; B exited cleanly.
@@ -283,7 +288,7 @@ Implemented/tested but not physically confirmed:
   found after transport changes; the immediate existing-monitor refresh fix is
   deployed and awaiting Apps-context confirmation. When disabled, the deployed
   menu explicitly offers `Enable default (127.0.0.1:1055)` instead of a
-  redundant disable action.
+  redundant disable action; that activation behavior is physically confirmed.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -300,16 +305,13 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- From OnionOS Apps open Settings > HTTP proxy with `PROXY=` and select
-  `Enable default (127.0.0.1:1055)`; then verify the Phase 2 transport-refresh
-  behavior without restarting PocketStremio.
+- From OnionOS Apps verify the remaining Phase 2 transport-refresh sequence:
+  unreachable edit, default restore, then disable, each without restarting.
 
 Required next physical test:
-- From Settings > HTTP proxy while disabled, select `Enable default
-  (127.0.0.1:1055)`: it must immediately show `Connecting...`, then
-  `Connected` without restart. Set `127.0.0.1:1056` and return home: it must
-  show `Connecting...`, then `Offline`. Restore the default: it must again
-  show `Connecting...`, then `Connected`. Disable the proxy and confirm the
+- Set `127.0.0.1:1056` and return home: it must show `Connecting...`, then
+  `Offline` without restart. Restore `127.0.0.1:1055`: it must again show
+  `Connecting...`, then `Connected`. Disable the proxy and confirm the
   direct-only confirmation plus the same Connecting-to-current-result behavior.
   Finally re-enable the default and verify an existing PSS request succeeds
   through the independently enabled companion.

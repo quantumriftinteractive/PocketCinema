@@ -75,7 +75,8 @@ validation regression for the preserved, previously supported
 only that root-path form in memory. The subsequent Apps settings run confirmed
 proxy persistence but found stale PSS status after an effective transport
 change; the monitor-refresh correction is deployed and awaits physical
-confirmation.
+confirmation. The disabled-state `Enable default (127.0.0.1:1055)` control has
+been observed from Apps; the remaining status-transition sequence is pending.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
