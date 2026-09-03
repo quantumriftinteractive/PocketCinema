@@ -90,6 +90,13 @@ Do not add proxy types, credentials, PAC/SOCKS support, provider discovery, or a
 
 ### 3. Replace first-run connection setup
 
+**Implementation status:** Implemented, automated/static-validated, and
+deployed; pending Apps-context confirmation. The approved two-endpoint profile,
+mode selection, direct local validation, manual remote validation through the
+generic proxy, and direct-first Automatic resolution are included in this Phase
+3 delivery. Legacy `SERVER_BASE`/`PROXY` configurations remain legacy routes
+until a user deliberately saves a profile.
+
 When no usable profile exists, open:
 
 ```text
@@ -108,11 +115,17 @@ Classify failures by stage. A proxy refusal/timeout says the remote route or hel
 
 ### 4. Make discovery and reachability distinct
 
+**Implementation status:** Included in the Phase 3 delivery above; pending
+Apps-context confirmation.
+
 Keep UDP discovery direct as a Local setup convenience. Keep every syntactically valid advertisement in selection data, label it `Found on local network`, and separately report direct validation as `Reachable` or `Not reachable from this route`. Selection retries direct validation before saving the Local URL.
 
 Do not proxy UDP discovery. Remote setup uses a manually entered Remote PSS URL or a future trusted setup handoff, then validates via the selected generic proxy. A future PSS desktop app may display/copy addresses but must not make UDP discovery a remote requirement.
 
 ### 5. Add profile routing and resilient startup
+
+**Implementation status:** Included in the Phase 3 delivery above; pending
+Apps-context confirmation.
 
 After first-run setup works, add the local/remote fields and modes. Resolve one active route at launch and use it consistently for status, API calls, play URLs, subtitles, progress, and FFplay proxy environment. Quick Resume binds to the logical PSS profile plus route identity so it does not silently replay against another PSS.
 

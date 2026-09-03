@@ -1,10 +1,16 @@
 # Copy this file to config/pocketstremio.conf on the Miyoo.
 # Environment variables still take precedence over these values.
-# Required PocketStremio server URL, using a LAN or overlay-network address.
+# Legacy single PSS URL. Existing configurations remain supported unchanged.
 SERVER_BASE=
 # Leave empty for direct LAN or other system-provided connectivity. Settings can
 # restore the supported generic HTTP-proxy default.
 PROXY=
+# New connection profile. Leave all three endpoint/mode fields empty to retain
+# legacy SERVER_BASE behavior. Automatic tries Local directly, then Remote
+# through PROXY. Remote setup requires a separately configured generic proxy.
+LOCAL_PSS=
+REMOTE_PSS=
+CONNECTION_MODE=
 DEFAULT_QUERY=big buck bunny
 AUTO_FIRST=0
 # App-local decoded-audio gain for normal Onion FFplay playback (1 to 2).

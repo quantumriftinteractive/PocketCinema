@@ -59,6 +59,7 @@ $files = @(
   @{ Local = "app/playback-poc.sh"; Remote = "playback-poc.sh" },
   @{ Local = "client/miyoo/pocketstremio-ui.sh"; Remote = "client/pocketstremio-ui.sh" },
   @{ Local = "client/miyoo/pocketstremio-proxy.sh"; Remote = "client/pocketstremio-proxy.sh" },
+  @{ Local = "client/miyoo/pocketstremio-connection.sh"; Remote = "client/pocketstremio-connection.sh" },
   @{ Local = "client/miyoo/pocketstremio-resource-monitor.sh"; Remote = "client/pocketstremio-resource-monitor.sh" },
   @{ Local = "client/miyoo/bin/pocketstremio-selector"; Remote = "bin/pocketstremio-selector" },
   @{ Local = "client/miyoo/bin/pocketstremio-pause-monitor"; Remote = "bin/pocketstremio-pause-monitor" },
@@ -115,6 +116,7 @@ $modeTargets = @(
   "$Destination/playback-poc.sh",
   "$Destination/client/pocketstremio-ui.sh",
   "$Destination/client/pocketstremio-proxy.sh",
+  "$Destination/client/pocketstremio-connection.sh",
   "$Destination/client/pocketstremio-resource-monitor.sh",
   "$Destination/bin/pocketstremio-selector",
   "$Destination/bin/pocketstremio-pause-monitor",
@@ -129,6 +131,7 @@ $shellTargets = @(
   "$Destination/playback-poc.sh",
   "$Destination/client/pocketstremio-ui.sh",
   "$Destination/client/pocketstremio-proxy.sh",
+  "$Destination/client/pocketstremio-connection.sh",
   "$Destination/client/pocketstremio-resource-monitor.sh",
   "$Destination/experiments/button-diagnostic.sh"
 ) -join " "
@@ -139,7 +142,7 @@ $playerVerifyTargets = @(
   "$Destination/experiments/ffplay/fonts/PocketStremio.ttf"
 ) + ($libraries | ForEach-Object { "$Destination/experiments/ffplay/lib/$($_.Remote)" })
 $playerVerify = "for f in $($playerVerifyTargets -join ' '); do test -s `"`$f`" || exit 1; done"
-$verify = "$normalize && chmod +x $modeTargets && $playerVerify && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh && /bin/sh -n $Destination/client/pocketstremio-proxy.sh && /bin/sh -n $Destination/client/pocketstremio-resource-monitor.sh"
+$verify = "$normalize && chmod +x $modeTargets && $playerVerify && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketstremio-ui.sh && /bin/sh -n $Destination/client/pocketstremio-proxy.sh && /bin/sh -n $Destination/client/pocketstremio-connection.sh && /bin/sh -n $Destination/client/pocketstremio-resource-monitor.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
 if ($EnableButtonDiagnostic) {
   Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch $Destination/config/button-diagnostic.mode"))

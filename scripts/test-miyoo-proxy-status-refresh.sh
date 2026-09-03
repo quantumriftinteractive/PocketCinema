@@ -32,6 +32,11 @@ start_server_monitor_body=$(awk '
   active { print }
   active && /^}/ { exit }
 ' "$UI_SCRIPT")
+resolve_active_route_body=$(awk '
+  /^resolve_active_route\(\)/ { active = 1 }
+  active { print }
+  active && /^}/ { exit }
+' "$UI_SCRIPT")
 http_proxy_flow_body=$(awk '
   /^http_proxy_flow\(\)/ { active = 1 }
   active { print }
@@ -61,11 +66,11 @@ refresh_line=$(line_number "$activate_http_proxy_body" 'start_server_monitor')
   exit 1
 }
 
-# The reused monitor invalidates any stale result before using curl_request's
-# current transport for the normal PSS /api/status validation.
+# The reused monitor invalidates stale state, then one shared route resolver
+# performs the normal status validation with the selected transport.
 assert_contains "$start_server_monitor_body" 'write_server_status "Server: Connecting..."'
-assert_contains "$start_server_monitor_body" 'curl_request -fsS --connect-timeout 3 --max-time 5'
-assert_contains "$start_server_monitor_body" '"$SERVER_BASE/api/status"'
+assert_contains "$start_server_monitor_body" 'resolve_active_route'
+assert_contains "$resolve_active_route_body" 'pocketstremio_resolve_connection_route'
 
 # A disabled proxy offers an explicit activation action, not a redundant
 # disable action. Edit, default activation/restore, and disable all share

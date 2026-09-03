@@ -43,6 +43,7 @@ PLAYBACK_CONTROL="$BASE_DIR/bin/pocketstremio-playback-control"
 RESOURCE_MONITOR="$BASE_DIR/client/pocketstremio-resource-monitor.sh"
 DISCOVERY_CLIENT="$BASE_DIR/bin/pocketstremio-discovery"
 PROXY_HELPER="$BASE_DIR/client/pocketstremio-proxy.sh"
+CONNECTION_HELPER="$BASE_DIR/client/pocketstremio-connection.sh"
 INFOPANEL="$SYS_DIR/bin/infoPanel"
 FFPLAY="$SYS_DIR/bin/ffplay"
 APP_LOCAL_PLAYER="${POCKETSTREMIO_APP_LOCAL_PLAYER:-1}"
@@ -75,9 +76,20 @@ CONFIG_ERROR=""
 SERVER_CONFIG_MESSAGE=""
 SERVER_URL_VALID=1
 SERVER_REACHABLE=2
+SERVER_STATUS_TEXT=""
 SERVER_MONITOR_PID=""
 SERVER_STATUS_FILE=/tmp/pocketstremio-server-status
 SERVER_STATUS_JSON=/tmp/pocketstremio-server-status.json
+SERVER_ROUTE_FILE=/tmp/pocketstremio-server-route
+LOCAL_PSS=""
+REMOTE_PSS=""
+CONNECTION_MODE=""
+CONNECTION_PROFILE=0
+LEGACY_SERVER_BASE=""
+LEGACY_PROXY=""
+REQUEST_PROXY=""
+ACTIVE_ROUTE=""
+ROUTE_FAILURE=""
 PLAYBACK_ERROR="Playback failed"
 FAILED_STREAM_IDS=""
 STREAM_RETRY_SUBTITLE_ID=""
@@ -88,6 +100,11 @@ mkdir -p "$LOG_DIR"
   exit 1
 }
 . "$PROXY_HELPER"
+[ -r "$CONNECTION_HELPER" ] || {
+  printf 'Missing PocketStremio connection helper\n' >&2
+  exit 1
+}
+. "$CONNECTION_HELPER"
 rm -f "$PREVIOUS_LOG_FILE.tmp"
 if [ -s "$LOG_FILE" ]; then
   tail -c 262144 "$LOG_FILE" >"$PREVIOUS_LOG_FILE.tmp" 2>/dev/null \
@@ -103,6 +120,9 @@ load_config() {
       ''|'#'*) continue ;;
       SERVER_BASE) [ -n "$SERVER_BASE" ] || SERVER_BASE="$config_value" ;;
       PROXY) [ -n "$PROXY" ] || PROXY="$config_value" ;;
+      LOCAL_PSS) LOCAL_PSS="$config_value" ;;
+      REMOTE_PSS) REMOTE_PSS="$config_value" ;;
+      CONNECTION_MODE) CONNECTION_MODE="$config_value" ;;
       DEFAULT_QUERY) [ -n "$DEFAULT_QUERY" ] || DEFAULT_QUERY="$config_value" ;;
       AUTO_FIRST) [ -n "$AUTO_FIRST" ] || AUTO_FIRST="$config_value" ;;
       AUDIO_GAIN) [ -n "$AUDIO_GAIN" ] || AUDIO_GAIN="$config_value" ;;
@@ -148,11 +168,6 @@ AUDIO_FALLBACK="${AUDIO_FALLBACK:-ask}"
 SUBTITLE_FALLBACK="${SUBTITLE_FALLBACK:-ask}"
 MAX_SUBTITLES_PER_LANGUAGE="${MAX_SUBTITLES_PER_LANGUAGE:-3}"
 MATROSKA_SUBTITLES="${MATROSKA_SUBTITLES:-0}"
-case "$SERVER_BASE" in
-  http://*|https://*) ;;
-  '') SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="No PocketStremio server configured" ;;
-  *) SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="SERVER_BASE must be an HTTP URL" ;;
-esac
 case "$PROXY" in
   '') ;;
   *)
@@ -161,6 +176,33 @@ case "$PROXY" in
     [ -n "${normalized_proxy:-}" ] && PROXY="$normalized_proxy"
     ;;
 esac
+if [ -n "$LOCAL_PSS$REMOTE_PSS$CONNECTION_MODE" ] && [ "$SERVER_ENV_OVERRIDE" -eq 0 ]; then
+  CONNECTION_PROFILE=1
+  if [ -n "$LOCAL_PSS" ]; then
+    LOCAL_PSS=$(pocketstremio_normalize_pss_url "$LOCAL_PSS") || \
+      CONFIG_ERROR="LOCAL_PSS must be an HTTP URL"
+  fi
+  if [ -n "$REMOTE_PSS" ]; then
+    REMOTE_PSS=$(pocketstremio_normalize_pss_url "$REMOTE_PSS") || \
+      CONFIG_ERROR="REMOTE_PSS must be an HTTP URL"
+  fi
+  CONNECTION_MODE=$(pocketstremio_normalize_connection_mode "$CONNECTION_MODE") || \
+    CONFIG_ERROR="CONNECTION_MODE must be automatic, local, or remote"
+  if [ -z "$CONFIG_ERROR" ] && ! pocketstremio_validate_connection_profile \
+    "$LOCAL_PSS" "$REMOTE_PSS" "$CONNECTION_MODE" "$PROXY"; then
+    CONFIG_ERROR="Connection profile is incomplete"
+  fi
+  [ -n "$CONFIG_ERROR" ] || SERVER_URL_VALID=1
+else
+  LEGACY_SERVER_BASE="$SERVER_BASE"
+  LEGACY_PROXY="$PROXY"
+  REQUEST_PROXY="$PROXY"
+  case "$SERVER_BASE" in
+    http://*|https://*) ;;
+    '') SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="No PSS connection configured" ;;
+    *) SERVER_URL_VALID=0; SERVER_CONFIG_MESSAGE="SERVER_BASE must be an HTTP URL" ;;
+  esac
+fi
 case "$AUTO_FIRST" in
   0|1) ;;
   *) CONFIG_ERROR="AUTO_FIRST must be 0 or 1" ;;
@@ -228,6 +270,7 @@ cleanup() {
     /tmp/pocketstremio-discovery.raw /tmp/pocketstremio-discovery.tsv \
     /tmp/pocketstremio-discovery-status.json \
     /tmp/pocketstremio-settings.tsv /tmp/pocketstremio-proxy.tsv \
+    /tmp/pocketstremio-connection.tsv /tmp/pocketstremio-route-status-$$.json \
     /tmp/pocketstremio-continue-action \
     /tmp/pocketstremio-remove-confirm.tsv \
     /tmp/pocketstremio-language-action.tsv \
@@ -238,7 +281,7 @@ cleanup() {
     /tmp/pocketstremio-max-subtitles.tsv \
     /tmp/pocketstremio-matroska-subtitle-fallback.tsv \
     /tmp/pocketstremio-english-subtitles.json \
-    "$SERVER_STATUS_FILE" "$SERVER_STATUS_JSON" \
+    "$SERVER_STATUS_FILE" "$SERVER_STATUS_JSON" "$SERVER_ROUTE_FILE" \
     /tmp/pocketstremio-stream-details.tsv \
     "$HTTP_ERROR_FILE"
 }
@@ -293,21 +336,28 @@ stop_loading() {
   rm -f /tmp/dismiss_info_panel
 }
 
-curl_request() (
+curl_request_with_proxy() (
+  request_proxy="$1"
+  shift
   unset LD_PRELOAD
-  if [ -n "$PROXY" ]; then
+  if [ -n "$request_proxy" ]; then
     unset ALL_PROXY all_proxy
-    HTTP_PROXY="$PROXY" http_proxy="$PROXY" \
-    HTTPS_PROXY="$PROXY" https_proxy="$PROXY" "$CURL" "$@"
+    HTTP_PROXY="$request_proxy" http_proxy="$request_proxy" \
+    HTTPS_PROXY="$request_proxy" https_proxy="$request_proxy" "$CURL" "$@"
   else
     unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
     "$CURL" "$@"
   fi
 )
 
+curl_request() (
+  curl_request_with_proxy "$REQUEST_PROXY" "$@"
+)
+
 api_get() {
   path="$1"
   timeout="${2:-30}"
+  ensure_active_route || return 1
   rm -f "$HTTP_ERROR_FILE"
   curl_request -fsS --max-time "$timeout" "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE"
   http_rc=$?
@@ -321,6 +371,7 @@ api_get() {
 api_post_empty() {
   path="$1"
   timeout="${2:-30}"
+  ensure_active_route || return 1
   rm -f "$HTTP_ERROR_FILE"
   curl_request -fsS --max-time "$timeout" -H 'Content-Type: application/json' \
     -d '{}' "$SERVER_BASE$path" 2>"$HTTP_ERROR_FILE"
@@ -339,6 +390,7 @@ api_post_play() {
   subtitle_id="${4:-none}"
   resume_seconds="${5:-0}"
   audio_stream_index="${6:-0}"
+  ensure_active_route || return 1
   body=$("$JQ" -nc \
     --arg type "$type" \
     --arg id "$id" \
@@ -395,6 +447,7 @@ api_post_progress() {
   position="$5"
   duration="$6"
   completed="$7"
+  ensure_active_route || return 1
   body=$("$JQ" -n \
     --arg type "$type" \
     --arg id "$id" \
@@ -417,6 +470,7 @@ api_post_progress() {
 api_post_continue_remove() {
   type="$1"
   id="$2"
+  ensure_active_route || return 1
   body=$("$JQ" -nc --arg type "$type" --arg id "$id" '{type:$type,id:$id}')
   rm -f "$HTTP_ERROR_FILE"
   curl_request -fsS --max-time 30 -H 'Content-Type: application/json' -d "$body" \
@@ -434,7 +488,7 @@ ffplay_has_subtitles() {
 }
 
 playback_setup_error() {
-  if [ -n "$PROXY" ]; then
+  if [ -n "$REQUEST_PROXY" ]; then
     case "$1" in
       5) printf '%s\n' "Configured HTTP proxy could not be resolved"; return 0 ;;
       7) printf '%s\n' "Configured HTTP proxy could not be reached"; return 0 ;;
@@ -514,13 +568,13 @@ run_ffplay() (
       unset POCKETSTREMIO_SUBTITLE_FILE
     fi
   fi
-  if [ -n "$PROXY" ]; then
+  if [ -n "$REQUEST_PROXY" ]; then
     unset ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
-    HTTP_PROXY="$PROXY" \
-    http_proxy="$PROXY" \
-    HTTPS_PROXY="$PROXY" \
-    https_proxy="$PROXY" \
+    HTTP_PROXY="$REQUEST_PROXY" \
+    http_proxy="$REQUEST_PROXY" \
+    HTTPS_PROXY="$REQUEST_PROXY" \
+    https_proxy="$REQUEST_PROXY" \
     LD_PRELOAD="$playback_preload" \
     "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   else
@@ -796,21 +850,135 @@ write_server_status() {
   printf '%s\n' "$status_value" >"$status_temp" && mv "$status_temp" "$SERVER_STATUS_FILE"
 }
 
+write_server_route() {
+  route_name="$1"
+  route_server="$2"
+  route_proxy="$3"
+  route_temp="$SERVER_ROUTE_FILE.tmp"
+  printf '%s\t%s\t%s\n' "$route_name" "$route_server" "$route_proxy" \
+    >"$route_temp" && mv "$route_temp" "$SERVER_ROUTE_FILE"
+}
+
+clear_server_route() {
+  rm -f "$SERVER_ROUTE_FILE"
+  ACTIVE_ROUTE=""
+}
+
 sync_server_status() {
   [ -f "$SERVER_STATUS_FILE" ] || return 0
   IFS= read -r server_status_value <"$SERVER_STATUS_FILE" || return 0
+  SERVER_STATUS_TEXT="$server_status_value"
   case "$server_status_value" in
-    "Server: Connected") SERVER_REACHABLE=1 ;;
+    "Server: Connected"* ) SERVER_REACHABLE=1 ;;
     "Server: Connecting...") SERVER_REACHABLE=2 ;;
     *) SERVER_REACHABLE=0 ;;
   esac
+  if [ "$SERVER_REACHABLE" -eq 1 ] && [ -f "$SERVER_ROUTE_FILE" ]; then
+    tab=$(printf '\t')
+    IFS="$tab" read -r active_route active_server active_proxy <"$SERVER_ROUTE_FILE" || true
+    case "$active_route" in
+      local) ACTIVE_ROUTE="Local" ;;
+      remote) ACTIVE_ROUTE="Remote" ;;
+      legacy) ACTIVE_ROUTE="" ;;
+      *) return 0 ;;
+    esac
+    [ -n "$active_server" ] && SERVER_BASE="$active_server"
+    REQUEST_PROXY="$active_proxy"
+  elif [ "$SERVER_REACHABLE" -eq 0 ]; then
+    ACTIVE_ROUTE=""
+  fi
+}
+
+validate_pss_url_with_proxy() {
+  candidate_url="$1"
+  candidate_proxy="$2"
+  ROUTE_VALIDATION_CURL_RC=0
+  route_status_file="/tmp/pocketstremio-route-status-$$.json"
+  rm -f "$route_status_file"
+  curl_request_with_proxy "$candidate_proxy" -fsS --connect-timeout 4 --max-time 7 \
+    "$candidate_url/api/status" >"$route_status_file" 2>/dev/null
+  route_curl_rc=$?
+  if [ "$route_curl_rc" -ne 0 ]; then
+    ROUTE_VALIDATION_CURL_RC=$route_curl_rc
+    rm -f "$route_status_file"
+    return 1
+  fi
+  "$JQ" -e '.status == "ok" and .service == "pocketstremio-server"' \
+    "$route_status_file" >/dev/null 2>&1
+  route_validation_rc=$?
+  rm -f "$route_status_file"
+  return "$route_validation_rc"
+}
+
+pocketstremio_probe_route() {
+  probe_route="$1"
+  probe_server="$2"
+  probe_proxy="$3"
+  POCKETSTREMIO_ROUTE_PROBE_FAILURE="pss"
+  validate_pss_url_with_proxy "$probe_server" "$probe_proxy" || {
+    if [ "$probe_route" = remote ]; then
+      case "$ROUTE_VALIDATION_CURL_RC" in
+        5|7|28) POCKETSTREMIO_ROUTE_PROBE_FAILURE="proxy" ;;
+      esac
+    fi
+    return 1
+  }
+}
+
+resolve_active_route() {
+  if [ "$CONNECTION_PROFILE" -eq 1 ]; then
+    resolve_mode="$CONNECTION_MODE"
+  else
+    resolve_mode=legacy
+  fi
+  pocketstremio_resolve_connection_route "$resolve_mode" "$LOCAL_PSS" \
+    "$REMOTE_PSS" "$PROXY" "$LEGACY_SERVER_BASE" "$LEGACY_PROXY"
+  resolve_rc=$?
+  ROUTE_RESULT="$POCKETSTREMIO_RESOLVED_ROUTE"
+  ROUTE_SERVER="$POCKETSTREMIO_RESOLVED_SERVER"
+  ROUTE_PROXY="$POCKETSTREMIO_RESOLVED_PROXY"
+  ROUTE_FAILURE="$POCKETSTREMIO_ROUTE_FAILURE"
+  return "$resolve_rc"
+}
+
+route_offline_status() {
+  case "$1" in
+    remote_proxy_unavailable) printf '%s\n' "Server: Remote proxy unavailable" ;;
+    remote_pss_unreachable) printf '%s\n' "Server: Remote PSS unreachable" ;;
+    local_pss_unreachable) printf '%s\n' "Server: Local PSS unreachable" ;;
+    *) printf '%s\n' "Server: Offline" ;;
+  esac
+}
+
+ensure_active_route() {
+  sync_server_status
+  [ "$SERVER_REACHABLE" -eq 1 ] && [ -n "$SERVER_BASE" ] && return 0
+  resolve_active_route || {
+    SERVER_REACHABLE=0
+    ACTIVE_ROUTE=""
+    SERVER_STATUS_TEXT=$(route_offline_status "$ROUTE_FAILURE")
+    clear_server_route
+    write_server_status "$SERVER_STATUS_TEXT"
+    return 1
+  }
+  SERVER_BASE="$ROUTE_SERVER"
+  REQUEST_PROXY="$ROUTE_PROXY"
+  case "$ROUTE_RESULT" in
+    local) ACTIVE_ROUTE="Local"; SERVER_STATUS_TEXT="Server: Connected (Local)" ;;
+    remote) ACTIVE_ROUTE="Remote"; SERVER_STATUS_TEXT="Server: Connected (Remote)" ;;
+    *) ACTIVE_ROUTE=""; SERVER_STATUS_TEXT="Server: Connected" ;;
+  esac
+  SERVER_REACHABLE=1
+  write_server_route "$ROUTE_RESULT" "$SERVER_BASE" "$REQUEST_PROXY"
+  write_server_status "$SERVER_STATUS_TEXT"
 }
 
 start_server_monitor() {
   stop_server_monitor
   if [ "$SERVER_URL_VALID" -ne 1 ]; then
     SERVER_REACHABLE=0
-    write_server_status "Connect to Server"
+    write_server_status "No PSS connection configured"
+    clear_server_route
     return 0
   fi
 
@@ -819,6 +987,7 @@ start_server_monitor() {
     ''|*[!0-9]*|0) monitor_interval=10 ;;
   esac
   SERVER_REACHABLE=2
+  clear_server_route
   write_server_status "Server: Connecting..."
   (
     monitor_child_pid=""
@@ -833,14 +1002,16 @@ start_server_monitor() {
     }
     trap stop_monitor_child TERM INT HUP
     while :; do
-      rm -f "$SERVER_STATUS_JSON"
-      if curl_request -fsS --connect-timeout 3 --max-time 5 \
-        "$SERVER_BASE/api/status" >"$SERVER_STATUS_JSON" 2>/dev/null \
-        && "$JQ" -e '.status == "ok" and .service == "pocketstremio-server"' \
-          "$SERVER_STATUS_JSON" >/dev/null 2>&1; then
-        write_server_status "Server: Connected"
+      if resolve_active_route; then
+        write_server_route "$ROUTE_RESULT" "$ROUTE_SERVER" "$ROUTE_PROXY"
+        case "$ROUTE_RESULT" in
+          local) write_server_status "Server: Connected (Local)" ;;
+          remote) write_server_status "Server: Connected (Remote)" ;;
+          *) write_server_status "Server: Connected" ;;
+        esac
       else
-        write_server_status "Server: Offline"
+        clear_server_route
+        write_server_status "$(route_offline_status "$ROUTE_FAILURE")"
       fi
       sleep "$monitor_interval" &
       monitor_child_pid=$!
@@ -854,14 +1025,7 @@ start_server_monitor() {
 
 validate_pss_url() {
   candidate_url="$1"
-  rm -f /tmp/pocketstremio-discovery-status.json
-  if ! curl_request -fsS --connect-timeout 4 --max-time 7 \
-    "$candidate_url/api/status" >/tmp/pocketstremio-discovery-status.json \
-    2>>"$HTTP_ERROR_FILE"; then
-    return 1
-  fi
-  "$JQ" -e '.status == "ok" and .service == "pocketstremio-server"' \
-    /tmp/pocketstremio-discovery-status.json >/dev/null 2>&1
+  validate_pss_url_with_proxy "$candidate_url" "$REQUEST_PROXY"
 }
 
 save_server_base() {
@@ -914,6 +1078,8 @@ activate_http_proxy() {
     return 0
   fi
   PROXY="$new_proxy"
+  LEGACY_PROXY="$new_proxy"
+  [ "$CONNECTION_PROFILE" -eq 1 ] || REQUEST_PROXY="$new_proxy"
   # Reuse the normal monitor so its next /api/status request uses this
   # transport, rather than leaving a result cached under the previous proxy.
   start_server_monitor
@@ -1509,9 +1675,9 @@ activate_server_base() {
 server_status_flow() {
   sync_server_status
   if [ "$SERVER_URL_VALID" -ne 1 ]; then
-    settings_flow
+    connection_setup_flow
   elif [ "$SERVER_REACHABLE" -eq 1 ]; then
-    message "PocketStremio Server" "Connected: $SERVER_BASE"
+    message "PocketStremio Server" "${SERVER_STATUS_TEXT#Server: }: $SERVER_BASE"
   elif [ "$SERVER_REACHABLE" -eq 2 ]; then
     message "PocketStremio Server" "Connecting to $SERVER_BASE"
   else
@@ -1519,7 +1685,8 @@ server_status_flow() {
   fi
 }
 
-scan_for_pss() {
+discover_local_pss() {
+  SETUP_PSS_URL=""
   if [ ! -x "$DISCOVERY_CLIENT" ]; then
     message "PocketStremio Settings" "Discovery helper is unavailable"
     return 1
@@ -1535,15 +1702,11 @@ scan_for_pss() {
     while IFS="$tab" read -r discovered_name discovered_url discovered_network; do
       [ -n "$discovered_name" ] && [ -n "$discovered_url" ] \
         && [ -n "$discovered_network" ] || continue
-      if validate_pss_url "$discovered_url"; then
-        discovered_address=$(printf '%s' "$discovered_url" | sed 's|^[A-Za-z]*://||')
-        short_name=$(printf '%s' "$discovered_name" | cut -c1-12)
-        short_network=$(printf '%s' "$discovered_network" | cut -c1-10)
-        printf '%s - %s - %s\t%s\n' "$short_name" "$discovered_address" \
-          "$short_network" "$discovered_url" >>/tmp/pocketstremio-discovery.tsv
-      else
-        log "ignored discovery response that failed PSS status validation url=$discovered_url"
-      fi
+      discovered_address=$(printf '%s' "$discovered_url" | sed 's|^[A-Za-z]*://||')
+      short_name=$(printf '%s' "$discovered_name" | cut -c1-12)
+      short_network=$(printf '%s' "$discovered_network" | cut -c1-10)
+      printf 'Found: %s - %s - %s\t%s\n' "$short_name" "$discovered_address" \
+        "$short_network" "$discovered_url" >>/tmp/pocketstremio-discovery.tsv
     done </tmp/pocketstremio-discovery.raw
   fi
   stop_loading
@@ -1553,7 +1716,7 @@ scan_for_pss() {
     return 1
   fi
 
-  discovered_choice=$(select_from_file "Select PSS" /tmp/pocketstremio-discovery.tsv)
+  discovered_choice=$(select_from_file "Found local PSS" /tmp/pocketstremio-discovery.tsv)
   [ -n "$discovered_choice" ] || return 0
   discovered_line=$(grep -F "$discovered_choice	" \
     /tmp/pocketstremio-discovery.tsv | head -n 1)
@@ -1562,51 +1725,233 @@ scan_for_pss() {
     message "PocketStremio Settings" "Server selection failed"
     return 1
   }
-  activate_server_base "$discovered_url" "$discovered_choice"
+  start_loading "Local connection" "Checking found PSS..."
+  if ! validate_pss_url_with_proxy "$discovered_url" ""; then
+    stop_loading
+    message "Local connection" "Found but local PSS unreachable"
+    return 1
+  fi
+  stop_loading
+  SETUP_PSS_URL="$discovered_url"
+  log "local discovery found and validated"
 }
 
-enter_server_manually() {
-  message "PocketStremio Settings" \
-    "PSS has no public login. Prefer a VPN or trusted network."
-  manual_initial="$SERVER_BASE"
-  [ -n "$manual_initial" ] || manual_initial="http://"
-  manual_url=$(read_keyboard "$manual_initial" "PSS URL or host:port")
+read_setup_pss_url() {
+  setup_initial="$1"
+  setup_title="$2"
+  SETUP_PSS_URL=""
+  [ -n "$setup_initial" ] || setup_initial="http://"
+  manual_url=$(read_keyboard "$setup_initial" "$setup_title")
   manual_url=$(printf '%s' "$manual_url" | tr -d '\r\n')
   [ -n "$manual_url" ] || return 0
-  case "$manual_url" in
-    http://*|https://*) ;;
-    *://*)
-      message "PocketStremio Settings" "Only HTTP and HTTPS URLs are supported"
-      return 1
-      ;;
-    *) manual_url="http://$manual_url" ;;
-  esac
-  case "$manual_url" in
-    *[[:space:]]*|http://*@*|https://*@*)
-      message "PocketStremio Settings" "Invalid PSS URL"
-      return 1
-      ;;
-  esac
+  manual_url=$(pocketstremio_normalize_pss_url "$manual_url") || {
+    message "PocketStremio Settings" "Invalid PSS URL"
+    return 1
+  }
+  SETUP_PSS_URL="$manual_url"
+}
 
-  start_loading "PocketStremio Settings" "Checking PSS..."
-  validate_pss_url "$manual_url"
+validate_setup_pss_url() {
+  setup_kind="$1"
+  setup_url="$2"
+  setup_proxy="$3"
+  start_loading "$setup_kind connection" "Checking PSS..."
+  validate_pss_url_with_proxy "$setup_url" "$setup_proxy"
   manual_rc=$?
   stop_loading
   if [ "$manual_rc" -ne 0 ]; then
-    message "PocketStremio Settings" "No valid PSS found at that address"
+    case "$setup_kind" in
+      Remote)
+        case "$ROUTE_VALIDATION_CURL_RC" in
+          5|7|28) message "Remote connection" "Remote proxy unavailable" ;;
+          *) message "Remote connection" "Remote PSS unreachable" ;;
+        esac
+        ;;
+      *) message "Local connection" "Local PSS unreachable" ;;
+    esac
     return 1
   fi
-  activate_server_base "$manual_url" "$manual_url"
+  return 0
+}
+
+choose_local_endpoint() {
+  SETUP_PSS_URL=""
+  while :; do
+    printf 'Scan local PSS\nEnter local address\nBack\n' >/tmp/pocketstremio-connection.tsv
+    local_action=$(select_from_file "Local connection" /tmp/pocketstremio-connection.tsv)
+    case "$local_action" in
+      "Scan local PSS")
+        discover_local_pss && return 0
+        ;;
+      "Enter local address")
+        read_setup_pss_url "$LOCAL_PSS" "Local PSS URL" || continue
+        [ -n "$SETUP_PSS_URL" ] || continue
+        validate_setup_pss_url Local "$SETUP_PSS_URL" "" && return 0
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
+choose_remote_proxy() {
+  SETUP_PROXY=""
+  default_proxy_display=${POCKETSTREMIO_DEFAULT_HTTP_PROXY#http://}
+  current_proxy_display=$(proxy_display_value)
+  while :; do
+    printf 'Use current proxy (%s)\nUse default proxy (%s)\nEdit remote proxy\nBack\n' \
+      "$current_proxy_display" "$default_proxy_display" >/tmp/pocketstremio-connection.tsv
+    proxy_action=$(select_from_file "Remote connection" /tmp/pocketstremio-connection.tsv)
+    case "$proxy_action" in
+      "Use current proxy "*)
+        [ -n "$PROXY" ] || {
+          message "Remote connection" "Remote proxy unavailable"
+          continue
+        }
+        SETUP_PROXY="$PROXY"
+        return 0
+        ;;
+      "Use default proxy "*)
+        SETUP_PROXY="$POCKETSTREMIO_DEFAULT_HTTP_PROXY"
+        return 0
+        ;;
+      "Edit remote proxy")
+        raw_proxy=$(read_keyboard "${PROXY:-$POCKETSTREMIO_DEFAULT_HTTP_PROXY}" "Remote proxy host:port")
+        SETUP_PROXY=$(pocketstremio_normalize_http_proxy "$raw_proxy") || {
+          message "Remote connection" "Use HTTP host:port without credentials"
+          continue
+        }
+        return 0
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
+choose_remote_endpoint() {
+  SETUP_PSS_URL=""
+  choose_remote_proxy || return 1
+  read_setup_pss_url "$REMOTE_PSS" "Remote PSS URL" || return 1
+  [ -n "$SETUP_PSS_URL" ] || return 1
+  validate_setup_pss_url Remote "$SETUP_PSS_URL" "$SETUP_PROXY"
+}
+
+apply_connection_profile() {
+  profile_local="$1"
+  profile_remote="$2"
+  profile_mode="$3"
+  profile_proxy="$4"
+  if ! pocketstremio_save_connection_profile "$CONFIG_FILE" "$profile_local" \
+    "$profile_remote" "$profile_mode" "$profile_proxy"; then
+    message "Connection settings" "Could not save connection profile"
+    return 1
+  fi
+  if [ "$SERVER_ENV_OVERRIDE" -eq 1 ]; then
+    message "Connection settings" "Saved. Server environment override remains active."
+    return 0
+  fi
+  LOCAL_PSS="$profile_local"
+  REMOTE_PSS="$profile_remote"
+  CONNECTION_MODE="$profile_mode"
+  PROXY="$profile_proxy"
+  CONNECTION_PROFILE=1
+  SERVER_BASE=""
+  REQUEST_PROXY=""
+  ACTIVE_ROUTE=""
+  SERVER_URL_VALID=1
+  SERVER_CONFIG_MESSAGE=""
+  start_server_monitor
+  message "Connection settings" "Profile saved. Checking PSS..."
+}
+
+connection_setup_flow() {
+  while :; do
+    printf 'Local / same network\nRemote / away from home\nBoth / automatic\nBack\n' \
+      >/tmp/pocketstremio-connection.tsv
+    setup_action=$(select_from_file "PocketStremio setup" /tmp/pocketstremio-connection.tsv)
+    case "$setup_action" in
+      "Local / same network")
+        choose_local_endpoint || continue
+        apply_connection_profile "$SETUP_PSS_URL" "" local "$PROXY"
+        return $?
+        ;;
+      "Remote / away from home")
+        message "Remote connection" "Use a separately configured network helper."
+        choose_remote_endpoint || continue
+        apply_connection_profile "" "$SETUP_PSS_URL" remote "$SETUP_PROXY"
+        return $?
+        ;;
+      "Both / automatic")
+        choose_local_endpoint || continue
+        both_local="$SETUP_PSS_URL"
+        message "Remote connection" "Use a separately configured network helper."
+        choose_remote_endpoint || continue
+        apply_connection_profile "$both_local" "$SETUP_PSS_URL" automatic "$SETUP_PROXY"
+        return $?
+        ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+connection_mode_flow() {
+  printf 'Automatic\tautomatic\nLocal only\tlocal\nRemote only\tremote\nBack\tback\n' \
+    >/tmp/pocketstremio-connection.tsv
+  selected_mode=$(select_from_file "Connection mode" /tmp/pocketstremio-connection.tsv)
+  case "$selected_mode" in
+    Automatic) new_mode=automatic ;;
+    "Local only") new_mode=local ;;
+    "Remote only") new_mode=remote ;;
+    *) return 0 ;;
+  esac
+  apply_connection_profile "$LOCAL_PSS" "$REMOTE_PSS" "$new_mode" "$PROXY"
+}
+
+connection_profile_flow() {
+  if [ "$CONNECTION_PROFILE" -eq 0 ]; then
+    connection_setup_flow
+    return
+  fi
+  while :; do
+    local_display=${LOCAL_PSS#http://}
+    remote_display=${REMOTE_PSS#http://}
+    [ -n "$local_display" ] || local_display="Not set"
+    [ -n "$remote_display" ] || remote_display="Not set"
+    case "$CONNECTION_MODE" in
+      automatic) mode_display="Automatic" ;;
+      local) mode_display="Local only" ;;
+      remote) mode_display="Remote only" ;;
+    esac
+    printf 'Edit local PSS (%s)\nEdit remote PSS (%s)\nMode: %s\nHTTP proxy\nBack\n' \
+      "$local_display" "$remote_display" "$mode_display" >/tmp/pocketstremio-connection.tsv
+    profile_action=$(select_from_file "Connection profile" /tmp/pocketstremio-connection.tsv)
+    case "$profile_action" in
+      "Edit local PSS "*)
+        choose_local_endpoint || continue
+        new_mode="$CONNECTION_MODE"
+        [ "$new_mode" = remote ] && new_mode=automatic
+        apply_connection_profile "$SETUP_PSS_URL" "$REMOTE_PSS" "$new_mode" "$PROXY"
+        ;;
+      "Edit remote PSS "*)
+        choose_remote_endpoint || continue
+        new_mode="$CONNECTION_MODE"
+        [ "$new_mode" = local ] && new_mode=automatic
+        apply_connection_profile "$LOCAL_PSS" "$SETUP_PSS_URL" "$new_mode" "$SETUP_PROXY"
+        ;;
+      "Mode: "*) connection_mode_flow ;;
+      "HTTP proxy") http_proxy_flow ;;
+      *) return 0 ;;
+    esac
+  done
 }
 
 settings_flow() {
   while :; do
-    printf 'Scan for PSS\nEnter Manually\nHTTP proxy\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
+    printf 'Connection setup\nConnection profile\nHTTP proxy\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
       >/tmp/pocketstremio-settings.tsv
     settings_action=$(select_from_file "Settings" /tmp/pocketstremio-settings.tsv)
     case "$settings_action" in
-      "Scan for PSS") scan_for_pss ;;
-      "Enter Manually") enter_server_manually ;;
+      "Connection setup") connection_setup_flow ;;
+      "Connection profile") connection_profile_flow ;;
       "HTTP proxy") http_proxy_flow ;;
       "Audio gain") audio_gain_flow ;;
       "Audio languages") audio_language_flow ;;
@@ -1625,18 +1970,25 @@ home_flow() {
       log "auto-selected home action=Search"
     else
       if [ "$SERVER_REACHABLE" -eq 1 ]; then
-        server_action="Server: Connected"
+        if [ -n "$ACTIVE_ROUTE" ]; then
+          server_action="Server: Connected ($ACTIVE_ROUTE)"
+        else
+          server_action="Server: Connected"
+        fi
       elif [ "$SERVER_REACHABLE" -eq 2 ]; then
         server_action="Server: Connecting..."
       elif [ "$SERVER_URL_VALID" -eq 1 ]; then
-        server_action="Server: Offline"
+        server_action="${SERVER_STATUS_TEXT:-Server: Offline}"
       else
-        server_action="Connect to Server"
+        server_action="No PSS connection configured"
       fi
       printf '%s\nSearch\nLive TV\nQuick Resume\nContinue Watching\nStremio Account\nSettings\nExit\n' \
         "$server_action" >/tmp/pocketstremio-home.tsv
       action=$(select_from_file "PocketStremio" /tmp/pocketstremio-home.tsv)
     fi
+    # The selector's first row can update while it is open. Synchronize again
+    # before a chosen request so it uses the route that produced that status.
+    sync_server_status
     case "$action" in
       Search)
         search_flow
@@ -1653,7 +2005,7 @@ home_flow() {
       "Stremio Account")
         account_flow
         ;;
-      "Server: Connected"|"Server: Connecting..."|"Server: Offline"|"Connect to Server")
+      "Server: "*|"No PSS connection configured")
         server_status_flow
         ;;
       Settings)
@@ -2704,7 +3056,7 @@ select_subtitle() {
 }
 
 cd "$SYS_DIR" || exit 1
-if [ -n "$PROXY" ]; then
+if [ -n "$REQUEST_PROXY" ]; then
   transport="proxy"
 else
   transport="direct"
@@ -2715,6 +3067,9 @@ if [ -n "$CONFIG_ERROR" ]; then
   log "configuration error=$CONFIG_ERROR"
   message "PocketStremio" "$CONFIG_ERROR"
   exit 1
+fi
+if [ "$SERVER_URL_VALID" -ne 1 ]; then
+  connection_setup_flow
 fi
 start_server_monitor
 home_flow

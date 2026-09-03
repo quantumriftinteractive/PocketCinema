@@ -154,7 +154,14 @@ implemented, statically validated, deployed, and physically confirmed. It
 preserves direct transport for absent/empty `PROXY` and does not inspect or
 control the companion. The final Apps run restored the default proxy and
 successfully searched for `friday` through it. Phase 3 onboarding is not
-started.
+physically confirmed yet.
+
+Phase 3 first-run connection onboarding, discovery/reachability separation,
+and two-endpoint routing are implemented, automated/static-validated, and
+deployed. They preserve legacy `SERVER_BASE`/`PROXY` behavior without automatic
+migration, add atomically saved Local/Remote/Mode profile fields, and use one
+active direct-or-proxied route for all client requests. Apps-context acceptance
+is pending.
 
 ## Last Completed Work
 
@@ -180,6 +187,13 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Implemented and deployed Phase 3 connection onboarding. The controller flow
+  supports Local, Remote, and Both/Automatic setup; direct local discovery and
+  validation are distinct; remote setup is manual and validates through the
+  configured generic proxy; and Automatic resolves Local directly before
+  Remote through that proxy. Focused route/profile tests, shell/PowerShell
+  parsing, Python compilation, and server tests pass. Existing live config was
+  preserved, while physical acceptance remains pending.
 - Physically confirmed Phase 2 generic HTTP-proxy controls from OnionOS Apps:
   the preserved root-path config started cleanly, edit/default/disable persisted
   correctly, `1056` became Offline, restoring `1055` became Connected,
@@ -256,8 +270,8 @@ Physically confirmed:
   restarted the existing PSS status monitor. The later Apps run confirmed
   `127.0.0.1:1056` changed status to Offline, restoring the default changed it
   to Connected, and disabling changed it to the correct direct-route state,
-  all without an app restart. A normal PSS request after re-enabling remains
-  pending, so Phase 2 is not confirmed.
+  all without an app restart. A later `friday` search through the restored
+  default completed Phase 2 confirmation.
 - The companion's Enabled and Disabled Apps screens visibly show its HTTP proxy
   endpoint. A controller Disable -> Enable cycle restored its
   `127.0.0.1:1055` listeners and `100.97.46.26` IP; B exited cleanly.
@@ -290,6 +304,11 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
+- Phase 3 first-run/profile routing: Local/Remote endpoints, Automatic | Local
+  only | Remote only modes, direct-first fallback, per-route status, manual
+  remote validation through the generic proxy, and direct discovery candidate
+  validation. It is deployed with the legacy config preserved and awaits the
+  required Apps-context acceptance matrix.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -297,16 +316,24 @@ Implemented/tested but not physically confirmed:
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
-- Tailnet first-run onboarding is blocked until the app can obtain its generic
-  HTTP proxy without relying on an already-existing PocketStremio config.
+- Phase 3 requires Apps-context acceptance before it can be considered a
+  confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Continue only the remaining Milestone 21 settings/preference acceptance work;
-  do not begin Phase 3 onboarding without explicit direction.
+- Run the Phase 3 Apps-context local, remote, automatic-routing, proxy-failure,
+  discovery-separation, and persistence acceptance checks. Do not begin
+  desktop PSS or release-installer work.
 
 Required next physical test:
-- Run the separately scoped remaining Milestone 21 settings/preference checks
-  when directed. No Phase 2 proxy test remains.
+- A. Launch with the preserved legacy config and confirm normal startup/Search.
+  B. Configure a direct Local-only PSS, validate, and Search. C. Configure a
+  Remote-only tailnet PSS with the default proxy, validate without discovery,
+  and Search. D. Configure both: verify local is Connected (Local), make it
+  unavailable, verify Connected (Remote), then restore local and verify the
+  next cycle returns to Local. E. Set proxy `127.0.0.1:1056` and confirm
+  `Remote proxy unavailable`, then restore the default. F. Confirm a found but
+  direct-unreachable discovery candidate is labelled/handled as unreachable.
+  G. Restart and confirm endpoints, mode, proxy, and the selected route persist.
 
 DO NOT:
 
