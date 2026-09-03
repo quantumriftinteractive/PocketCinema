@@ -19,6 +19,13 @@ IPv4 address in the footer. Controller logs physically confirmed:
 - each enable recreated the app-local socket and restored the same IP;
 - proxy traffic succeeded after re-enabling.
 
+The controller source now also displays the companion-owned HTTP proxy listener
+in that footer. The listener value is shared with daemon startup through
+`scripts/proxy-listeners.sh`; its initial value remains `127.0.0.1:1055`, with
+the existing `TS_HTTP_PROXY_LISTEN` launch-time override preserved. This UI
+addition is implemented and pending an OnionOS Apps-context visual/controller
+test; it is not included in the physical confirmation above.
+
 The user later opened the app after reboot and confirmed that it showed
 Enabled. The first-account Connect account screen is implemented with its
 pending URL restricted to `/tmp`, but was not physically tested because the

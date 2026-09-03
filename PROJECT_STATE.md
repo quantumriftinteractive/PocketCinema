@@ -145,8 +145,9 @@ client/server behavior. Do not label them production until they are physically
 confirmed where required and the milestone is accepted.
 
 The first-run local/remote onboarding design is documented in
-`docs/portable-connection-onboarding-plan.md`. It is planning only: no client,
-companion, network, deployment, or Tailscale behavior changed in this session.
+`docs/portable-connection-onboarding-plan.md`. Its companion endpoint-display
+phase is implemented and statically validated, but pending an OnionOS
+Apps-context test; no PocketStremio client or network behavior changed.
 
 ## Last Completed Work
 
@@ -224,6 +225,10 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
+- The standalone Tailscale companion now shows its HTTP proxy listener in the
+  controller footer. Startup and UI share the existing `TS_HTTP_PROXY_LISTEN`
+  default/override source; the required Apps-context visual/controller test is
+  pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -235,15 +240,15 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Obtain approval of the proposed two-endpoint local/remote profile and begin
-  the first Milestone 21 implementation phase in
-  `docs/portable-connection-onboarding-plan.md`; no networking behavior has
-  changed yet.
+- Deploy the companion-only endpoint-display change and run the required
+  OnionOS Apps-context visual/controller test before beginning PocketStremio
+  proxy/onboarding work.
 
 Required next physical test:
-- After first-run remote setup is implemented, start with no PocketStremio
-  config, configure the generic proxy through the UI, and validate a tailnet
-  PSS manually. Direct discovery remains a separate LAN-only test.
+- From Apps -> Tailscale, confirm both Enabled and Disabled screens retain their
+  existing state/IP/control behavior and visibly show the exact configured HTTP
+  proxy endpoint. Then perform the existing enable/disable/re-enable check
+  without changing PocketStremio or Tailscale identity/state.
 
 DO NOT:
 

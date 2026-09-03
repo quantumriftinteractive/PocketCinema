@@ -26,6 +26,7 @@ Open **Apps -> Tailscale**. The screen shows:
 
 - Enabled or Disabled daemon state;
 - the assigned Tailscale IPv4 address when connected;
+- the companion-owned HTTP proxy endpoint for other applications;
 - a locally generated QR code for the Tailscale admin machines page;
 - Enable or Disable;
 - Automatic enable on boot status and toggle;

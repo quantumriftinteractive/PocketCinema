@@ -60,7 +60,10 @@ proxy endpoint. PocketStremio will retain a generic, editable HTTP-proxy URL
 companion. The proposed two-endpoint profile, automatic route behavior,
 packaging boundary, and required tests are recorded in
 [Portable Connection and First-Run Onboarding Plan](docs/portable-connection-onboarding-plan.md).
-This is a design decision, not implementation or physical confirmation.
+The companion endpoint-display phase is implemented and statically validated,
+but is not physically confirmed; the remaining onboarding design is not
+implemented. Nothing in this direction changes PocketStremio ownership of, or
+control over, the independent companion.
 The opt-in app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu

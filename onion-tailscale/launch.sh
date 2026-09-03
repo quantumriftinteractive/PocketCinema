@@ -10,6 +10,7 @@ INFOPANEL="$SYS_DIR/bin/infoPanel"
 ADMIN_URL="https://login.tailscale.com/admin/machines"
 
 mkdir -p "$LOG_DIR"
+. "$BASE_DIR/scripts/proxy-listeners.sh"
 
 log() {
   printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$LOG_FILE"
@@ -92,7 +93,7 @@ while :; do
   if [ "$service_state" = "enabled" ]; then
     title="Tailscale: Enabled"
     [ -n "$tailscale_ip" ] || tailscale_ip="unavailable"
-    bottom="IP $tailscale_ip  A Select  B Exit"
+    bottom="IP $tailscale_ip  HTTP proxy: $HTTP_PROXY_LISTEN"
     if [ "$tailscale_ip" = "unavailable" ]; then
       printf 'Connect account\nDisable\nAutomatic enable: %s\nRefresh\nExit\n' "$autostart_state" >/tmp/onion-tailscale-menu
     else
@@ -100,7 +101,7 @@ while :; do
     fi
   else
     title="Tailscale: Disabled"
-    bottom="IP unavailable  A Select  B Exit"
+    bottom="IP unavailable  HTTP proxy: $HTTP_PROXY_LISTEN"
     printf 'Enable\nAutomatic enable: %s\nRefresh\nExit\n' "$autostart_state" > /tmp/onion-tailscale-menu
   fi
 

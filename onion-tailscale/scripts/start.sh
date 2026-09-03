@@ -3,11 +3,9 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 . "$SCRIPT_DIR/common.sh"
+. "$SCRIPT_DIR/proxy-listeners.sh"
 
 LOG_FILE="$LOG_DIR/tailscaled.log"
-
-SOCKS5_LISTEN="${TS_SOCKS5_LISTEN:-127.0.0.1:1055}"
-HTTP_PROXY_LISTEN="${TS_HTTP_PROXY_LISTEN:-127.0.0.1:1055}"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$RUN_DIR"
 

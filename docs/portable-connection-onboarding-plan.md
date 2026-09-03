@@ -52,6 +52,9 @@ New fields require an atomic rewrite of the same app-local config file, preservi
 
 ### 1. Expose the companion's owned HTTP proxy information
 
+**Implementation status:** Implemented and statically validated; pending the
+required OnionOS Apps-context visual/controller test.
+
 Create one companion-owned source for the advertised HTTP proxy listener default/configuration and use it in `start.sh` and the controller UI. The smallest safe UI change is a compact read-only row or footer:
 
 ```text
