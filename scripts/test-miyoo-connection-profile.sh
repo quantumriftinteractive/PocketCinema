@@ -142,6 +142,7 @@ assert_ui_contains 'if [ "$SERVER_URL_VALID" -ne 1 ]; then'
 assert_ui_contains '  connection_setup_flow'
 assert_ui_contains 'message "Automatic connection"'
 assert_ui_contains 'Automatic prefers Local first.'
-assert_ui_contains 'uses the configured proxy. A=OK" acknowledge'
+assert_ui_contains 'message_max_lines=7'
+assert_ui_contains 'A = OK" acknowledge'
 
 printf 'Miyoo connection profile tests passed\n'

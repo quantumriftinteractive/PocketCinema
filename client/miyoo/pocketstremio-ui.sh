@@ -299,16 +299,19 @@ message() {
   title="$1"
   body="$2"
   message_mode="${3:-auto}"
+  message_max_lines=4
+  [ "$message_mode" = acknowledge ] && message_max_lines=7
   if [ "${POCKETSTREMIO_HEADLESS:-0}" = "1" ]; then
     log "message mode=$message_mode title=$title body=$body"
     return 0
   fi
-  display_body=$(printf '%s\n' "$body" | tr '\r' ' ' | fold -s -w 32 | awk '
-    NR <= 4 { lines[NR] = $0 }
-    NR == 5 { truncated = 1 }
+  display_body=$(printf '%s\n' "$body" | tr '\r' ' ' | fold -s -w 32 | \
+    awk -v max_lines="$message_max_lines" '
+    NR <= max_lines { lines[NR] = $0 }
+    NR == max_lines + 1 { truncated = 1 }
     END {
-      for (i = 1; i <= 4 && i in lines; i++) {
-        if (i == 4 && truncated) print substr(lines[i], 1, 29) "..."
+      for (i = 1; i <= max_lines && i in lines; i++) {
+        if (i == max_lines && truncated) print substr(lines[i], 1, 29) "..."
         else print lines[i]
       }
     }
@@ -1890,7 +1893,10 @@ connection_setup_flow() {
           "Both addresses will be saved.
 Automatic prefers Local first.
 If it is unavailable, Remote
-uses the configured proxy. A=OK" acknowledge
+uses the configured proxy.
+
+
+A = OK" acknowledge
         choose_local_endpoint || continue
         both_local="$SETUP_PSS_URL"
         message "Remote connection" "Use a separately configured network helper."
