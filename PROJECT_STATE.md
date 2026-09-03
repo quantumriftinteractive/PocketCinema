@@ -128,6 +128,11 @@ stability follow-up remains pending its own physical retest.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
+- The no-config first-run path cannot currently connect to a tailnet-only PSS:
+  it starts direct, so manual entry and discovery validation cannot use the
+  app-local generic proxy that the saved configuration normally supplies. The
+  discovery response is seen but rejected at status validation; the original
+  live configuration was restored unchanged after this test.
 - Milestone 17 long-duration bridge acceptance, fresh-SD validation, and final
   packaging/licensing gates remain open.
 
@@ -212,20 +217,22 @@ Physically confirmed:
 
 Implemented/tested but not physically confirmed:
 - Remaining separate Milestone 21 settings/preferences acceptance work,
-  including first-run server setup and the precise subtitle-download and
-  conversion-startup failure categories.
+  including a first-run proxy/onboarding design for tailnet PSS access and the
+  precise subtitle-download and conversion-startup failure categories.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
+- Tailnet first-run onboarding is blocked until the app can obtain its generic
+  HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Plan the first-run no-config server-setup check without disturbing the
-  current saved device configuration.
+- Decide whether first-run tailnet support should add an app-local generic
+  proxy setup step or remain explicitly limited to direct-LAN PSS discovery.
 
 Required next physical test:
-- With the current config safely preserved, test the no-config first-run server
-  setup path and restore the saved configuration afterward.
+- After a first-run proxy decision is implemented, start with no config and
+  connect to the tailnet PSS through manual entry and discovery.
 
 DO NOT:
 

@@ -688,8 +688,13 @@ selecting that row opened Settings, which restored the Windows connection.
 When the current Wi-Fi prevented direct LAN peer traffic and therefore UDP
 discovery, controller keyboard entry of the Mac PSS tailnet address passed
 `/api/status`, atomically saved `SERVER_BASE`, and returned to a connected home
-menu. Manual entry is therefore physically confirmed; the no-config first-run
-route remains pending. Playback failure reporting now classifies bounded,
+menu. Manual entry is therefore physically confirmed with the existing generic
+proxy configuration. A no-config first-run test then confirmed a tailnet gap:
+the client starts direct, so it discovered the Mac PSS but rejected both its
+manual address and discovery result during status validation because no proxy
+was available. The original device configuration was restored unchanged. A
+first-run proxy/onboarding design is required before tailnet first-run can be
+accepted. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
