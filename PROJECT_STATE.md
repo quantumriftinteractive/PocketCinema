@@ -165,7 +165,11 @@ partially confirms legacy startup and the manual Local direct route: the Miyoo
 saved `172.20.10.3:8755` as Local-only, showed `Connected (Local)`, and returned
 `friday` search results through that direct route. UDP discovery then advertised
 that direct PSS, and selection completed a separate direct validation. The
-remaining route-mode and negative discovery checks are pending.
+Remote-only setup is also confirmed: it saved the Tailnet endpoint, showed
+`Connected (Remote)`, and returned a Miyoo `friday` search through the proxy.
+The Local scan of that Tailnet advertisement correctly failed direct validation
+as the negative discovery case. Automatic fallback, proxy-failure/restore,
+restart persistence, and pristine-first-run remain pending.
 
 ## Last Completed Work
 
@@ -179,9 +183,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Complete the remaining Phase 3 Apps-context route-mode, proxy-failure, negative
-discovery, persistence, and pristine-first-run checks. Update the roadmap,
-evidence, and this file together only when the milestone is actually accepted.
+Complete the remaining Phase 3 Apps-context Automatic fallback, proxy-failure,
+persistence, and pristine-first-run checks. Update the roadmap, evidence, and
+this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -198,6 +202,12 @@ Completed:
   `Connected (Local)`, and returned `friday` search results directly from the
   Miyoo. The later hotspot scan advertised `172.20.10.3:8755`; selecting it
   completed separate direct validation and retained the Local profile.
+- Confirmed Phase 3 Remote-only setup from OnionOS Apps. The profile saved
+  `REMOTE_PSS=http://100.82.23.65:8755`, `CONNECTION_MODE=remote`, and the
+  default generic proxy; the monitor reported `Connected (Remote)` and a Miyoo
+  `friday` search returned HTTP 200 through that route. Scanning the same
+  Tailnet-advertised endpoint under Local setup then failed the required direct
+  validation, confirming the found-but-unreachable negative case.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
@@ -270,12 +280,14 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
-- Phase 3 partial acceptance: legacy startup and manual Local-only setup are
-  confirmed. The direct hotspot PSS route was selected, persisted, reported
-  `Connected (Local)`, and served a Miyoo `friday` search. UDP scan did not
-  advertise `Mac PSS` at `172.20.10.3:8755`; selecting it succeeded through
-  the direct validation step. The found-but-unreachable negative case remains
-  unconfirmed.
+- Phase 3 partial acceptance: legacy startup, manual Local-only setup, and
+  normal Local discovery/validation are confirmed. The direct hotspot PSS route
+  was selected, persisted, reported `Connected (Local)`, and served a Miyoo
+  `friday` search. Remote-only setup persisted the Tailnet endpoint and default
+  proxy, reported `Connected (Remote)`, and served the same search through the
+  proxy. A Local scan then found that Tailnet-advertised endpoint; selecting it
+  failed the required direct validation and exercised the found-but-unreachable
+  negative case.
 - Phase 2 generic HTTP-proxy controls: the settings UI accepts a legacy
   `http://host:port/` value at startup; explicit disable and enable-default
   actions persist correctly; proxy changes immediately invalidate the old PSS
@@ -325,8 +337,9 @@ Implemented/tested but not physically confirmed:
   only | Remote only modes, direct-first fallback, per-route status, manual
   remote validation through the generic proxy, and direct discovery candidate
   validation. Legacy, manual Local-only, and normal discovery/validation are
-  physically confirmed; the Remote-only, Automatic, proxy-failure, restart,
-  pristine-first-run, and found-but-unreachable discovery checks remain pending.
+  physically confirmed; Remote-only and the found-but-unreachable discovery
+  case are also confirmed. Automatic, proxy-failure, restart, and
+  pristine-first-run checks remain pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -338,19 +351,18 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Rebind the Mac PSS to its Tailnet address and complete Remote-only, proxy
-  failure/default restore, and persistence Apps checks. Do not begin desktop
-  PSS or release-installer work.
+- Complete the Remote-only proxy-failure/default-restore and restart-persistence
+  Apps checks while the Mac PSS is Tailnet-bound. Then run Automatic fallback
+  with usable Local and Remote endpoints. Do not begin desktop PSS or
+  release-installer work.
 
 Required next physical test:
-- A. Configure a Remote-only tailnet PSS with the default proxy, validate
-  without discovery, and Search. B. Configure both: verify local is Connected
+- A. Set the Remote-only proxy to `127.0.0.1:1056` and confirm `Remote proxy
+  unavailable`, then restore the default and confirm `Connected (Remote)` plus
+  a `friday` search. B. Restart and confirm the Remote endpoint, mode, proxy,
+  and selected route persist. C. Configure both: verify local is Connected
   (Local), make it unavailable, verify Connected (Remote), then restore local
-  and verify the next cycle returns to Local. C. Set proxy `127.0.0.1:1056`
-  and confirm `Remote proxy unavailable`, then restore the default. D. Confirm
-  a found but direct-unreachable discovery candidate is labelled/handled as
-  unreachable. E. Restart and confirm
-  endpoints, mode, proxy, and the selected route persist. F. On a separate
+  and verify the next cycle returns to Local. D. On a separate
   pristine installation/config, launch from OnionOS Apps and
   confirm the setup controller opens before the home screen; do not modify the
   preserved legacy config on the development Miyoo merely to simulate first run.

@@ -94,7 +94,9 @@ Do not add proxy types, credentials, PAC/SOCKS support, provider discovery, or a
 deployed; partially confirmed from OnionOS Apps. Legacy startup and manual
 Local-only setup were confirmed through a direct Miyoo `friday` search. The
 hotspot scan then advertised the direct PSS and selection passed direct
-validation. The remaining route modes and negative discovery case await Apps
+validation. Remote-only setup/search through the proxy and the found-but-
+unreachable Local validation case are also confirmed. Automatic fallback,
+proxy-failure recovery, restart persistence, and pristine-first-run await Apps
 confirmation. The approved two-endpoint profile, mode selection, direct local
 validation, manual remote validation through the generic proxy, and direct-first
 Automatic resolution are included in this Phase 3 delivery. Legacy

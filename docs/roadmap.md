@@ -701,10 +701,11 @@ deployed, and physically confirmed; the remaining PocketStremio onboarding work
 is implemented, automated/static-tested, deployed, and partially physically
 confirmed. Legacy startup and manual Local-only direct setup/search passed from
 OnionOS Apps; the hotspot scan also advertised the direct PSS and passed
-selection validation. It now includes first-run Local/Remote/Both setup,
-separate direct discovery/reachability handling, and direct-first Automatic
-routing through the existing generic proxy. Playback failure reporting now
-classifies bounded,
+selection validation. Remote-only setup/search through the proxy and the
+found-but-unreachable Local validation case also passed. It now includes
+first-run Local/Remote/Both setup, separate direct discovery/reachability
+handling, and direct-first Automatic routing through the existing generic
+proxy. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure
