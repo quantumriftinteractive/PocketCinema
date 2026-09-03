@@ -105,6 +105,14 @@ Deploy application files and binaries:
 .\scripts\deploy.ps1 -DeviceHost root@DEVICE_ADDRESS
 ```
 
+For a tracked app/script upgrade from a checkout without the ignored Tailscale
+binaries, retain the already-installed device binaries after the deployer has
+verified them:
+
+```powershell
+.\scripts\deploy.ps1 -DeviceHost root@DEVICE_ADDRESS -ReuseInstalledBinaries
+```
+
 Deployment creates the app directories but never copies or changes `state/` or
 `logs/`. Tailscale binaries, archives, node state, and logs remain ignored by
 git; the small ARMv7 selector binary is tracked with its source.

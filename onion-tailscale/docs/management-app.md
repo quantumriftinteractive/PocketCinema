@@ -24,7 +24,10 @@ in that footer. The listener value is shared with daemon startup through
 `scripts/proxy-listeners.sh`; its initial value remains `127.0.0.1:1055`, with
 the existing `TS_HTTP_PROXY_LISTEN` launch-time override preserved. This UI
 addition is implemented and pending an OnionOS Apps-context visual/controller
-test; it is not included in the physical confirmation above.
+test; it is not included in the physical confirmation above. The update was
+deployed through the normal companion deployer with its verified
+`-ReuseInstalledBinaries` mode, so the device's existing binaries, state, and
+logs were retained.
 
 The user later opened the app after reboot and confirmed that it showed
 Enabled. The first-account Connect account screen is implemented with its

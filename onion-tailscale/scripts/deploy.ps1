@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory = $true)]
-  [string]$DeviceHost
+  [string]$DeviceHost,
+  [switch]$ReuseInstalledBinaries
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,10 +23,13 @@ function Invoke-Checked {
 $tailscale = Join-Path $root "bin\tailscale"
 $tailscaled = Join-Path $root "bin\tailscaled"
 $selector = Join-Path $root "bin\onion-tailscale-selector"
-if (-not (Test-Path -LiteralPath $tailscale -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $tailscaled -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $selector -PathType Leaf)) {
-  throw "Install Tailscale binaries and build the committed selector before deployment"
+if (-not (Test-Path -LiteralPath $selector -PathType Leaf)) {
+  throw "Build the committed selector before deployment"
+}
+if (-not $ReuseInstalledBinaries -and
+    (-not (Test-Path -LiteralPath $tailscale -PathType Leaf) -or
+     -not (Test-Path -LiteralPath $tailscaled -PathType Leaf))) {
+  throw "Install Tailscale binaries or pass -ReuseInstalledBinaries to retain verified device binaries"
 }
 
 Invoke-Checked "ssh" ($sshOptions + @(
@@ -37,10 +41,14 @@ Invoke-Checked "ssh" ($sshOptions + @(
 $files = @(
   @{ Local = (Join-Path $root "config.json"); Remote = "config.json" },
   @{ Local = (Join-Path $root "launch.sh"); Remote = "launch.sh" },
-  @{ Local = $selector; Remote = "bin/onion-tailscale-selector" },
-  @{ Local = $tailscale; Remote = "bin/tailscale" },
-  @{ Local = $tailscaled; Remote = "bin/tailscaled" }
+  @{ Local = $selector; Remote = "bin/onion-tailscale-selector" }
 )
+if (-not $ReuseInstalledBinaries) {
+  $files += @(
+    @{ Local = $tailscale; Remote = "bin/tailscale" },
+    @{ Local = $tailscaled; Remote = "bin/tailscaled" }
+  )
+}
 Get-ChildItem -LiteralPath (Join-Path $root "boot") -Filter "*.sh" | ForEach-Object {
   $files += @{ Local = $_.FullName; Remote = "boot/$($_.Name)" }
 }
@@ -54,9 +62,14 @@ foreach ($file in $files) {
   ))
 }
 
-$verify = "chmod +x $destination/launch.sh $destination/bin/onion-tailscale-selector " +
-  "$destination/bin/tailscale $destination/bin/tailscaled $destination/boot/*.sh " +
+$verify = "test -x $destination/bin/tailscale && test -x $destination/bin/tailscaled && " +
+  "chmod +x $destination/launch.sh $destination/bin/onion-tailscale-selector " +
+  "$destination/boot/*.sh " +
   "$destination/scripts/*.sh && /bin/sh -n $destination/launch.sh " +
   "$destination/boot/*.sh $destination/scripts/*.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
-Write-Output "Tailscale app deployed without copying or modifying node state"
+if ($ReuseInstalledBinaries) {
+  Write-Output "Tailscale app deployed with existing device binaries; node state and logs were preserved"
+} else {
+  Write-Output "Tailscale app deployed without copying or modifying node state"
+}

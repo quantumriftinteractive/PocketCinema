@@ -696,9 +696,9 @@ was available. The original device configuration was restored unchanged. A
 first-run proxy/onboarding design is required before tailnet first-run can be
 accepted. The proposed direct-first, generic-proxy remote route is documented
 in [Portable Connection and First-Run Onboarding Plan](portable-connection-onboarding-plan.md);
-the companion's endpoint-display phase is implemented and statically tested but
-awaits its required Apps-context test; the remaining PocketStremio onboarding
-work is unimplemented and unconfirmed. Playback failure reporting now classifies bounded,
+the companion's endpoint-display phase is implemented, statically tested, and
+deployed but awaits its required Apps-context test; the remaining PocketStremio
+onboarding work is unimplemented and unconfirmed. Playback failure reporting now classifies bounded,
 sanitized FFplay and transport symptoms instead of displaying only `Playback
 failed`, and the client retains one bounded previous UI log so a later restart
 does not erase the immediately preceding diagnostic evidence. Physical failure

@@ -146,8 +146,9 @@ confirmed where required and the milestone is accepted.
 
 The first-run local/remote onboarding design is documented in
 `docs/portable-connection-onboarding-plan.md`. Its companion endpoint-display
-phase is implemented and statically validated, but pending an OnionOS
-Apps-context test; no PocketStremio client or network behavior changed.
+phase is implemented, statically validated, and deployed to the Miyoo, but
+pending an OnionOS Apps-context test; no PocketStremio client or network
+behavior changed.
 
 ## Last Completed Work
 
@@ -175,8 +176,9 @@ Active milestone: Milestone 21 — Device Settings and Playback Preferences
 Completed:
 - Implemented the companion-only HTTP proxy endpoint display. The shared
   listener source preserves the `127.0.0.1:1055` default and the existing
-  launch-time overrides; shell/static checks pass, while the Apps test remains
-  pending because no Miyoo SSH host was available for deployment.
+  launch-time overrides; shell/static checks pass and the change was deployed
+  through the tailnet with existing device binaries preserved. The Apps test
+  remains pending.
 - Recorded the proposed portable local/remote connection design, including the
   independent companion proxy display, editable generic proxy, first-run flow,
   two-route automatic behavior, release packaging boundary, and acceptance
@@ -244,9 +246,8 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Deploy the companion-only endpoint-display change and run the required
-  OnionOS Apps-context visual/controller test before beginning PocketStremio
-  proxy/onboarding work.
+- Run the required OnionOS Apps-context visual/controller test before beginning
+  PocketStremio proxy/onboarding work.
 
 Required next physical test:
 - From Apps -> Tailscale, confirm both Enabled and Disabled screens retain their
