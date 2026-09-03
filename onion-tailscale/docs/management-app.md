@@ -27,7 +27,9 @@ addition is implemented and pending an OnionOS Apps-context visual/controller
 test; it is not included in the physical confirmation above. The update was
 deployed through the normal companion deployer with its verified
 `-ReuseInstalledBinaries` mode, so the device's existing binaries, state, and
-logs were retained.
+logs were retained. The user then opened the enabled screen and confirmed the
+HTTP proxy endpoint was visible. The Disabled -> Enabled recovery portion of
+the test remains pending, so this addition is not yet fully confirmed.
 
 The user later opened the app after reboot and confirmed that it showed
 Enabled. The first-account Connect account screen is implemented with its

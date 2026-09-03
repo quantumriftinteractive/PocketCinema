@@ -202,6 +202,10 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
+- The deployed companion's Enabled Apps screen visibly shows its HTTP proxy
+  endpoint; the device log also confirms the fresh launch and enabled state.
+  The Disabled -> Enabled recovery check is still pending, so the endpoint
+  display phase is not yet fully confirmed.
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
   playback, progress, Menu exit, and cleanup; a later run also exercised three
   English and three Greek tracks.
@@ -233,8 +237,8 @@ Physically confirmed:
 Implemented/tested but not physically confirmed:
 - The standalone Tailscale companion now shows its HTTP proxy listener in the
   controller footer. Startup and UI share the existing `TS_HTTP_PROXY_LISTEN`
-  default/override source; the required Apps-context visual/controller test is
-  pending.
+  default/override source; its Enabled screen is physically observed, while
+  the Disabled -> Enabled recovery check is pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -246,14 +250,13 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Run the required OnionOS Apps-context visual/controller test before beginning
-  PocketStremio proxy/onboarding work.
+- Complete the companion's Disabled -> Enabled Apps-context recovery check
+  before beginning PocketStremio proxy/onboarding work.
 
 Required next physical test:
-- From Apps -> Tailscale, confirm both Enabled and Disabled screens retain their
-  existing state/IP/control behavior and visibly show the exact configured HTTP
-  proxy endpoint. Then perform the existing enable/disable/re-enable check
-  without changing PocketStremio or Tailscale identity/state.
+- From Apps -> Tailscale, choose Disable and confirm its screen still visibly
+  shows the configured HTTP proxy endpoint. Re-enable it, confirm the tailnet
+  IP and endpoint return, then exit with B without changing identity/state.
 
 DO NOT:
 
