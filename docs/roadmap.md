@@ -723,8 +723,9 @@ and saved progress at 185 seconds.
   preferred track is available and offer the bounded other-track picker.
 - Apply the same ordered matching to subtitles. Package only matching
   preferred languages when selectable Matroska subtitles are active. If none
-  match, offer `No subtitles`, `Choose other subtitles`, and `Back` instead of
-  silently substituting an unrelated language.
+  match, offer `Continue with no subtitles`, `Use English subtitles` only when
+  English is available and not already preferred, and `Back to streams` instead
+  of silently substituting an unrelated language.
 - Keep the ordering independent for audio and subtitles. For example, audio
   can prefer Japanese then English while subtitles prefer English then Greek.
   `und` and missing language metadata never count as a preference match.
@@ -785,8 +786,10 @@ R1 cycling. The earlier file-level alternate-subtitle picker was deliberately
 replaced before acceptance. The revised dialog is automated-tested and deployed
 to the Miyoo. An Apps-context local-video run with Greek preferred reached the
 named fallback dialog and, after `Use English subtitles`, the selectable-
-subtitle playback stream. R1 cycling of that fallback package and the
-English-already-preferred suppression case remain to be physically confirmed.
+subtitle playback stream. The device log confirmed three packaged English
+tracks and R1 transitions through all tracks to subtitles-off; the run exited
+cleanly and saved progress. With English subsequently added to the preference
+list, replay correctly bypassed the fallback dialog.
 
 Saved audio order is also applied before stream selection. The client chooses
 the highest-priority saved language that exists in the currently playable,
@@ -855,8 +858,9 @@ Acceptance criterion: controller-only settings persist across app restarts, a
 Spanish-first source can prefer an available English audio track or clearly
 report that none exists, subtitle priorities are deterministic, and a Continue
 Watching item can be removed without marking unrelated media complete. When no
-preferred language matches, the client must clearly offer the bounded other-track
-or no-subtitles choice rather than silently substituting an unrelated language.
+preferred language matches, the client must clearly offer the bounded other-audio
+track or, for subtitles, explicit no-subtitles, English-if-available, and Back
+choices rather than silently substituting an unrelated language.
 
 ### 22. Selectable Matroska Subtitles
 

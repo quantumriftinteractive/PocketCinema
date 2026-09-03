@@ -1,6 +1,6 @@
 # PocketStremio Current Project State
 
-Last updated: 2026-09-02
+Last updated: 2026-09-03
 Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `3b4962fcbd97e569195ae5b94d6f1c8794fa1adf`
@@ -121,12 +121,10 @@ stability follow-up remains pending its own physical retest.
 - No Matroska multi-track regression is present in the audited committed code.
 - The first physical no-preferred-subtitle test exposed a Milestone 21 defect:
   a missing preferred language silently started playback without subtitles.
-  The user-directed correction is implemented and automated-tested: name the
-  missing preference, offer no subtitles, offer English only when English is
-  actually available and not already preferred, and return Back to the stream
-  list. Its earlier file-level alternate-subtitle picker was intentionally
-  replaced before acceptance. The revised client is now deployed and awaits
-  Apps-context testing.
+  The user-directed correction now has Apps-context confirmation: it names the
+  missing preference, offers no subtitles, offers English only when available
+  and not already preferred, and returns Back to the stream list. Its earlier
+  file-level alternate-subtitle picker was deliberately removed.
 - The Windows implementation and state/documentation recovery have been
   reviewed and reconciled with the updated Mac `origin/main`; acceptance and
   release gates remain open.
@@ -205,24 +203,25 @@ Physically confirmed:
 - With Greek preferred and the local compatibility video selected, the
   unavailable-preference dialog named the English fallback, and choosing
   `Use English subtitles` reached the selectable-subtitle playback stream.
+- That fallback cached three English tracks; R1 cycled all three and subtitles
+  off, then playback exited cleanly and saved progress. With `ell,eng` saved,
+  replay correctly bypassed the fallback dialog.
 
 Implemented/tested but not physically confirmed:
-- Remaining Milestone 21 settings/preferences acceptance work, including
-  R1 cycling of the English fallback package and suppression of the English
-  option when English is already preferred.
+- Remaining separate Milestone 21 settings/preferences acceptance work,
+  starting with the source-name filter controller flow.
 
 Known issue / blocker:
 - Milestone 21 remains pending Apps-context acceptance; release gates remain
   open.
 
 Next exact action:
-- From the deployed English fallback stream, verify R1 cycles its bounded
-  English subtitle package; then retest with English already preferred.
+- Test the documented source-name filter from the controller without changing
+  the now-confirmed subtitle fallback.
 
 Required next physical test:
-- Confirm R1 cycles the bounded English tracks after the explicit fallback
-  choice. With English already in the preferred subtitle-language list, confirm
-  the `Use English subtitles` option is absent.
+- Confirm source-name filtering and its Back/cancellation path from the
+  controller.
 
 DO NOT:
 
