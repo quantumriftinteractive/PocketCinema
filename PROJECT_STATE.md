@@ -171,14 +171,15 @@ The Local scan of that Tailnet advertisement correctly failed direct validation
 as the negative discovery case. Changing the Remote-only proxy to
 `127.0.0.1:1056` reported `Remote proxy unavailable`; restoring the default
 immediately returned to `Connected (Remote)`. A fresh app launch preserved the
-Remote endpoint, mode, proxy, and selected Remote route. Automatic fallback and
-pristine-first-run remain pending.
+Remote endpoint, mode, proxy, and selected Remote route. Pristine-first-run
+remains pending.
 
 With both endpoints saved in Automatic mode, the Mac's hotspot address then
 disappeared while its Tailnet endpoint remained reachable. The Miyoo resolved
-`Connected (Remote)` through the proxy, physically confirming the Local-
-unavailable → Remote half of Automatic fallback; the return-to-Local half
-remains pending.
+`Connected (Remote)` through the proxy. When the direct hotspot address became
+available again, the saved Automatic profile returned without edits to
+`Connected (Local)`. The complete direct-first Local → Remote → Local
+Automatic fallback is physically confirmed.
 
 The Both/Automatic setup now has an implemented, automated-tested blocking
 acknowledgment explaining that both endpoints are saved and that Local is
@@ -197,9 +198,9 @@ inputs are unavailable.
 
 ## Next Action
 
-Complete the remaining Phase 3 Apps-context Automatic fallback, proxy-failure,
-persistence, and pristine-first-run checks. Update the roadmap, evidence, and
-this file together only when the milestone is actually accepted.
+Complete the remaining Phase 3 Apps-context acknowledgment-layout and
+pristine-first-run checks. Update the roadmap, evidence, and this file together
+only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
@@ -229,10 +230,11 @@ Completed:
 - Confirmed Phase 3 Remote-profile restart persistence. After a fresh launch,
   the saved Remote endpoint, `remote` mode, and default proxy were loaded and
   the monitor returned to `Connected (Remote)`.
-- Confirmed the first half of Phase 3 Automatic fallback. With the saved
-  `automatic` profile, the lost `172.20.10.3` Local address made the Miyoo
-  select the still-reachable Tailnet endpoint through the default proxy and
-  report `Connected (Remote)`. Return-to-Local remains pending.
+- Confirmed complete Phase 3 Automatic fallback. With the saved `automatic`
+  profile, losing `172.20.10.3` made the Miyoo select the still-reachable
+  Tailnet endpoint through the default proxy and report `Connected (Remote)`;
+  restoring the direct hotspot address returned it to `Connected (Local)` with
+  no profile edits.
 - Implemented and deployed Phase 3 connection onboarding. The controller flow
   supports Local, Remote, and Both/Automatic setup; direct local discovery and
   validation are distinct; remote setup is manual and validates through the
@@ -368,8 +370,9 @@ Implemented/tested but not physically confirmed:
   validation. Legacy, manual Local-only, and normal discovery/validation are
   physically confirmed; Remote-only and the found-but-unreachable discovery
   case are also confirmed. Remote proxy-failure/default recovery is confirmed.
-  Remote-profile restart persistence is confirmed. Automatic Local-to-Remote
-  fallback is confirmed; return-to-Local and pristine-first-run remain pending.
+  Remote-profile restart persistence is confirmed. Complete Automatic
+  Local-to-Remote-to-Local fallback is confirmed; pristine-first-run remains
+  pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -381,13 +384,14 @@ Known issue / blocker:
   confirmed replacement for the measured first-run blocker.
 
 Next exact action:
-- Restore the hotspot Local route and confirm the Automatic profile returns to
-  `Connected (Local)`. Then run the pristine-first-run check. Do not begin
-  desktop PSS or release-installer work.
+- From OnionOS Apps, check the revised Both/Automatic acknowledgment layout:
+  it must keep visible separation before `A = OK`. Then run the
+  pristine-first-run check. Do not begin desktop PSS or release-installer work.
 
 Required next physical test:
-- A. Restore the Local hotspot endpoint and verify the saved Automatic profile
-  changes from `Connected (Remote)` back to `Connected (Local)`. B. On a separate
+- A. In `Settings -> Connection setup -> Both / automatic`, verify the blocking
+  acknowledgment leaves visible vertical separation before `A = OK`; press A,
+  then back out without changing the saved profile. B. On a separate
   pristine installation/config, launch from OnionOS Apps and
   confirm the setup controller opens before the home screen; do not modify the
   preserved legacy config on the development Miyoo merely to simulate first run.

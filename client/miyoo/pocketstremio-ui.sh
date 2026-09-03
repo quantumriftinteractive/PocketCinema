@@ -1889,13 +1889,14 @@ connection_setup_flow() {
         return $?
         ;;
       "Both / automatic")
+        automatic_ack_spacer=" "
         message "Automatic connection" \
           "Both addresses will be saved.
 Automatic prefers Local first.
 If it is unavailable, Remote
 uses the configured proxy.
-
-
+$automatic_ack_spacer
+$automatic_ack_spacer
 A = OK" acknowledge
         choose_local_endpoint || continue
         both_local="$SETUP_PSS_URL"
