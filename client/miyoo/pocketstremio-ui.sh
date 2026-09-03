@@ -930,8 +930,13 @@ http_proxy_flow() {
   while :; do
     current_proxy=$(proxy_display_value)
     default_proxy_display=${POCKETSTREMIO_DEFAULT_HTTP_PROXY#http://}
-    printf 'Edit HTTP proxy\nRestore default (%s)\nDisable proxy\nBack\n' \
-      "$default_proxy_display" >/tmp/pocketstremio-proxy.tsv
+    if [ -n "$PROXY" ]; then
+      printf 'Edit HTTP proxy\nRestore default (%s)\nDisable proxy\nBack\n' \
+        "$default_proxy_display" >/tmp/pocketstremio-proxy.tsv
+    else
+      printf 'Enable default (%s)\nEdit HTTP proxy\nBack\n' \
+        "$default_proxy_display" >/tmp/pocketstremio-proxy.tsv
+    fi
     proxy_action=$(select_from_file "HTTP proxy: $current_proxy" \
       /tmp/pocketstremio-proxy.tsv)
     case "$proxy_action" in
@@ -947,7 +952,7 @@ http_proxy_flow() {
         }
         activate_http_proxy "$normalized_proxy"
         ;;
-      "Restore default "*)
+      "Enable default "*|"Restore default "*)
         activate_http_proxy "$POCKETSTREMIO_DEFAULT_HTTP_PROXY"
         ;;
       "Disable proxy")

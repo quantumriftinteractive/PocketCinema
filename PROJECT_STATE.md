@@ -184,6 +184,11 @@ Branch: `main`
 Active milestone: Milestone 21 — Device Settings and Playback Preferences
 
 Completed:
+- Corrected the disabled Phase 2 proxy menu after Apps testing showed it still
+  offered a redundant `Disable proxy` action. The deployed disabled state now
+  offers the explicit `Enable default (127.0.0.1:1055)` action, manual edit,
+  and Back; Disable appears only when a proxy is enabled. Physical retest is
+  pending.
 - Implemented the Phase 2 stale-status correction after physical testing found
   that proxy edit, default restore, and disable kept the PSS monitor result
   from the previous transport. A successful effective proxy change now restarts
@@ -276,7 +281,9 @@ Implemented/tested but not physically confirmed:
   `http://host:port/` root-path spelling without an interactive startup error.
   Its persistence UI has been exercised, but a stale server-status defect was
   found after transport changes; the immediate existing-monitor refresh fix is
-  deployed and awaiting Apps-context confirmation.
+  deployed and awaiting Apps-context confirmation. When disabled, the deployed
+  menu explicitly offers `Enable default (127.0.0.1:1055)` instead of a
+  redundant disable action.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -293,18 +300,18 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Deploy the Phase 2 monitor-refresh correction, then from OnionOS Apps verify
-  that edit to an unreachable proxy, restore default, and disable each replace
-  the prior server state with `Connecting...` and the current reachability
-  result without restarting PocketStremio.
+- From OnionOS Apps open Settings > HTTP proxy with `PROXY=` and select
+  `Enable default (127.0.0.1:1055)`; then verify the Phase 2 transport-refresh
+  behavior without restarting PocketStremio.
 
 Required next physical test:
-- From Settings, set `127.0.0.1:1056` and return to the home screen: it must
-  first show `Server: Connecting...`, then `Server: Offline` without restart.
-  Restore `127.0.0.1:1055`: it must again show `Connecting...`, then
-  `Connected` without restart. Disable the proxy and confirm the same
-  Connecting-to-current-result behavior and the direct-only confirmation.
-  Finally restore the default and verify an existing PSS request succeeds
+- From Settings > HTTP proxy while disabled, select `Enable default
+  (127.0.0.1:1055)`: it must immediately show `Connecting...`, then
+  `Connected` without restart. Set `127.0.0.1:1056` and return home: it must
+  show `Connecting...`, then `Offline`. Restore the default: it must again
+  show `Connecting...`, then `Connected`. Disable the proxy and confirm the
+  direct-only confirmation plus the same Connecting-to-current-result behavior.
+  Finally re-enable the default and verify an existing PSS request succeeds
   through the independently enabled companion.
 
 DO NOT:
