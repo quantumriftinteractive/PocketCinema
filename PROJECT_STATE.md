@@ -189,7 +189,7 @@ this file together only when the milestone is actually accepted.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `cb15a3924501c287d5dabfe19bc391b30367bb4a`
+Checkpoint commit: `6016a524429d4e0448c17cb6565b35d135d7ff30`
 Remote verified: YES
 Machine: macOS development checkout
 Branch: `main`
