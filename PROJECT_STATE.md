@@ -146,9 +146,8 @@ confirmed where required and the milestone is accepted.
 
 The first-run local/remote onboarding design is documented in
 `docs/portable-connection-onboarding-plan.md`. Its companion endpoint-display
-phase is implemented, statically validated, and deployed to the Miyoo, but
-pending an OnionOS Apps-context test; no PocketStremio client or network
-behavior changed.
+phase is implemented, statically validated, deployed, and physically confirmed
+from OnionOS Apps; no PocketStremio client or network behavior changed.
 
 ## Last Completed Work
 
@@ -177,12 +176,13 @@ Completed:
 - Added a normal deployer reuse mode for tracked companion upgrades when the
   ignored local Tailscale binaries are absent. It verifies and preserves the
   installed device binaries, state, and logs; deployment and the enabled-screen
-  endpoint display have been observed, with recovery testing still pending.
+  endpoint display have been observed, and the disabled/re-enable recovery is
+  now physically confirmed.
 - Implemented the companion-only HTTP proxy endpoint display. The shared
   listener source preserves the `127.0.0.1:1055` default and the existing
   launch-time overrides; shell/static checks pass and the change was deployed
-  through the tailnet with existing device binaries preserved. The Apps test
-  remains pending.
+  through the tailnet with existing device binaries preserved. The Apps test is
+  physically confirmed.
 - Recorded the proposed portable local/remote connection design, including the
   independent companion proxy display, editable generic proxy, first-run flow,
   two-route automatic behavior, release packaging boundary, and acceptance
@@ -206,10 +206,9 @@ Completed:
   automated-tested and deployed.
 
 Physically confirmed:
-- The deployed companion's Enabled Apps screen visibly shows its HTTP proxy
-  endpoint; the device log also confirms the fresh launch and enabled state.
-  The Disabled -> Enabled recovery check is still pending, so the endpoint
-  display phase is not yet fully confirmed.
+- The companion's Enabled and Disabled Apps screens visibly show its HTTP proxy
+  endpoint. A controller Disable -> Enable cycle restored its
+  `127.0.0.1:1055` listeners and `100.97.46.26` IP; B exited cleanly.
 - Milestone 22 three-track Matroska switching, off toggle, synchronized
   playback, progress, Menu exit, and cleanup; a later run also exercised three
   English and three Greek tracks.
@@ -239,10 +238,6 @@ Physically confirmed:
   cleanly through the title screen with no stale app markers.
 
 Implemented/tested but not physically confirmed:
-- The standalone Tailscale companion now shows its HTTP proxy listener in the
-  controller footer. Startup and UI share the existing `TS_HTTP_PROXY_LISTEN`
-  default/override source; its Enabled screen is physically observed, while
-  the Disabled -> Enabled recovery check is pending.
 - Remaining separate Milestone 21 settings/preferences acceptance work,
   including first-run local/remote proxy onboarding and the precise
   subtitle-download and conversion-startup failure categories.
@@ -254,13 +249,13 @@ Known issue / blocker:
   HTTP proxy without relying on an already-existing PocketStremio config.
 
 Next exact action:
-- Complete the companion's Disabled -> Enabled Apps-context recovery check
-  before beginning PocketStremio proxy/onboarding work.
+- Await explicit direction to begin Phase 2: PocketStremio's editable generic
+  proxy controls. Phase 1 is complete and does not authorize Phase 2 by itself.
 
 Required next physical test:
-- From Apps -> Tailscale, choose Disable and confirm its screen still visibly
-  shows the configured HTTP proxy endpoint. Re-enable it, confirm the tailnet
-  IP and endpoint return, then exit with B without changing identity/state.
+- After Phase 2 is implemented, test editable generic-proxy configuration and
+  persistence from PocketStremio Settings without provider inspection or
+  lifecycle control.
 
 DO NOT:
 

@@ -22,14 +22,15 @@ IPv4 address in the footer. Controller logs physically confirmed:
 The controller source now also displays the companion-owned HTTP proxy listener
 in that footer. The listener value is shared with daemon startup through
 `scripts/proxy-listeners.sh`; its initial value remains `127.0.0.1:1055`, with
-the existing `TS_HTTP_PROXY_LISTEN` launch-time override preserved. This UI
-addition is implemented and pending an OnionOS Apps-context visual/controller
-test; it is not included in the physical confirmation above. The update was
-deployed through the normal companion deployer with its verified
+the existing `TS_HTTP_PROXY_LISTEN` launch-time override preserved. The update
+was deployed through the normal companion deployer with its verified
 `-ReuseInstalledBinaries` mode, so the device's existing binaries, state, and
 logs were retained. The user then opened the enabled screen and confirmed the
-HTTP proxy endpoint was visible. The Disabled -> Enabled recovery portion of
-the test remains pending, so this addition is not yet fully confirmed.
+HTTP proxy endpoint was visible. The user then confirmed the Disabled screen
+also retained the endpoint, re-enabled the companion, confirmed that the IP and
+endpoint returned, and exited with B. The device log records the clean stop,
+restart, restored `127.0.0.1:1055` listeners, restored `100.97.46.26` IP, and
+B exit. This endpoint-display addition is physically confirmed.
 
 The user later opened the app after reboot and confirmed that it showed
 Enabled. The first-account Connect account screen is implemented with its
