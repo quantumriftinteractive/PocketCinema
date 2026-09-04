@@ -221,8 +221,8 @@ turns off, then exit normally.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `33c09c1`
-Remote verified: YES (`33c09c1` is reachable from `origin/main`)
+Checkpoint commit: `37a3e17`
+Remote verified: pending push/fetch verification
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
