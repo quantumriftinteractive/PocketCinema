@@ -244,17 +244,16 @@ the 700 ms Tk poll synchronously refreshed routes, which on Windows spawned
 PowerShell interface discovery on the UI thread. Connection refresh now runs in
 a worker, start/restart/stop/close waits remain off the UI thread with owned
 operations serialized, and unchanged log text is not redrawn each poll. Service
-checks and child log draining remain background work. This requires only the
-focused Windows responsiveness smoke; it does not change PCServer ownership,
-network-provider behavior, or the API.
+checks and child log draining remain background work. The user physically
+confirmed normal Windows desktop use remained responsive after this repair, so
+the focused responsiveness acceptance is **PASS**. It does not change PCServer
+ownership, network-provider behavior, or the API.
 
-Next exact action: relaunch `python server\\pocketcinema_desktop.py` and perform
-only a short Windows responsiveness smoke: check service/connections, start,
-briefly use, then stop or restart without a frozen window. The font-scale change
-does not alter M22 track switching, subtitle-off, playback, or cleanup, so its
-previously confirmed M22 physical evidence is inherited. The Production PASS
-audit is complete; M23 packaging remains separately scoped after the pending
-Windows responsiveness observation.
+Next exact action: the Production PASS audit and focused Windows responsiveness
+acceptance are complete. Hold M23 packaging and the desktop Remote-route smoke
+for separately scoped work. The font-scale change does not alter M22 track
+switching, subtitle-off, playback, or cleanup, so its previously confirmed M22
+physical evidence is inherited.
 
 ## Latest Verified Checkpoint
 
@@ -359,22 +358,16 @@ Completed:
   cleanup, so the existing M22 acceptance evidence is inherited. Configurable
   subtitle size and position remain a future normal-UI UX feature.
 
-- M23 Windows desktop-shell responsiveness repair implemented and focused
-  automated-tested: recurring Windows route/tool discovery and owned lifecycle
-  waits no longer block the Tk thread, operations are serialized, and unchanged
-  logs are not re-rendered. The remaining risk is a short physical Windows GUI
-  responsiveness smoke only.
+- M23 Windows desktop-shell responsiveness repair is physically confirmed:
+  recurring Windows route/tool discovery and owned lifecycle waits no longer
+  block the Tk thread, operations are serialized, unchanged logs are not
+  re-rendered, and normal desktop use remained responsive.
 
 Pending:
 
 - M23 focused dynamic-list presentation and desktop-managed Tailscale / Remote
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
-
-- M23 focused Windows desktop responsiveness smoke: launch the desktop shell,
-  check service/connections, start, briefly use, then stop or restart without a
-  frozen window. With the audit recorded, M23 packaging may then continue as
-  separately scoped work.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

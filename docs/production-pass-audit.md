@@ -61,7 +61,7 @@ is outside this audit and was not read, modified, staged, or deployed.
 | 36 | Optional deterministic compatibility fixtures | M7-M9, M18 | allowlisted optional fixture routes | F | server tests and roadmap decisions | Intentionally not required for normal playback | No | Explicitly retained as regression infrastructure, never a production activation requirement. |
 | 37 | Current-state/plan checkpoint and renderer narrative | M22/M23 handoffs | `PROJECT_STATE.md`, desktop plan | E | audit comparison with `b83eff2` and physical repair evidence | **Fix required: state drift** | No | Stale pending/readability language and old remote-verification text must be reconciled. |
 | 38 | Windows desktop test portability | M23 Windows repair verification | `server/test_desktop.py` | E | Windows audit run | **Fixed in this audit** | No | Expected path now uses host `Path` semantics rather than POSIX separators. |
-| 39 | M23 accepted Local desktop management | M23 Local PASS | desktop lifecycle, route list, owned child | A | desktop suite and recorded Local smoke | Accepted Local path retained | No | Windows responsiveness and Remote desktop checks remain pending M23 work, not historical PASS regressions. |
+| 39 | M23 accepted Local desktop management and Windows responsiveness | M23 Local PASS; focused Windows responsiveness PASS | desktop lifecycle, route list, owned child | A | desktop suite, recorded Local smoke, and user physical Windows observation | Accepted paths retained | No | The desktop Remote-route check remains separately pending M23 work, not a historical PASS regression. |
 
 ## Findings and disposition
 
@@ -105,8 +105,7 @@ boundary.
 
 ## Remaining physical work
 
-Only the existing M23 Windows desktop responsiveness smoke remains: launch the
-desktop shell, inspect service/connections, start it, briefly use it, then stop
-or restart without a frozen window. This is required because it exercises the
-Tk UI thread on Windows; static tests cannot establish perceived responsiveness.
-It does not justify replaying M21/M22 playback acceptance.
+The focused Windows desktop responsiveness observation is now physically
+confirmed PASS. The separately pending M23 desktop Remote-route observation is
+outside this audit and must remain separately scoped. Neither observation
+justifies replaying M21/M22 playback acceptance.
