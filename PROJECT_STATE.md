@@ -93,10 +93,11 @@ IP, and B exited cleanly.
 The canonical PocketCinema client artwork is implemented as the tracked 74×74
 app-local runtime copy `app/icon.png`, deployed to
 `/mnt/SDCARD/App/PocketCinema/icon.png` and referenced by its `config.json`.
-Deployment and remote-file verification are complete; Apps-menu visual and
-launch/status/B-exit confirmation remains pending. This is visual metadata and
-packaging only, with no network, playback, migration, Tailscale, or PCServer
-behavior change.
+It is **Physically Confirmed**: OnionOS Apps displayed the custom PocketCinema
+icon, the app reached its normal Home/UI and server status, and B exited cleanly.
+The independent Tailscale companion retained its separate custom icon. This is
+visual metadata and packaging only, with no network, playback, migration,
+Tailscale, or PCServer behavior change.
 
 ## Intentional Legacy Identifiers
 
@@ -113,10 +114,6 @@ behavior change.
 Milestone 23 is the sole **Next** milestone, but its desktop-server shell remains
 planning-only. The focused post-rename Apps-context smoke test is complete. Do
 not begin Milestone 23 implementation without an explicit request.
-
-Next physical action: from OnionOS Apps, confirm the PocketCinema icon replaces
-the generic icon, launch to Home/UI with normal server status, exit with B, and
-confirm the independent Tailscale icon remains separate.
 
 ## Latest Verified Checkpoint
 
@@ -137,6 +134,9 @@ Completed:
   documented, and wired as a 74×74 app-local runtime icon without a label or
   runtime behavior change; Apps-context display and normal companion screen
   behavior are physically confirmed.
+- Canonical PocketCinema client artwork wired as a 74×74 app-local OnionOS icon;
+  the Apps-menu icon, normal Home/UI and server status, B exit, and separate
+  Tailscale icon are physically confirmed.
 - Durable regression-impact/evidence-inheritance policy recorded. It preserves
   M21/M22 confirmation, requires diff/history-based targeted testing, and keeps
   M23 planning-only while specifying its configurable PCServer-only Stremio
