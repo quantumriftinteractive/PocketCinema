@@ -219,7 +219,7 @@ once to confirm the visible track changes or turns off, then exit normally.
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `33c09c1`
-Remote verified: YES (`3ed29b8` is reachable from `origin/main`)
+Remote verified: YES (`33c09c1` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
