@@ -991,9 +991,11 @@ subtitle discovery: a retained pre-rename FFplay binary reads
 normal runtime repair supplies both compiled identities with the same selected
 subtitle package/font settings and rewrites migrated fontconfig paths. It does
 not alter providers, Matroska mode, conversion, stream selection, or the
-renderer algorithm. One focused normal Apps playback—visible captions plus one
-R1 transition and clean exit—remains required before marking the regression
-restored.
+renderer algorithm. The normal deployment script now explicitly targets the
+documented Miyoo `root` account, and successfully installed the repair while
+preserving live configuration and networking-provider state. One focused normal
+Apps playback—visible captions plus one R1 transition and clean exit—remains
+required before marking the regression restored.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains

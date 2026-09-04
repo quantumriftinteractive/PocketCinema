@@ -201,10 +201,13 @@ provided only `POCKETCINEMA_*`; it also retained a `fonts.conf` pointing to the
 old app directory. Native FFplay still switches the Matroska streams, but the
 track-aware subtitle filter does not receive its subtitle package. The scoped
 repair supplies the same normal app-local assets under both compiled identities
-and rewrites migrated fontconfig paths. It is static-tested but not yet
-physically confirmed: the normal deployer encountered an interactive SSH
-connection close in this session before it could update the Miyoo. No marker,
-provider, Matroska-mode, conversion, or renderer redesign is involved.
+and rewrites migrated fontconfig paths. The normal deployer now explicitly
+targets the documented Miyoo `root` account rather than inheriting the macOS
+login name; it successfully installed and remotely verified the repair while
+preserving live configuration and networking-provider state. No marker,
+provider, Matroska-mode, conversion, or renderer redesign is involved. The
+focused visible-caption/R1 Apps observation remains the only outstanding
+evidence.
 
 Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
@@ -212,9 +215,9 @@ Custom shows only its explicit route. Return to All interfaces, use the
 displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
 proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
 playback matrices or account playback. Keep the separate Matroska
-renderer/display symptom open until the normal deployment repair is installed:
-launch one known subtitle-bearing title, confirm captions are visible, press R1
-once to confirm the visible track changes or turns off, then exit normally.
+renderer/display symptom open until one known subtitle-bearing title launched
+from Apps shows captions; press R1 once to confirm the visible track changes or
+turns off, then exit normally.
 
 ## Latest Verified Checkpoint
 
@@ -308,8 +311,10 @@ Completed:
   implemented: a migrated pre-rename FFplay binary expects legacy
   `POCKETSTREMIO_*` subtitle/font bindings and its migrated fontconfig pointed
   at the old app path. The normal client now binds both identities and the
-  normal deployer rewrites the path. Static validation passes; physical
-  deployment and one visible-caption/R1 Apps check remain pending.
+  normal deployer rewrites the path. The normal deployer now uses the documented
+  `root` target and successfully installed the repair; remote static validation
+  confirms both bindings, the migrated fontconfig path, no diagnostic marker,
+  and shell syntax. One visible-caption/R1 Apps check remains pending.
 
 Pending:
 
@@ -317,10 +322,10 @@ Pending:
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
 
-- M22 focused renderer restoration: deploy the tracked normal client/deployer
-  repair, then from Apps open one known subtitle-bearing title, confirm visible
-  captions and one R1 visible change/off transition, and exit normally. Do not
-  repeat the M22 discovery, provider, conversion, or playback matrix.
+- M22 focused renderer restoration: from Apps open one known subtitle-bearing
+  title, confirm visible captions and one R1 visible change/off transition, and
+  exit normally. Do not repeat the M22 discovery, provider, conversion, or
+  playback matrix.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

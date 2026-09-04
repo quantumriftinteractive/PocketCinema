@@ -28,6 +28,7 @@ $sshOptions = @(
   "-o", "MACs=+hmac-sha1",
   "-o", "StrictHostKeyChecking=accept-new"
 )
+$deviceTarget = "root@$DeviceHost"
 $scpOptions = @(
   "-o", "MACs=+hmac-sha1",
   "-o", "StrictHostKeyChecking=accept-new"
@@ -65,7 +66,7 @@ if [ -d "`$legacy" ]; then
   fi
 fi
 "@
-Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $migration))
+Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, $migration))
 
 $directories = @(
   $Destination,
@@ -78,11 +79,11 @@ $directories = @(
   "$Destination/experiments/ffplay/lib",
   "$Destination/experiments/ffplay/fonts"
 ) -join " "
-Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "mkdir -p $directories"))
+Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, "mkdir -p $directories"))
 
 if ($ReuseInstalledPlayerAssets) {
   $playerMigration = "legacy='$LegacyDestination'; destination='$Destination'; if [ ! -e `"`$destination/experiments/ffplay/bin/ffplay`" ] && [ -d `"`$legacy/experiments/ffplay`" ]; then cp -pR `"`$legacy/experiments/ffplay/.`" `"`$destination/experiments/ffplay/`"; fi; if [ ! -e `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`" ] && [ -f `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" ]; then mv `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`"; fi; if [ -f `"`$destination/experiments/ffplay/fonts.conf`" ]; then sed 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g; s|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g' `"`$destination/experiments/ffplay/fonts.conf`" > `"`$destination/experiments/ffplay/fonts.conf.tmp`" && mv `"`$destination/experiments/ffplay/fonts.conf.tmp`" `"`$destination/experiments/ffplay/fonts.conf`"; fi"
-  Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $playerMigration))
+  Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, $playerMigration))
 }
 
 $files = @(
@@ -104,7 +105,7 @@ $files = @(
 )
 foreach ($file in $files) {
   $localPath = Join-Path $root $file.Local
-  Invoke-Checked "scp" ($scpOptions + @($localPath, "${DeviceHost}:$Destination/$($file.Remote)"))
+  Invoke-Checked "scp" ($scpOptions + @($localPath, "${deviceTarget}:$Destination/$($file.Remote)"))
 }
 $libraries = @(
   @{ Name = "libSDL-1.2.so.0.11.4"; Remote = "libSDL-1.2.so.0" },
@@ -130,7 +131,7 @@ if (-not $ReuseInstalledPlayerAssets) {
     @{ Local = $PlayerFontPath; Remote = "experiments/ffplay/fonts/PocketCinema.ttf" }
   )
   foreach ($runtimeFile in $runtimeFiles) {
-    Invoke-Checked "scp" @($scpOptions + @($runtimeFile.Local, "${DeviceHost}:$Destination/$($runtimeFile.Remote)"))
+    Invoke-Checked "scp" @($scpOptions + @($runtimeFile.Local, "${deviceTarget}:$Destination/$($runtimeFile.Remote)"))
   }
   foreach ($library in $libraries) {
     $source = Join-Path $playerSysroot "usr\lib\$($library.Name)"
@@ -140,7 +141,7 @@ if (-not $ReuseInstalledPlayerAssets) {
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
       throw "Missing app-local FFplay runtime library: $($library.Name)"
     }
-    Invoke-Checked "scp" @($scpOptions + @($source, "${DeviceHost}:$Destination/experiments/ffplay/lib/$($library.Remote)"))
+    Invoke-Checked "scp" @($scpOptions + @($source, "${deviceTarget}:$Destination/experiments/ffplay/lib/$($library.Remote)"))
   }
 }
 
@@ -176,9 +177,9 @@ $playerVerifyTargets = @(
 ) + ($libraries | ForEach-Object { "$Destination/experiments/ffplay/lib/$($_.Remote)" })
 $playerVerify = "for f in $($playerVerifyTargets -join ' '); do test -s `"`$f`" || exit 1; done"
 $verify = "test -s $Destination/icon.png && $normalize && chmod +x $modeTargets && $playerVerify && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketcinema-ui.sh && /bin/sh -n $Destination/client/pocketcinema-proxy.sh && /bin/sh -n $Destination/client/pocketcinema-connection.sh && /bin/sh -n $Destination/client/pocketcinema-resource-monitor.sh"
-Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
+Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, $verify))
 if ($EnableButtonDiagnostic) {
-  Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch $Destination/config/button-diagnostic.mode"))
+  Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, "touch $Destination/config/button-diagnostic.mode"))
   Write-Output "Button diagnostic mode enabled for the next PocketCinema Apps launch"
 }
 if ($ReuseInstalledPlayerAssets) {
