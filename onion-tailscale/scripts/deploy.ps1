@@ -40,6 +40,7 @@ Invoke-Checked "ssh" ($sshOptions + @(
 
 $files = @(
   @{ Local = (Join-Path $root "config.json"); Remote = "config.json" },
+  @{ Local = (Join-Path $root "icon.png"); Remote = "icon.png" },
   @{ Local = (Join-Path $root "launch.sh"); Remote = "launch.sh" },
   @{ Local = $selector; Remote = "bin/onion-tailscale-selector" }
 )

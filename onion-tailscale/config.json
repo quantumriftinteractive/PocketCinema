@@ -1,6 +1,6 @@
 {
   "label": "Tailscale",
-  "icon": "../../Icons/Default/app/terminal.png",
+  "icon": "/mnt/SDCARD/App/Tailscale/icon.png",
   "launch": "launch.sh",
   "description": "Manage the Tailscale userspace connection"
 }

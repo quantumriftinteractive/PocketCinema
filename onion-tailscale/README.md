@@ -9,6 +9,12 @@ Target device path:
 /mnt/SDCARD/App/Tailscale/
 ```
 
+## App icon
+
+`icon.png` is the 74×74 app-local runtime icon. The normal deployer copies it
+to `/mnt/SDCARD/App/Tailscale/icon.png`, which `config.json` references. It is
+visual packaging only and does not change the app label or its runtime behavior.
+
 The app owns its daemon, controller UI, boot hook, socket, proxy, state, and
 logs. Consumer applications only configure the local proxy and do not manage
 the daemon.

@@ -58,6 +58,9 @@ artwork. `UI_concept/Icons/PocketCinema_Server_icon.png` is the master artwork
 for the future PocketCinema Server desktop application.
 `UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png` is the canonical
 artwork for the independent OnionOS Tailscale companion application; it does
-not claim to be an official Tailscale asset or endorsement. None of these
-source assets is converted into desktop packaging formats by this rename. The
-companion artwork is not wired into OnionOS metadata.
+not claim to be an official Tailscale asset or endorsement. The companion's
+tracked runtime copy is `onion-tailscale/icon.png`, a 74×74 PNG derived from
+that canonical source and deployed to `/mnt/SDCARD/App/Tailscale/icon.png`.
+`onion-tailscale/config.json` references that app-local runtime copy while the
+companion retains its separate `Tailscale` application label. None of these
+source assets is converted into desktop packaging formats by this rename.
