@@ -117,18 +117,17 @@ PowerShell.
 ## Initial macOS development shell (implemented, not yet physically confirmed)
 
 The source entry point is `server/pocketcinema_desktop.py`. On the current Mac,
-use the Apple-supplied Tk-capable interpreter:
+use the Tk-capable Homebrew Python:
 
 ```sh
-/usr/bin/python3 server/pocketcinema_desktop.py
+python3 server/pocketcinema_desktop.py
 ```
 
-The current Homebrew Python 3.14 installation lacks `_tkinter`, so it remains
-suitable for non-GUI automated checks but cannot launch this development shell.
-The Apple-supplied Tcl/Tk 8.5 runtime is also dark-mode-incompatible on this
-Mac, so the shell explicitly selects its visible `clam` theme only for that
-legacy runtime. This is a local development prerequisite observation, not a
-macOS packaging claim.
+The Homebrew `python-tk@3.14` development dependency supplies Tcl/Tk 9.0.4.
+The Apple-supplied Tcl/Tk 8.5 runtime is dark-mode-incompatible on this Mac and
+is not a supported development launcher; the shell retains a visible fallback
+theme only for diagnostic compatibility. This is a local development
+prerequisite observation, not a macOS packaging claim.
 
 The implementation is deliberately split into testable layers:
 

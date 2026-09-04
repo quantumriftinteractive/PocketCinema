@@ -120,9 +120,9 @@ sanitized status/log output, and uses the canonical server PNG as its window
 icon. The server core remains independently source-runnable.
 The documented direct macOS source entry point now resolves the repository
 package root correctly instead of requiring `PYTHONPATH` or `python -m`.
-Apple Tcl/Tk 8.5 initially opened a blank dark-mode window; the shell now applies
-an explicit visible compatibility theme for that legacy macOS runtime and awaits
-relaunch confirmation.
+The current development shell uses Homebrew Python 3.14 with `python-tk@3.14`
+(Tcl/Tk 9.0.4). Apple Tcl/Tk 8.5 opened a blank dark-mode window and is not a
+supported development launcher.
 
 Next exact action: perform the focused macOS desktop-shell physical acceptance:
 launch, verify title/icon, save and reload one harmless setting, configure the
@@ -170,9 +170,9 @@ Completed:
   server/pocketcinema_desktop.py` now bootstraps the repository import path
   before loading the Tk shell.
 
-- Apple Tcl/Tk 8.5 dark-mode rendering regression fixed and construction-tested
-  with its explicit `clam` compatibility theme; physical relaunch confirmation
-  remains pending.
+- Homebrew `python-tk@3.14` installed as the local macOS development prerequisite;
+  Python 3.14/Tcl-Tk 9.0.4 desktop construction and the desktop unit suite pass.
+  Physical relaunch confirmation remains pending.
 
 Pending:
 

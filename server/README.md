@@ -43,10 +43,10 @@ development workflow, not a release bundle. It persists only non-secret desktop
 settings under `~/Library/Application Support/PocketCinema/`, starts and stops
 only its owned PCServer child, and keeps credentials/addon configuration in its
 separate per-user directories. On this development Mac, launch it with the
-Tk-capable system interpreter:
+Tk-capable Homebrew interpreter:
 
 ```sh
-/usr/bin/python3 server/pocketcinema_desktop.py
+python3 server/pocketcinema_desktop.py
 ```
 
 The Stremio Service field accepts a validated HTTP origin on the PCServer host
