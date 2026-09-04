@@ -184,8 +184,8 @@ rerun M21/M22 playback matrices or account playback.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `d7a2976`
-Remote verified: YES (`d7a2976` is reachable from `origin/main`)
+Checkpoint commit: `5fc7e07`
+Remote verified: YES (`5fc7e07` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
