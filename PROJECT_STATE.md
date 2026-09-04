@@ -258,7 +258,7 @@ physical evidence is inherited.
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `189d8ac`
-Remote verified: pending push and fetch verification
+Remote verified: YES — `189d8ac` and its metadata seals are reachable from `origin/main`
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
