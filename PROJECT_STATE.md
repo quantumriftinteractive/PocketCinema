@@ -155,8 +155,8 @@ change.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `b5d5116a4a0b9f9703b64c9c55a29c2c37c0e2f7`
-Remote verified: YES (`b5d5116` is reachable from `origin/main`)
+Checkpoint commit: `ecafbc6`
+Remote verified: pending push (`ecafbc6` is the focused M23 networking-model correction commit)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
