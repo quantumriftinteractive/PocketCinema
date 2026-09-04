@@ -1,7 +1,7 @@
 """Non-secret desktop settings, validation, and per-user paths."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import ipaddress
 import json
 import os
@@ -12,11 +12,13 @@ import urllib.parse
 
 
 APP_NAME = "PocketCinema"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_STREMIO_SERVICE_URL = "http://127.0.0.1:11470"
 DEFAULT_SERVER_PORT = 8755
 DISCOVERY_PORT = 8754
 OPEN_MEDIA_ADDON_PORT = 8756
+LISTEN_MODES = ("automatic", "all_interfaces", "custom")
+ADVERTISED_MODES = ("automatic", "manual")
 
 
 class ConfigurationError(ValueError):
@@ -27,8 +29,10 @@ class ConfigurationError(ValueError):
 class DesktopSettings:
     schema_version: int = SCHEMA_VERSION
     server_name: str = "PocketCinema Server"
+    listen_mode: str = "automatic"
     listen_address: str = "127.0.0.1"
     listen_port: int = DEFAULT_SERVER_PORT
+    advertised_mode: str = "automatic"
     advertised_address: str = "127.0.0.1"
     network_name: str = "Local"
     stremio_service_url: str = DEFAULT_STREMIO_SERVICE_URL
@@ -88,6 +92,13 @@ def _valid_advertised_address(value):
     return value
 
 
+def _valid_choice(value, values, label):
+    value = str(value).strip()
+    if value not in values:
+        raise ConfigurationError(f"{label} is invalid")
+    return value
+
+
 def validate_stremio_service_url(value):
     value = str(value).strip()
     parsed = urllib.parse.urlsplit(value)
@@ -139,8 +150,12 @@ def validate_settings(settings):
     return DesktopSettings(
         schema_version=SCHEMA_VERSION,
         server_name=name,
+        listen_mode=_valid_choice(settings.listen_mode, LISTEN_MODES, "Listen mode"),
         listen_address=_valid_bind_address(settings.listen_address),
         listen_port=port,
+        advertised_mode=_valid_choice(
+            settings.advertised_mode, ADVERTISED_MODES, "PocketCinema address mode"
+        ),
         advertised_address=_valid_advertised_address(settings.advertised_address),
         network_name=network_name,
         stremio_service_url=validate_stremio_service_url(settings.stremio_service_url),
@@ -159,7 +174,14 @@ def load_settings(root=None):
         if not isinstance(payload, dict):
             raise ValueError("settings must be an object")
         keys = set(DesktopSettings.__dataclass_fields__)
-        return validate_settings({key: value for key, value in payload.items() if key in keys})
+        values = {key: value for key, value in payload.items() if key in keys}
+        # Version-1 preferences exposed explicit addresses. Retain that exact
+        # behavior instead of silently replacing a working manual route.
+        if "listen_mode" not in values:
+            values["listen_mode"] = "custom"
+        if "advertised_mode" not in values:
+            values["advertised_mode"] = "manual"
+        return validate_settings(values)
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         raise ConfigurationError(f"Desktop settings could not be loaded: {exc}") from exc
 
@@ -195,3 +217,48 @@ def address_is_assigned(address):
         candidates = []
     candidates.extend(socket.getaddrinfo("localhost", None))
     return any(item[4][0] == address for item in candidates)
+
+
+def resolve_network_settings(settings, local_address):
+    """Return the effective child configuration for the selected listen mode.
+
+    Automatic choices are intentionally resolved at start/display time, while
+    stored preferences remain non-secret choices rather than stale interface IPs.
+    """
+    settings = validate_settings(settings)
+    local_address = str(local_address or "").strip()
+    if settings.listen_mode == "automatic":
+        if not local_address:
+            raise ConfigurationError("No usable local network address was found")
+        listen_address = local_address
+        network_name = "Local network"
+    elif settings.listen_mode == "all_interfaces":
+        if not local_address:
+            raise ConfigurationError("Choose a device-facing address in Advanced Settings")
+        listen_address = "0.0.0.0"
+        network_name = "All interfaces"
+    else:
+        listen_address = settings.listen_address
+        network_name = settings.network_name
+
+    advertised_address = (
+        settings.advertised_address
+        if settings.advertised_mode == "manual"
+        else local_address or listen_address
+    )
+    if advertised_address in {"0.0.0.0", "::"}:
+        raise ConfigurationError("Choose a device-facing address in Advanced Settings")
+    return replace(
+        settings,
+        listen_address=listen_address,
+        advertised_address=advertised_address,
+        network_name=network_name,
+    )
+
+
+def pocketcinema_url(address, port):
+    """Format a device-facing HTTP URL without exposing a wildcard bind."""
+    address = str(address).strip()
+    if ":" in address and not address.startswith("["):
+        address = f"[{address}]"
+    return f"http://{address}:{_valid_port(port, 'Server port')}"

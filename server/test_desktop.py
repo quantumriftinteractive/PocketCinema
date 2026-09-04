@@ -8,11 +8,13 @@ import threading
 import time
 import unittest
 
-from server.desktop.capabilities import detect_tool, probe_stremio_service
+from server.desktop.capabilities import detect_tool, preferred_local_address, probe_stremio_service
 from server.desktop.config import (
     ConfigurationError,
     DesktopSettings,
     load_settings,
+    pocketcinema_url,
+    resolve_network_settings,
     save_settings,
     user_data_root,
     validate_settings,
@@ -32,7 +34,55 @@ class SettingsTests(unittest.TestCase):
             saved = save_settings(DesktopSettings(server_name="Living Room PCServer"), temporary)
             self.assertEqual(saved.server_name, "Living Room PCServer")
             self.assertEqual(load_settings(temporary).server_name, "Living Room PCServer")
-            self.assertEqual(json.loads((Path(temporary) / "config.json").read_text())["schema_version"], 1)
+            self.assertEqual(json.loads((Path(temporary) / "config.json").read_text())["schema_version"], 2)
+
+    def test_new_profile_automatically_derives_a_local_network_address(self):
+        effective = resolve_network_settings(DesktopSettings(), "192.0.2.44")
+        self.assertEqual(effective.listen_mode, "automatic")
+        self.assertEqual(effective.listen_address, "192.0.2.44")
+        self.assertEqual(effective.advertised_address, "192.0.2.44")
+        self.assertEqual(pocketcinema_url(effective.advertised_address, 8755), "http://192.0.2.44:8755")
+
+    def test_all_interfaces_keeps_a_device_facing_address(self):
+        effective = resolve_network_settings(
+            DesktopSettings(listen_mode="all_interfaces"), "192.0.2.44"
+        )
+        self.assertEqual(effective.listen_address, "0.0.0.0")
+        self.assertEqual(effective.advertised_address, "192.0.2.44")
+
+    def test_custom_and_manual_address_remain_available(self):
+        settings = DesktopSettings(
+            listen_mode="custom",
+            listen_address="192.0.2.45",
+            advertised_mode="manual",
+            advertised_address="example.test",
+            network_name="Remote network",
+        )
+        effective = resolve_network_settings(settings, "192.0.2.44")
+        self.assertEqual(effective.listen_address, "192.0.2.45")
+        self.assertEqual(effective.advertised_address, "example.test")
+        self.assertEqual(effective.network_name, "Remote network")
+
+    def test_version_one_settings_remain_manual(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            (Path(temporary) / "config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "server_name": "Existing PCServer",
+                        "listen_address": "192.0.2.45",
+                        "listen_port": 8757,
+                        "advertised_address": "192.0.2.46",
+                        "network_name": "Existing network",
+                        "stremio_service_url": "http://127.0.0.1:11470",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            loaded = load_settings(temporary)
+        self.assertEqual(loaded.listen_mode, "custom")
+        self.assertEqual(loaded.advertised_mode, "manual")
+        self.assertEqual(loaded.listen_address, "192.0.2.45")
 
     def test_invalid_settings_are_rejected(self):
         for kwargs in (
@@ -63,6 +113,17 @@ class StremioHandler(BaseHTTPRequestHandler):
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_preferred_local_address_skips_loopback(self):
+        self.assertEqual(
+            preferred_local_address(
+                [
+                    ("Loopback", "127.0.0.1"),
+                    ("Link-local", "fe80::1"),
+                    ("Host", "192.0.2.44"),
+                ]
+            ),
+            "192.0.2.44",
+        )
     def test_tool_detection_for_manual_missing_path(self):
         status = detect_tool("definitely-not-pocketcinema-tool", "/missing/tool")
         self.assertFalse(status.available)

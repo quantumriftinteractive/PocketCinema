@@ -156,6 +156,27 @@ Tk desktop UI
   as the Tk window/application icon; it is not modified. A derived `.icns` is
   deferred to macOS packaging and a derived `.ico` to Windows packaging.
 
+### Initial UX refinement (implemented, visual launch confirmed)
+
+The normal screen now asks only for the PCServer name, a simple **Listen on**
+choice, port, Stremio Service endpoint, and Start/Stop actions. The derived
+**PocketCinema address** is read-only and copyable; it is the address entered on
+the Miyoo. It is deliberately distinct from the Stremio Service endpoint, which
+PCServer alone uses upstream.
+
+- **Automatic / Local network** resolves a usable non-loopback, non-link-local
+  local address when displayed and started. This is the new-profile default.
+- **All interfaces** binds `0.0.0.0` but still displays a concrete derived
+  PocketCinema address rather than a wildcard.
+- **Custom address** reveals the explicit bind field.
+- Advanced Settings retains manual PocketCinema-address override, network label,
+  and FFmpeg/FFprobe paths. Version-1 stored settings load as Custom plus manual
+  address override, preserving their existing behavior without rewriting them.
+- The normal Media tools section reports Available or Missing. Manual paths are
+  secondary because successful automatic detection needs no user action.
+- Start and Stop are state-aware primary actions; Restart, connection checking,
+  copying, and manual overrides are secondary.
+
 ### Regression impact matrix for the initial shell
 
 | Changed area | Classification | Required verification | Inherited evidence and reason |
@@ -205,10 +226,12 @@ Normal preferences should initially contain only non-secret fields, for example:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "server_name": "PocketCinema Server",
+  "listen_mode": "automatic",
   "listen_address": "127.0.0.1",
   "listen_port": 8755,
+  "advertised_mode": "automatic",
   "advertised_address": "127.0.0.1",
   "network_name": "Local",
   "stremio_service_url": "http://127.0.0.1:11470",
@@ -239,8 +262,9 @@ configuration.
 
 Safe initial behavior:
 
-- Default to loopback until the user deliberately selects a device-reachable
-  interface.
+- New desktop profiles default to Automatic / Local network, which chooses a
+  usable device-reachable local address. Existing stored profiles retain their
+  prior explicit addresses as Custom/manual settings.
 - Show interface name and IP together when available.
 - Offer All interfaces only with an exposure warning and a separately selected
   advertised address; never display `0.0.0.0` as the Miyoo URL.

@@ -112,8 +112,9 @@ Tailscale, or PCServer behavior change.
 ## Active Work and Next Action
 
 Milestone 23 is active. The initial functional macOS source-development desktop
-shell is implemented and automatically tested, but is not physically confirmed
-or packaged. Its Tk UI owns only a tracked PCServer child, persists non-secret
+shell is implemented and automatically tested; its revised main screen is
+visually confirmed, but owned-start/stop and Miyoo acceptance remain pending and
+it is not packaged. Its Tk UI owns only a tracked PCServer child, persists non-secret
 settings under the per-user PocketCinema directory, validates the editable
 PCServer-only Stremio Service HTTP origin, detects FFmpeg/FFprobe, displays
 sanitized status/log output, and uses the canonical server PNG as its window
@@ -123,12 +124,18 @@ package root correctly instead of requiring `PYTHONPATH` or `python -m`.
 The current development shell uses Homebrew Python 3.14 with `python-tk@3.14`
 (Tcl/Tk 9.0.4). Apple Tcl/Tk 8.5 opened a blank dark-mode window and is not a
 supported development launcher.
+The M23 UX refinement is implemented and visually confirmed on macOS: the main
+screen now derives a non-loopback PocketCinema address through Automatic / Local
+network, keeps Stremio Service clearly separate, reports detected media tools,
+and moves manual address/label/tool paths behind Advanced Settings. Existing
+desktop preferences preserve their explicit Custom/manual behavior.
 
 Next exact action: perform the focused macOS desktop-shell physical acceptance:
-launch, verify title/icon, save and reload one harmless setting, configure the
-known Stremio endpoint, start/stop the owned PCServer, and run one `friday`
-Miyoo connection/search smoke test. Do not rerun M21/M22 playback matrices
-unless this new lifecycle/configuration path exposes a specific regression.
+save and reload one harmless setting, configure the known Stremio endpoint,
+start/stop the owned PCServer, and run one `friday` Miyoo connection/search
+smoke test using the displayed PocketCinema address. Do not rerun M21/M22
+playback matrices unless this new lifecycle/configuration path exposes a
+specific regression.
 
 ## Latest Verified Checkpoint
 
@@ -173,6 +180,12 @@ Completed:
 - Homebrew `python-tk@3.14` installed as the local macOS development prerequisite;
   Python 3.14/Tcl-Tk 9.0.4 desktop construction and the desktop unit suite pass.
   Physical relaunch confirmation remains pending.
+
+- M23 user-facing UX refinement implemented, visual macOS launch confirmed, and
+  automated-tested: Automatic / Local network derives a concrete usable address;
+  All interfaces and Custom remain available; manual address/label/tool paths
+  are secondary; Stremio Service is distinct; primary server actions are
+  state-aware. Full owned-start/stop and Miyoo `friday` acceptance remains pending.
 
 Pending:
 

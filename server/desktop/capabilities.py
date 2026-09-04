@@ -1,5 +1,6 @@
 """Host capability discovery used by the desktop manager and tests."""
 from dataclasses import dataclass
+import ipaddress
 import os
 from pathlib import Path
 import shutil
@@ -43,11 +44,33 @@ def local_addresses():
     seen = {"127.0.0.1"}
     for record in records:
         address = record[4][0]
-        if address in seen or address.startswith("127.") or address.startswith("169.254.") or address == "::1":
+        if address in seen or not _usable_device_address(address):
             continue
         seen.add(address)
         values.append((socket.gethostname(), address))
     return values
+
+
+def preferred_local_address(addresses=None):
+    """Choose the first non-loopback host address without naming its transport."""
+    addresses = local_addresses() if addresses is None else addresses
+    for _, address in addresses:
+        if _usable_device_address(address):
+            return address
+    return ""
+
+
+def _usable_device_address(address):
+    try:
+        candidate = ipaddress.ip_address(address.split("%", 1)[0])
+    except ValueError:
+        return False
+    return not (
+        candidate.is_loopback
+        or candidate.is_link_local
+        or candidate.is_multicast
+        or candidate.is_unspecified
+    )
 
 
 def probe_stremio_service(url, timeout=2):
