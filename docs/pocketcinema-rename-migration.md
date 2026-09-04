@@ -46,6 +46,14 @@ Tailscale companion remained separate and intact. This validates the
 rename/deployment/migration wiring only; it does not re-qualify the previously
 confirmed Milestone 21 or 22 playback behavior.
 
+## Regression impact assessment
+
+| Change area | Affected evidence/workflow | Required verification | Inherited evidence | Reason |
+| --- | --- | --- | --- | --- |
+| App paths, script names, config/environment keys, migration, process detection, metadata, and deployment endpoint names | Rename/deployment integration | Static checks plus focused Apps migration, Local/Remote/Automatic routing, search, and B-exit smoke | M21/M22 media behavior | These boundaries changed behaviorally. |
+| Playback, subtitles, conversion/transcoding, account compatibility, and media APIs | Historical M21/M22 acceptance | No additional physical matrix | M21/M22 physical evidence | Diff/history classify the relevant implementation and semantics as unchanged or mechanically renamed. |
+| Independent Tailscale companion | Companion ownership and state | Separate icon display/state smoke only | Existing networking evidence | The rename did not alter companion lifecycle, auth, state, or proxy behavior. |
+
 ## Intentional compatibility exceptions
 
 The UDP discovery request/response markers remain

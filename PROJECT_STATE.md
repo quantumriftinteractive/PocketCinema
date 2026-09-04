@@ -33,8 +33,11 @@ decision.
 
 - Keep addon URLs, media/subtitle URLs, and account credentials on the PCServer;
   the device receives only opaque identifiers.
-- Stremio Service is loopback-only on the PCServer host; preserve the inbound
-  firewall block for TCP `11470-11474` and `12470`.
+- The Miyoo never reaches Stremio Service directly; PocketCinema Server is the
+  device-facing boundary. The current local default is `http://127.0.0.1:11470`;
+  preserve the inbound firewall block for TCP `11470-11474` and `12470` when
+  the service runs locally on the PCServer host. M23 planning permits a
+  validated, PCServer-only configurable endpoint on another reachable host.
 - PocketCinema is transport-agnostic: direct HTTP is normal, an optional generic
   HTTP proxy supports Remote routing, and it never manages Tailscale.
 - Automatic routing tries Local PCServer directly, then Remote PCServer through
@@ -67,6 +70,15 @@ saved Local and Remote PCServer routes, traversed Local → Remote → Local und
 Automatic routing, and exited with B. This confirms rename/deployment wiring
 only; Milestones 21 and 22 remain physically confirmed under their historical
 PocketStremio evidence and were not re-qualified.
+
+Historical evidence is inherited unless a later material change intersects the
+validated behavior. The rename impact assessment classified path, deployment,
+migration, configuration-key, process-detection, and metadata wiring as the
+only targeted smoke-test surface; unchanged playback, subtitle, transcoding,
+and account-compatibility evidence for Milestones 21 and 22 remains confirmed.
+The current development machine cannot reach its configured Stremio Service, so
+account playback was not re-tested in this session; this does not invalidate
+the historical evidence.
 
 The canonical source artwork for the independent OnionOS Tailscale companion is
 tracked at `UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png`. Its

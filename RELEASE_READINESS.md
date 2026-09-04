@@ -42,7 +42,9 @@ provider. The completed transport-agnostic onboarding path:
 - supports a future installer, profile, or setup-code handoff without copying
   credentials, runtime state, or private configuration; and
 - does not rely on public port forwarding, because the PCServer has no public-facing
-  authentication and Stremio Service must remain loopback-only on its host.
+  authentication. The Miyoo never reaches Stremio Service directly; its local
+  default remains loopback with the firewall block preserved, while M23 may
+  configure a PCServer-only endpoint on a separately reachable host.
 
 A future desktop PCServer application can make server endpoint selection and setup
 information visible, but it cannot itself create the Miyoo's network route. The
@@ -150,7 +152,8 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
   complete. Code presence is not completion evidence.
 - A clean supported Windows PC can install or extract the actual PocketCinema
   Server artifact, configure and persist PCServer name, listen interface/address,
-  port, device-facing address, and Stremio Service through the desktop UI,
+  port, device-facing address, and a validated Stremio Service endpoint through
+  the desktop UI,
   verify or select FFmpeg and FFprobe, start the server, and connect a Miyoo
   Mini Plus without Python, PowerShell, repository knowledge, or manual
   environment-variable configuration.
@@ -223,7 +226,8 @@ This is the required v1.0 direction, not a currently available artifact.
 - Network access from the Miyoo to the selected PCServer interface/address. Direct
   LAN HTTP is supported; Tailscale remains optional, independent transport.
 - Stremio/Stremio Service only where required by the existing account or Local
-  Files architecture, with PCServer access remaining loopback-only.
+  Files architecture, accessed by PCServer only. The default endpoint is local
+  loopback; a configured endpoint may instead be on another reachable host.
 - FFmpeg and FFprobe detected automatically or selected through the desktop UI.
   They are not to be bundled until redistribution provenance and licensing are
   approved.
@@ -249,8 +253,9 @@ not optional release polish.
   Stremio runtime or explicit `-FFprobePath`/`-FFmpegPath` arguments.
 - The PocketCinema server host address reachable from the Miyoo. Direct LAN
   HTTP is supported; Tailscale is optional transport infrastructure.
-- Optional Stremio Service installed and reachable locally at
-  `http://127.0.0.1:11470`.
+- Optional Stremio Service installed and reachable from PCServer. The default
+  local endpoint is `http://127.0.0.1:11470`; configure a non-secret endpoint
+  override when the service is on another reachable host.
 - Optional stream addon manifests configured in ignored
   `server/config/stream_addons.json`.
 - Optional account binding performed only through the official temporary
@@ -311,8 +316,9 @@ development working tree:
 - [ ] Launch PocketCinema Server and confirm that its per-user directories are
       created outside the application bundle.
 - [ ] Configure the PCServer name, listen interface/address, port, advertised Miyoo
-      address, and Stremio Service in the UI; restart the app and verify that
-      non-secret settings persist.
+      address, and Stremio Service endpoint (including manual host/address and
+      port or URL override) in the UI; restart the app and verify that non-secret
+      settings persist.
 - [ ] Confirm FFmpeg and FFprobe automatic detection and manual selection, then
       verify useful missing-tool handling without a traceback in the primary UI.
 - [ ] Start PCServer, verify `/api/status`, and copy the displayed device-reachable
@@ -376,7 +382,9 @@ artifact:
 - [ ] Choose a listen interface and confirm the separately displayed Miyoo
       address.
 - [ ] Configure and validate the port.
-- [ ] Configure and check the loopback Stremio Service endpoint.
+- [ ] Configure and check the Stremio Service endpoint: retain the loopback
+      default or manually override the host/address and port (or URL), then
+      verify validation and reachability feedback.
 - [ ] Verify FFmpeg and FFprobe detection or select their executable paths.
 - [ ] Connect a Stremio account through the existing official approval flow if
       desired; never manually copy an auth key into the application bundle.
@@ -396,9 +404,11 @@ artifact:
       `stop` for lifecycle operations.
 - [ ] Confirm `/api/status`, search, metadata, streams, play-session creation,
       and a byte-range media request.
-- [ ] Confirm Stremio Service is local-only at `127.0.0.1:11470`.
-- [ ] Keep the inbound Windows Firewall block for TCP `11470-11474` and
-      `12470`; verify LAN and tailnet denial to those ports.
+- [ ] In the current source workflow, confirm Stremio Service is local-only at
+      `127.0.0.1:11470`, keep the inbound Windows Firewall block for TCP
+      `11470-11474` and `12470`, and verify LAN and tailnet denial to those ports.
+      The M23 packaged UI must instead support a validated PCServer-only endpoint
+      for another service host without exposing it directly to the Miyoo.
 - [ ] Configure only legal, intended addon manifests in ignored files.
 - [ ] Keep `server/config/stremio_account.json`, `server/data/`, logs, caches,
       and local media ignored and out of release artifacts.
@@ -445,8 +455,9 @@ artifact:
 - [ ] Account media is limited to safe direct HTTP(S) results; reject P2P,
       external-player, local/private-address, credential-in-URL, and unsafe
       schemes.
-- [ ] Stremio Service remains loopback-only from PocketCinema’s perspective,
-      with the Windows Firewall inbound block preserved.
+- [ ] The Miyoo never reaches Stremio Service directly. Preserve the loopback
+      default and Windows Firewall inbound block when the service is local to
+      PCServer; any remote endpoint remains PCServer-only and validated.
 - [ ] Local Files allowlisting remains explicit and never broadens to general
       user directories.
 - [ ] HTTP proxy settings are optional and never cause PocketCinema to start,

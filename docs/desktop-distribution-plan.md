@@ -40,8 +40,12 @@ The existing PocketCinema server should remain the core implementation.
   written atomically with user-only permissions where supported.
 - Optional addon manifests default to ignored
   `server/config/stream_addons.json`; an environment variable can override them.
-- The default Stremio Service URL is `http://127.0.0.1:11470`. The server must
-  continue accessing it through loopback only.
+- The default Stremio Service URL is `http://127.0.0.1:11470` when it runs on
+  the PCServer host, and the current core intentionally validates loopback-only
+  origins. M23 must retain the default while replacing that hard restriction
+  with a validated, non-secret PCServer-only endpoint policy for a separately
+  reachable service host; the Miyoo never contacts Stremio Service directly.
+  Preserve the Windows Firewall block for the local service listener.
 - FFprobe and FFmpeg accept explicit CLI paths. The Python core otherwise searches
   `PATH`; the Windows PowerShell managers additionally check Stremio's current
   per-user runtime location. The macOS manager discovers tools from `PATH`.
@@ -77,6 +81,16 @@ The first implementation should use four testable layers:
    kill unrelated Python, FFmpeg, Stremio, or Tailscale processes.
 4. **UI:** render status and controls, delegate all validation and lifecycle work,
    and keep blocking checks off the UI event loop.
+
+### Stremio Service endpoint
+
+Persist a non-secret endpoint as a URL or equivalent host/address-and-port
+fields. Default it to `http://127.0.0.1:11470`; permit an explicit manual
+override for a service on the same PC or another reachable host. Validate the
+scheme, host/address, and port before launch, check PCServer-to-service
+connectivity, and show a concise actionable unreachable or invalid-endpoint
+state. This setting changes only the PCServer's upstream connection; it never
+exposes Stremio Service to the Miyoo.
 
 `tkinter.ttk` is the provisional UI choice because it is Python's standard
 cross-platform Tk interface and avoids adding a large application framework. Its
@@ -184,7 +198,8 @@ The initial control panel should expose only:
 - PCServer name;
 - listening interface/address and port;
 - advertised Miyoo address;
-- Stremio Service address and reachable/unreachable state;
+- Stremio Service endpoint (editable address/host and port or URL, default and
+  manual override) and reachable/unreachable/invalid state;
 - FFmpeg and FFprobe detected, missing, or manually configured state;
 - Stopped, Starting, Running, or Error server state;
 - Start, Stop, and Restart controls;
@@ -258,7 +273,8 @@ Keep GUI geometry out of core tests. Add deterministic tests for:
   advertised-address selection;
 - FFmpeg/FFprobe explicit-path and `PATH` detection, missing tools, and capability
   checks;
-- Stremio Service reachable/unreachable/invalid URL state;
+- Stremio Service default, manual-override, reachable/unreachable/invalid
+  endpoint state;
 - owned child start, health timeout, duplicate instance, port-in-use, stop,
   restart, crash, and stale metadata handling;
 - proof that unrelated processes are never selected for termination;
@@ -277,15 +293,15 @@ PowerShell workflow, or manually prepared environment variables to:
 
 1. install or extract the actual release artifact;
 2. launch the control panel;
-3. persist PCServer name, interface, port, and Stremio Service settings;
+3. persist PCServer name, interface, port, and Stremio Service endpoint settings;
 4. detect or manually configure FFmpeg and FFprobe;
 5. start PCServer and show the correct device-reachable URL;
 6. connect a real Miyoo Mini Plus from OnionOS Apps;
 7. pass direct, converted/downscaled, subtitle, Continue Watching, Resume, and
    Play from Start regressions;
 8. restart the desktop app/server and retain intended configuration and PCServer data;
-9. handle invalid port, missing FFmpeg/FFprobe, unreachable Stremio Service, a
-   disappeared interface, and startup failure cleanly;
+9. handle invalid port, invalid or unreachable Stremio Service endpoint, missing
+   FFmpeg/FFprobe, a disappeared interface, and startup failure cleanly;
 10. stop only the managed PCServer process and remove the application without deleting
     unrelated or user-owned data unexpectedly;
 11. confirm that credentials, addon URLs/tokens, upstream URLs, development files,

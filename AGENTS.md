@@ -33,9 +33,13 @@ priority.
 - PocketCinema must be transport-agnostic. Direct HTTP is the default; a
   generic HTTP proxy is optional configuration. PocketCinema must never start,
   stop, or inspect Tailscale.
-- PocketCinema must access Stremio Service only through loopback on the gaming
-  PC. Preserve the inbound Windows Firewall block for TCP `11470-11474` and
-  `12470`; never make those ports reachable from the Miyoo, LAN, or tailnet.
+- The Miyoo must never reach Stremio Service directly; PocketCinema Server is
+  the only device-facing service. The local default is
+  `http://127.0.0.1:11470`. Milestone 23 may configure a validated, non-secret
+  PCServer-only Stremio Service endpoint for a separately reachable host. Keep
+  the inbound Windows Firewall block for TCP `11470-11474` and `12470` whenever
+  the service runs locally on the gaming PC; never make that local listener
+  reachable from the Miyoo, LAN, or tailnet.
 - Do not commit private addon URLs, tokens, Tailscale state, downloaded binaries,
   logs, generated caches, or the local test video. Respect `.gitignore`.
 - Do not add torrent ingestion, transcoding, subtitle, progress, poster, or
@@ -176,7 +180,10 @@ overwrite it. Environment variables take precedence over app-local config.
 - Keep HLS playlists and child URLs server-side. The device-facing HLS path must
   remain a bounded unencrypted MPEG-TS bridge unless a replacement is physically
   measured.
-- Keep Stremio-specific and source-specific logic on the gaming PC.
+- Keep Stremio-specific and source-specific logic on the PCServer. The Miyoo
+  never contacts Stremio Service directly; the default local endpoint is
+  loopback, while a later desktop UI may configure and validate a PCServer-only
+  endpoint on another reachable host.
 - Prefer the Python standard library until a dependency removes demonstrated
   complexity and has a clear deployment story.
 - Use `server/manage-server.ps1` for normal background lifecycle operations and
@@ -280,6 +287,38 @@ deployment with `scripts/deploy-miyoo.ps1` is part of test preparation and must
 be performed automatically unless the user explicitly declines deployment.
 Interactive blank-password SSH authentication is expected and is not a reason
 to skip deployment.
+
+## Regression Impact and Evidence Inheritance
+
+Historical automated and physical evidence remains valid unless a later change
+materially intersects the behavior it validated. Do not equate a new commit,
+time elapsed, or a test not repeated in the current session with an invalidated
+milestone.
+
+Before requesting physical testing for a meaningful change, establish the
+baseline and inspect the diff, history, rename detection, relevant callers, and
+tests. Classify each affected area as behaviorally changed, mechanically
+renamed, unchanged, or uncertain, then intersect it with the validated
+workflows and evidence. Record a concise regression-impact matrix with: changed
+area; affected evidence/workflow; required verification; inherited evidence;
+and reason. Run applicable automated/static checks first.
+Request only the smallest Apps-context physical acceptance that resolves the
+remaining risk, naming the changed component and exact reason.
+
+Evidence must be revisited only when a change materially affects validated
+code, dependency behavior, configuration semantics, deployment/runtime paths,
+platform assumptions, or a documented invariant; when relevant automated
+regression checks fail; or when evidence itself is invalidated. Cosmetic work,
+documentation-only changes, nonsemantic assets, and mechanical renames do not
+invalidate unrelated evidence.
+
+For an identity rename, target paths, script names, environment/configuration
+keys, migration, process detection, app metadata, and deployment endpoint names.
+Do not blanket-rerun playback, subtitle, transcoding, or account-compatibility
+matrices when their code and semantics are unchanged. Physical observation stays
+authoritative, but it is expensive: request focused evidence rather than a full
+historical matrix. A milestone remains Confirmed when its historical evidence
+is inherited; "not re-tested today" is not "unconfirmed."
 
 ## Documentation and Milestones
 

@@ -32,8 +32,11 @@ Architectural boundaries:
 - Network providers such as Tailscale are operated independently from
   PocketCinema.
 - PocketCinema server is the only service exposed to the Miyoo.
-- PocketCinema accesses Stremio Service only through `127.0.0.1:11470`; a
-  Windows Firewall block rule prevents remote access to the service ports.
+- PocketCinema Server is the only service exposed to the Miyoo; the local
+  Stremio Service default is `http://127.0.0.1:11470`. A Windows Firewall block
+  prevents remote access to that local service. M23 plans a validated,
+  PCServer-only configurable endpoint for a separately reachable service host;
+  the Miyoo never contacts it directly.
 - PocketCinema persistent files remain under
   `/mnt/SDCARD/App/PocketCinema/`; independent provider apps own their own app
   directories.
@@ -992,7 +995,11 @@ does not satisfy that gate.
   application-data directory, separately from account credentials, private
   addon configuration, logs, and runtime data.
 - Expose PCServer name, validated listen interface/address and port, a distinct
-  device-facing address, Stremio Service address/reachability, and
+  device-facing address, and a non-secret Stremio Service endpoint. The endpoint
+  must have a sensible local default (`http://127.0.0.1:11470`), an editable
+  host/address and port (or equivalent URL), manual override, persistence,
+  validation, reachability status, and actionable errors; it may name the same
+  PC or another reachable host, but remains PCServer-only. Also expose
   FFmpeg/FFprobe detection with manual path selection.
 - Provide Stopped, Starting, Running, and Error states plus Start, Stop, Restart,
   and Copy Miyoo Address controls.
@@ -1009,14 +1016,16 @@ does not satisfy that gate.
   requirements documented and tested before release claims.
 - Preserve direct play, conversion/downscaling, subtitle modes, multi-audio,
   account linking, progress, Continue Watching, Resume, Menu cleanup, opaque
-  upstream URLs, loopback-only Stremio Service access, and Tailscale independence.
+  upstream URLs, PCServer-only Stremio Service access (with the secure local
+  default), and Tailscale independence.
 
 Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop-distribution-plan.md)
 
 Acceptance criterion: a clean supported Windows PC can install or extract the
 actual PocketCinema Server release artifact, configure and persist the PCServer
 name, listen interface/address, port, advertised Miyoo address, and Stremio
-Service through the desktop application, detect or manually select FFmpeg and
+Service endpoint (including a manual host/address-and-port override) through the
+desktop application, detect or manually select FFmpeg and
 FFprobe, start and stop only its owned server, and connect a real Miyoo Mini Plus
 without Python, PowerShell, a repository checkout, or manual environment
 variables. The packaged-artifact run must pass the documented playback,
