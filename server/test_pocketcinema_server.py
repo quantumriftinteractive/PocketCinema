@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import io
 import json
 import socket
@@ -649,6 +650,62 @@ class PocketCinemaServerTest(unittest.TestCase):
         self.assertFalse(diagnostics["reachable"])
         self.assertEqual(diagnostics["message"], "Stremio Service is unavailable")
         self.assertNotIn("private failure", json.dumps(diagnostics))
+
+    def test_stremio_service_status_log_reports_transitions_without_duplicates(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir], status_ttl=0
+        )
+        backend._fetch_json = mock.Mock(
+            side_effect=[
+                OSError("timed out"),
+                OSError("timed out"),
+                OSError("connection refused"),
+                {"values": {"serverVersion": "4.20.8", "localAddonEnabled": True}},
+                {
+                    "id": "org.stremio.local",
+                    "version": "1.10.0",
+                    "resources": ["stream"],
+                    "types": ["movie"],
+                },
+                OSError("timed out"),
+            ]
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            first = backend.status(force=True)
+            duplicate = backend.status(force=True)
+            changed = backend.status(force=True)
+            recovered = backend.status(force=True)
+            after_recovery = backend.status(force=True)
+
+        self.assertFalse(first["reachable"])
+        self.assertFalse(duplicate["reachable"])
+        self.assertFalse(changed["reachable"])
+        self.assertTrue(recovered["reachable"])
+        self.assertFalse(after_recovery["reachable"])
+        self.assertEqual(
+            output.getvalue().splitlines(),
+            [
+                "Stremio Service status failed: timed out",
+                "Stremio Service status failed: connection refused",
+                "Stremio Service status recovered",
+                "Stremio Service status failed: timed out",
+            ],
+        )
+
+    def test_stremio_service_status_log_sanitizes_failure_urls(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://127.0.0.1:11470", [self.server.media_dir], status_ttl=0
+        )
+        backend._fetch_json = mock.Mock(
+            side_effect=OSError("failed http://example.test/untrusted-path")
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = backend.status(force=True)
+
+        self.assertFalse(status["reachable"])
+        self.assertEqual(output.getvalue(), "Stremio Service status failed: failed <URL>\n")
 
     def test_stremio_service_local_file_is_opaque_and_range_playable(self):
         backend = stremio_service.StremioServiceBackend(

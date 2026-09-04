@@ -11,6 +11,7 @@ DEFAULT_TIMEOUT = 3
 DEFAULT_STATUS_TTL = 10
 LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 WINDOWS_DRIVE_PATH = re.compile(r"^[A-Za-z]:[\\/]")
+STATUS_URL_PATTERN = re.compile(r"https?://[^\s'\"]+", re.IGNORECASE)
 
 
 class StremioServiceError(RuntimeError):
@@ -94,6 +95,12 @@ def _manifest_supports_stream(manifest, item_type):
     return "stream" in resource_names and item_type in (manifest.get("types") or [])
 
 
+def _status_failure_reason(exc):
+    """Return a bounded, URL-safe reason for a server diagnostic only."""
+    value = STATUS_URL_PATTERN.sub("<URL>", str(exc).replace("\x00", ""))
+    return value[:300] or type(exc).__name__
+
+
 class StremioServiceBackend:
     def __init__(
         self,
@@ -110,6 +117,7 @@ class StremioServiceBackend:
         self.status_ttl = max(0, int(status_ttl))
         self._cached_status = None
         self._cached_at = 0
+        self._status_diagnostic = None
         self._lock = threading.Lock()
 
     @property
@@ -126,6 +134,23 @@ class StremioServiceBackend:
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def _report_status_failure(self, exc):
+        """Log state changes without flooding the owned desktop-server log."""
+        reason = _status_failure_reason(exc)
+        state = ("unreachable", reason)
+        with self._lock:
+            previous = self._status_diagnostic
+            self._status_diagnostic = state
+        if previous != state:
+            print(f"Stremio Service status failed: {reason}", flush=True)
+
+    def _report_status_recovery(self):
+        with self._lock:
+            previous = self._status_diagnostic
+            self._status_diagnostic = ("reachable", "")
+        if previous is not None and previous[0] == "unreachable":
+            print("Stremio Service status recovered", flush=True)
 
     def status(self, force=False):
         if not self.configured:
@@ -164,7 +189,9 @@ class StremioServiceBackend:
                 "reachable": False,
                 "message": "Stremio Service is unavailable",
             }
-            print(f"Stremio Service status failed: {exc}", flush=True)
+            self._report_status_failure(exc)
+        else:
+            self._report_status_recovery()
 
         with self._lock:
             self._cached_status = dict(status)

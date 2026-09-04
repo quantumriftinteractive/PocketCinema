@@ -143,15 +143,31 @@ Mac cannot reach the gaming PC's intentionally localhost-contained Stremio
 Service through its tailnet address; that is an expected split-host limitation,
 not a Stremio or historical playback regression.
 
-Next exact action: perform the focused macOS desktop-shell physical acceptance:
-save and reload one harmless setting, start the owned PCServer with the old
-server stopped, confirm that the main screen displays Local and (when detected)
-Tailscale/Remote routes, then run one `friday` Miyoo Remote connection/search
-smoke using the displayed Remote route and existing generic proxy. Test Local
-only if the current Miyoo network actually has a direct LAN path; otherwise
-record that environmental limitation. Stop the owned server afterward. Do not
-rerun M21/M22 playback matrices or account playback for this M23 networking/UI
-change.
+Focused Local M23 physical acceptance is **PASS**. The desktop-managed Mac
+PCServer ran with Automatic / Local network on port 8757, displayed its concrete
+Local and detected Remote routes without Advanced Settings, and accepted a
+same-LAN Miyoo's `/api/status`, addon refresh, account-link creation and poll,
+and `friday` search requests successfully. The recorded Miyoo source was on the
+same `192.168.0.x` LAN; exact transient addresses remain out of committed state.
+The Mac's configured Remote Stremio Service endpoint remained unreachable, as
+expected because the gaming PC deliberately keeps that service localhost-only.
+This does not invalidate the Local PCServer/account acceptance or inherited
+account/playback evidence, and no Stremio listener, firewall, or network-provider
+setting was changed. The desktop-managed Tailscale / Remote PocketCinema route
+was displayed but has not yet had a physical Miyoo smoke test.
+
+The server now emits a sanitized Stremio Service status diagnostic only for the
+first failure, a changed failure reason, recovery, or a later failure after
+recovery; repeated identical `/api/status` failures do not flood the desktop
+log. Status response and owned-child lifecycle behavior are unchanged, while the
+desktop's explicit connection check continues to show a fresh reachable or
+unreachable result.
+
+Next exact action: if the desktop-managed Tailscale / Remote PocketCinema route
+is intended for this Mac topology, run one focused Miyoo Remote `friday`
+connection/search smoke using its existing generic proxy. Otherwise record that
+environmental limitation and proceed with the later packaged fresh-machine M23
+acceptance. Do not rerun M21/M22 playback matrices or account playback.
 
 ## Latest Verified Checkpoint
 
@@ -209,13 +225,27 @@ Completed:
   all-interface owned child exposes both concrete PCServer URLs; discovery
   remains Local-only; and approved Host handling preserves the client route in
   returned play/subtitle URLs. Live Mac owned-child health checks passed through
-  both routes. M21/M22 media and client evidence is inherited; only focused
-  desktop/Miyoo routing acceptance remains pending.
+  both routes. M21/M22 media and client evidence is inherited; only the focused
+  desktop-managed Remote/Miyoo routing acceptance remains pending.
+
+- M23 Local desktop-management acceptance is physically confirmed: Automatic /
+  Local network on port 8757 displayed concrete Local and detected Remote
+  PCServer routes without Advanced Settings; a same-LAN Miyoo completed status,
+  addon refresh, account-link/poll, and `friday` search requests. The separately
+  hosted, intentionally localhost-only Stremio Service was expected to be
+  unreachable from this Mac and did not change its security boundary. Remote
+  PocketCinema-route acceptance remains pending.
+
+- Stremio Service status logging is transition-aware and URL-sanitized: it emits
+  an initial failure, a reason change, recovery, and a later failure after
+  recovery, while suppressing identical repeats. API status payloads and owned
+  lifecycle behavior remain unchanged.
 
 Pending:
 
-- M23 focused macOS desktop-shell routing acceptance, then later macOS packaging
-  and the required Windows clean-machine bundle/distribution phases.
+- M23 focused desktop-managed Tailscale / Remote route acceptance, if applicable
+  to this Mac topology, then later macOS packaging and the required Windows
+  clean-machine bundle/distribution phases.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

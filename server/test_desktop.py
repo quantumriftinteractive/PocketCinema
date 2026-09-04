@@ -7,14 +7,17 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 from server.desktop.capabilities import (
+    ServiceStatus,
     device_endpoints,
     detect_tool,
     host_interface_addresses,
     preferred_local_address,
     probe_stremio_service,
 )
+from server.desktop.gui import PocketCinemaDesktop
 from server.desktop.config import (
     ConfigurationError,
     DeviceEndpoint,
@@ -220,6 +223,44 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
         self.assertTrue(status.configured)
         self.assertFalse(status.reachable)
         self.assertIn("currently unreachable", status.message)
+
+
+class DesktopServiceCheckTests(unittest.TestCase):
+    def test_explicit_service_check_shows_current_unreachable_result(self):
+        class Value:
+            def __init__(self, value=""):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+            def set(self, value):
+                self.value = value
+
+        class Root:
+            @staticmethod
+            def after(_delay, callback):
+                callback()
+
+        class ImmediateThread:
+            def __init__(self, target, daemon):
+                self.target = target
+
+            def start(self):
+                self.target()
+
+        desktop = object.__new__(PocketCinemaDesktop)
+        desktop.values = {"stremio_service_url": Value("http://192.0.2.55:11470")}
+        desktop.service_state = Value()
+        desktop.root = Root()
+        unavailable = ServiceStatus(
+            True, False, "Configured Stremio Service is currently unreachable from this machine."
+        )
+        with mock.patch("server.desktop.gui.probe_stremio_service", return_value=unavailable), mock.patch(
+            "server.desktop.gui.threading.Thread", ImmediateThread
+        ):
+            desktop.check_service()
+        self.assertEqual(desktop.service_state.get(), "Unreachable")
 
 
 class LifecycleTests(unittest.TestCase):

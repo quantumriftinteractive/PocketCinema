@@ -200,6 +200,35 @@ The normal Media tools section reports Available or Missing. Start and Stop are
 state-aware primary actions; Restart, connection checking, copying, and manual
 overrides are secondary.
 
+### Focused macOS Local acceptance (physically confirmed)
+
+On 2026-09-04, the desktop shell managed one PCServer on the development Mac
+with **Automatic / Local network** and port `8757`. It displayed the concrete
+Local LAN and detected Tailscale / Remote routes without Advanced Settings. A
+Miyoo Mini Plus on that Local LAN reached the managed PCServer (the request log
+showed a same-subnet `192.168.0.x` Miyoo source) and completed:
+
+- `GET /api/status` — 200
+- `GET /api/addons?refresh=1` — 200
+- `POST /api/account/link` — 201
+- `GET /api/account?poll=1` — 200
+- a refreshed addon listing — 200
+- `GET /api/search?q=friday` — 200
+
+This is a focused Local desktop-management and account-link/search acceptance,
+not a claim that this Mac reached the separately hosted Stremio Service. That
+service is intentionally localhost-contained on the gaming PC, so the Mac's
+configured Remote service origin was expected to report unreachable. No
+listener binding, firewall rule, or network-provider state was changed. The
+desktop-managed Tailscale / Remote PocketCinema route was displayed and
+detected, but remains physically unexercised.
+
+The PCServer status diagnostic logs the first Stremio Service failure, suppresses
+an identical repeated failure, and logs a reason change, recovery, or later
+failure after recovery. `/api/status` and the desktop's explicit connection
+check retain their existing reachable/unreachable behavior; the latter still
+provides fresh visible feedback without changing PCServer lifecycle behavior.
+
 ### Regression impact matrix for the initial shell
 
 | Changed area | Classification | Required verification | Inherited evidence and reason |
@@ -208,11 +237,14 @@ overrides are secondary.
 | Multi-route endpoint derivation and owned-child arguments | Server lifecycle/configuration | interface parsing, Local/Remote route, absent-remote, manual-compatibility, start/health/stop, and focused Miyoo search tests | Existing resolver, conversion, subtitle, controller, and transport-client code is unchanged. |
 | Approved Host route for returned device URLs | Existing PCServer configuration | Local/Remote URL-selection and unapproved-Host tests; existing API/play/Range suite | A request keeps its existing route only; opaque stream handling and media pipeline behavior are unchanged. |
 | Stremio Service origin validation | Existing PCServer configuration modified | URL validation and full server suite; configured-endpoint status check | The secure local default and opaque Local Files handling remain covered by existing tests. Historical account/playback evidence remains valid because its resolver, proxy, conversion, and client paths were not changed. |
+| Stremio Service status diagnostic | Server logging only | failure-transition/recovery unit test; existing status and lifecycle suites | Status payloads, upstream access, device routes, and lifecycle ownership are unchanged; M21/M22 evidence remains inherited. |
 
-The remaining physical acceptance is deliberately limited to the desktop shell:
-title/icon, preference persistence, endpoint status, owned start/stop, and one
-Miyoo `friday` connection/search smoke. It does not require rerunning the M21 or
-M22 playback, subtitle, or conversion matrices.
+The focused Local desktop-management and Miyoo `friday` connection/search smoke
+is complete. Remaining M23 physical work is the separately displayed
+Tailscale / Remote PocketCinema route, if that topology is to be supported in
+this development configuration, followed by the packaged fresh-machine release
+acceptance. It does not require rerunning the M21 or M22 playback, subtitle, or
+conversion matrices.
 
 ## Persistent paths and privacy boundary
 
