@@ -17,7 +17,7 @@ from server.desktop.capabilities import (
     preferred_local_address,
     probe_stremio_service,
 )
-from server.desktop.gui import PocketCinemaDesktop
+from server.desktop.gui import PocketCinemaDesktop, connection_summary
 from server.desktop.config import (
     ConfigurationError,
     DeviceEndpoint,
@@ -73,12 +73,10 @@ class SettingsTests(unittest.TestCase):
             [endpoint.address for endpoint in endpoints], ["192.0.2.44", "100.64.10.20"]
         )
 
-    def test_automatic_uses_one_wildcard_bind_when_remote_is_available(self):
-        effective = resolve_network_settings(
-            DesktopSettings(), "192.0.2.44", remote_available=True
-        )
-        self.assertEqual(effective.listen_address, "0.0.0.0")
-        self.assertEqual(effective.network_name, "Local + Remote")
+    def test_automatic_uses_only_local_routes_when_remote_is_available(self):
+        effective = resolve_network_settings(DesktopSettings(), "192.0.2.44")
+        self.assertEqual(effective.listen_address, "192.0.2.44")
+        self.assertEqual(effective.network_name, "Local network")
         endpoints = derive_device_endpoints(
             effective,
             (
@@ -86,7 +84,14 @@ class SettingsTests(unittest.TestCase):
                 DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
             ),
         )
-        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44", "100.64.10.20"])
+        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44"])
+
+    def test_all_interfaces_omits_remote_when_no_remote_route_exists(self):
+        endpoints = derive_device_endpoints(
+            DesktopSettings(listen_mode="all_interfaces"),
+            (DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),),
+        )
+        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44"])
 
     def test_specific_bind_exposes_only_its_matching_route(self):
         settings = DesktopSettings(listen_mode="automatic", listen_address="192.0.2.44")
@@ -103,6 +108,47 @@ class SettingsTests(unittest.TestCase):
         settings = DesktopSettings(advertised_mode="manual", advertised_address="remote.example")
         endpoints = derive_device_endpoints(settings, (DeviceEndpoint("Local", "192.0.2.44"),))
         self.assertEqual(endpoints, (DeviceEndpoint("Custom", "remote.example", "manual"),))
+
+    def test_custom_mode_uses_its_explicit_bind_address(self):
+        settings = DesktopSettings(listen_mode="custom", listen_address="192.0.2.45")
+        endpoints = derive_device_endpoints(
+            settings,
+            (DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),),
+        )
+        self.assertEqual(endpoints, (DeviceEndpoint("Custom", "192.0.2.45", "manual"),))
+
+    def test_route_urls_refresh_for_port_and_custom_address_changes(self):
+        records = (
+            DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+            DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
+        )
+        automatic = resolve_network_settings(DesktopSettings(listen_port=8755), "192.0.2.44")
+        self.assertEqual(
+            [pocketcinema_url(endpoint.address, automatic.listen_port) for endpoint in derive_device_endpoints(automatic, records)],
+            ["http://192.0.2.44:8755"],
+        )
+        all_interfaces = DesktopSettings(listen_mode="all_interfaces", listen_port=8757)
+        self.assertEqual(
+            [pocketcinema_url(endpoint.address, all_interfaces.listen_port) for endpoint in derive_device_endpoints(all_interfaces, records)],
+            ["http://192.0.2.44:8757", "http://100.64.10.20:8757"],
+        )
+        custom = DesktopSettings(listen_mode="custom", listen_address="192.0.2.45", listen_port=8760)
+        self.assertEqual(
+            [pocketcinema_url(endpoint.address, custom.listen_port) for endpoint in derive_device_endpoints(custom, records)],
+            ["http://192.0.2.45:8760"],
+        )
+
+    def test_detected_routes_filter_loopback_link_local_and_wildcard(self):
+        endpoints = derive_device_endpoints(
+            DesktopSettings(listen_mode="all_interfaces"),
+            (
+                DeviceEndpoint("Loopback", "127.0.0.1", "local", "lo0"),
+                DeviceEndpoint("Link local", "169.254.1.2", "local", "en0"),
+                DeviceEndpoint("Wildcard", "0.0.0.0", "local"),
+                DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+            ),
+        )
+        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44"])
 
     def test_custom_and_manual_address_remain_available(self):
         settings = DesktopSettings(
@@ -226,6 +272,64 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
 
 
 class DesktopServiceCheckTests(unittest.TestCase):
+    def test_connection_summary_is_concise(self):
+        self.assertEqual(connection_summary(0), "None available")
+        self.assertEqual(connection_summary(1), "1 available")
+        self.assertEqual(connection_summary(2), "2 available")
+
+    def test_stopped_desktop_refreshes_rows_for_mode_port_and_custom_address(self):
+        class Value:
+            def __init__(self, value=""):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+            def set(self, value):
+                self.value = value
+
+        routes = (
+            DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+            DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
+        )
+        desktop = object.__new__(PocketCinemaDesktop)
+        desktop.values = {
+            key: Value(str(value))
+            for key, value in vars(DesktopSettings()).items()
+            if key != "schema_version"
+        }
+        desktop.listen_choice = Value("Automatic / Local network")
+        desktop.device_url = Value()
+        desktop.listen_detail = Value()
+        desktop._effective_settings = None
+        desktop._render_connections = mock.Mock()
+        with mock.patch("server.desktop.gui.device_endpoints", return_value=routes):
+            desktop.refresh_network_summary()
+            self.assertEqual(
+                desktop._render_connections.call_args.args[0],
+                [("Local network", "http://192.0.2.44:8755")],
+            )
+            self.assertEqual(desktop.device_url.get(), "1 available")
+
+            desktop.listen_choice.set("All interfaces")
+            desktop.refresh_network_summary()
+            self.assertEqual(
+                desktop._render_connections.call_args.args[0],
+                [
+                    ("Local network", "http://192.0.2.44:8755"),
+                    ("Tailscale / Remote", "http://100.64.10.20:8755"),
+                ],
+            )
+
+            desktop.listen_choice.set("Custom address")
+            desktop.values["listen_address"].set("192.0.2.45")
+            desktop.values["listen_port"].set("8760")
+            desktop._on_route_setting_changed()
+            self.assertEqual(
+                desktop._render_connections.call_args.args[0],
+                [("Custom", "http://192.0.2.45:8760")],
+            )
+
     def test_explicit_service_check_shows_current_unreachable_result(self):
         class Value:
             def __init__(self, value=""):

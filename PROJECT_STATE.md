@@ -163,11 +163,24 @@ log. Status response and owned-child lifecycle behavior are unchanged, while the
 desktop's explicit connection check continues to show a fresh reachable or
 unreachable result.
 
-Next exact action: if the desktop-managed Tailscale / Remote PocketCinema route
-is intended for this Mac topology, run one focused Miyoo Remote `friday`
-connection/search smoke using its existing generic proxy. Otherwise record that
-environmental limitation and proceed with the later packaged fresh-machine M23
-acceptance. Do not rerun M21/M22 playback matrices or account playback.
+The next M23 desktop networking UX refinement is implemented and
+automated-tested. The dynamic PocketCinema connection list now follows the
+selected listen mode: Automatic / Local network binds and displays usable Local
+routes only; All interfaces displays all usable Local and detected Remote
+routes; Custom displays only its explicit route. It filters loopback,
+link-local, multicast, unspecified, and wildcard addresses from automatic
+routes, refreshes the stopped desktop display for mode, port, and custom-address
+changes, and keeps Status concise with an available-route count. It does not
+inspect or manage Tailscale state/lifecycle, change the Stremio Service model,
+or alter PCServer API/discovery behavior. The existing Local physical acceptance
+is inherited; the new presentation and Remote route remain physically pending.
+
+Next exact action: launch the desktop shell, visually confirm Automatic shows
+only Local routes, All interfaces shows Local plus detected Remote, and Custom
+shows only its explicit route. Return to All interfaces, start the owned
+PCServer, use the displayed Remote URL in the existing Miyoo Remote profile and
+unchanged generic proxy, search `friday`, then stop the owned server. Do not
+rerun M21/M22 playback matrices or account playback.
 
 ## Latest Verified Checkpoint
 
@@ -241,11 +254,19 @@ Completed:
   recovery, while suppressing identical repeats. API status payloads and owned
   lifecycle behavior remain unchanged.
 
+- M23 dynamic desktop connection-list refinement implemented and
+  automated-tested: Automatic / Local binds and lists Local routes only; All
+  interfaces lists usable Local and detected Remote routes; Custom lists its
+  explicit route. The stopped UI refreshes these rows for mode, port, and custom
+  address changes, filters non-device addresses, and reports only a concise
+  available-route count in Status. Existing Local physical acceptance is
+  inherited; the new presentation and Remote smoke are pending.
+
 Pending:
 
-- M23 focused desktop-managed Tailscale / Remote route acceptance, if applicable
-  to this Mac topology, then later macOS packaging and the required Windows
-  clean-machine bundle/distribution phases.
+- M23 focused dynamic-list presentation and desktop-managed Tailscale / Remote
+  route acceptance, if applicable to this Mac topology, then later macOS
+  packaging and the required Windows clean-machine bundle/distribution phases.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

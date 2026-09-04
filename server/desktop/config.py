@@ -234,7 +234,7 @@ def address_is_assigned(address):
         return False
 
 
-def resolve_network_settings(settings, local_address, remote_available=False):
+def resolve_network_settings(settings, local_address):
     """Return the effective child configuration for the selected listen mode.
 
     Automatic choices are intentionally resolved at start/display time, while
@@ -245,8 +245,10 @@ def resolve_network_settings(settings, local_address, remote_available=False):
     if settings.listen_mode == "automatic":
         if not local_address:
             raise ConfigurationError("No usable local network address was found")
-        listen_address = "0.0.0.0" if remote_available else local_address
-        network_name = "Local + Remote" if remote_available else "Local network"
+        # Automatic is intentionally the simple direct-LAN choice. Remote
+        # interfaces remain available through the explicit All interfaces mode.
+        listen_address = local_address
+        network_name = "Local network"
     elif settings.listen_mode == "all_interfaces":
         if not local_address:
             raise ConfigurationError("Choose a device-facing address in Advanced Settings")
@@ -288,14 +290,36 @@ def derive_device_endpoints(settings, endpoints):
     for endpoint in endpoints:
         if not isinstance(endpoint, DeviceEndpoint):
             endpoint = DeviceEndpoint(*endpoint)
-        if endpoint.address in seen or not _valid_advertised_address(endpoint.address):
+        if endpoint.address in seen or not _usable_detected_route(endpoint.address):
             continue
         seen.add(endpoint.address)
         unique.append(endpoint)
 
-    if settings.listen_mode == "all_interfaces" or settings.listen_address in {"0.0.0.0", "::"}:
+    if settings.listen_mode == "automatic":
+        return tuple(endpoint for endpoint in unique if endpoint.kind == "local")
+    if settings.listen_mode == "all_interfaces":
         return tuple(unique)
-    return tuple(endpoint for endpoint in unique if endpoint.address == settings.listen_address)
+    custom_address = (
+        settings.listen_address
+        if settings.listen_address not in {"0.0.0.0", "::"}
+        else settings.advertised_address
+    )
+    return (DeviceEndpoint("Custom", custom_address, "manual"),)
+
+
+def _usable_detected_route(address):
+    """Filter placeholder and non-device addresses from derived automatic routes."""
+    try:
+        _valid_advertised_address(address)
+        candidate = ipaddress.ip_address(str(address).split("%", 1)[0])
+    except (ConfigurationError, ValueError):
+        return False
+    return not (
+        candidate.is_loopback
+        or candidate.is_link_local
+        or candidate.is_multicast
+        or candidate.is_unspecified
+    )
 
 
 def pocketcinema_url(address, port):

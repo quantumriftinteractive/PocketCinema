@@ -47,6 +47,13 @@ LISTEN_LABELS = {
 }
 
 
+def connection_summary(count):
+    """Keep the status row concise; concrete URLs belong in the route list."""
+    if count <= 0:
+        return "None available"
+    return f"{count} available"
+
+
 class PocketCinemaDesktop:
     def __init__(self, root):
         self.root = root
@@ -73,6 +80,8 @@ class PocketCinemaDesktop:
         self.tool_ffprobe = tk.StringVar(value="Checking…")
         self._effective_settings = None
         self._build()
+        for name in ("listen_port", "listen_address", "advertised_address"):
+            self.values[name].trace_add("write", self._on_route_setting_changed)
         self.refresh_capabilities()
         self.refresh_network_summary()
         self.poll()
@@ -229,11 +238,7 @@ class PocketCinemaDesktop:
 
     def effective_settings(self):
         endpoints = device_endpoints()
-        return resolve_network_settings(
-            self.settings(),
-            preferred_local_address(endpoints),
-            remote_available=any(endpoint.kind == "remote" for endpoint in endpoints),
-        )
+        return resolve_network_settings(self.settings(), preferred_local_address(endpoints))
 
     def effective_endpoints(self, settings):
         return derive_device_endpoints(settings, device_endpoints())
@@ -248,24 +253,25 @@ class PocketCinemaDesktop:
             self.custom_listen_entry.grid_remove()
         self.refresh_network_summary()
 
+    def _on_route_setting_changed(self, *_unused):
+        if self._effective_settings is None:
+            self.refresh_network_summary()
+
     def refresh_network_summary(self):
         try:
             settings = self._effective_settings or self.effective_settings()
             endpoints = self.effective_endpoints(settings)
             urls = [(endpoint.label, pocketcinema_url(endpoint.address, settings.listen_port)) for endpoint in endpoints]
-            self.device_url.set("; ".join(f"{label}: {url}" for label, url in urls) or "Not available")
+            self.device_url.set(connection_summary(len(urls)))
             self._render_connections(urls)
             if settings.listen_mode == "automatic":
-                if settings.listen_address == "0.0.0.0":
-                    self.listen_detail.set("Automatically serves the detected Local and Remote connections with one PCServer.")
-                else:
-                    self.listen_detail.set(f"Automatically uses {settings.listen_address} when the server starts.")
+                self.listen_detail.set("Automatically serves detected Local network connections only.")
             elif settings.listen_mode == "all_interfaces":
                 self.listen_detail.set("Listens once on all current interfaces and keeps Local and Remote routes separate.")
             else:
                 self.listen_detail.set("Uses the custom address configured below.")
         except ConfigurationError as exc:
-            self.device_url.set("Not available")
+            self.device_url.set("None available")
             self._render_connections(())
             self.listen_detail.set(str(exc))
 
@@ -399,8 +405,7 @@ class PocketCinemaDesktop:
         threading.Thread(target=worker, daemon=True).start()
 
     def copy_endpoint(self, endpoint=None):
-        endpoint = endpoint or self.device_url.get()
-        if endpoint != "Not available":
+        if endpoint:
             self.root.clipboard_clear()
             self.root.clipboard_append(endpoint)
 

@@ -179,13 +179,14 @@ does not call, authenticate, start, stop, configure, or read state from
 Tailscale. If the remote route is absent, PocketCinema continues as a normal
 Local-only server.
 
-- **Automatic / Local network** binds and displays the selected Local route when
-  no Remote route is detected. When an existing Remote route is detected, it
-  binds once to all interfaces and displays both routes without requiring
-  Advanced Settings.
+- **Automatic / Local network** binds the selected Local address and displays
+  all usable detected Local routes only. It neither displays nor enables a
+  Tailscale / Remote route; users choose **All interfaces** when that route is
+  intended.
 - **All interfaces** binds `0.0.0.0` once and displays both Local and optional
   Tailscale / Remote routes; it never displays the wildcard itself.
-- **Custom address** remains available for unusual deployments.
+- **Custom address** remains available for unusual deployments and displays only
+  its explicit Custom route.
 - The child receives all displayed routes as approved device hosts. Returned
   play, subtitle, and fixture URLs stay on the approved Host route used by the
   request, so Local and Remote clients do not switch routes mid-playback.
@@ -196,9 +197,13 @@ Local-only server.
   FFmpeg/FFprobe paths. Version-1 stored settings load as Custom plus manual
   address override, preserving their existing behavior without rewriting them.
 
-The normal Media tools section reports Available or Missing. Start and Stop are
-state-aware primary actions; Restart, connection checking, copying, and manual
-overrides are secondary.
+The connection area is a dynamic series of route-label, concrete-URL, and
+individual Copy rows. It immediately re-evaluates the selected listen mode,
+port, and custom address while the desktop is stopped. The concise Status row
+reports only None, 1, or N available; it does not repeat the URLs. The normal
+Media tools section reports Available or Missing. Start and Stop are state-aware
+primary actions; Restart, connection checking, copying, and manual overrides
+are secondary.
 
 ### Focused macOS Local acceptance (physically confirmed)
 
@@ -238,13 +243,15 @@ provides fresh visible feedback without changing PCServer lifecycle behavior.
 | Approved Host route for returned device URLs | Existing PCServer configuration | Local/Remote URL-selection and unapproved-Host tests; existing API/play/Range suite | A request keeps its existing route only; opaque stream handling and media pipeline behavior are unchanged. |
 | Stremio Service origin validation | Existing PCServer configuration modified | URL validation and full server suite; configured-endpoint status check | The secure local default and opaque Local Files handling remain covered by existing tests. Historical account/playback evidence remains valid because its resolver, proxy, conversion, and client paths were not changed. |
 | Stremio Service status diagnostic | Server logging only | failure-transition/recovery unit test; existing status and lifecycle suites | Status payloads, upstream access, device routes, and lifecycle ownership are unchanged; M21/M22 evidence remains inherited. |
+| Dynamic connection list | Desktop configuration/UI | mode, route filtering, port/custom-address update, concise-status, and lifecycle tests | The PCServer API, discovery protocol, Stremio boundary, Tailscale independence, and M21/M22 media behavior are unchanged. |
 
 The focused Local desktop-management and Miyoo `friday` connection/search smoke
-is complete. Remaining M23 physical work is the separately displayed
-Tailscale / Remote PocketCinema route, if that topology is to be supported in
-this development configuration, followed by the packaged fresh-machine release
-acceptance. It does not require rerunning the M21 or M22 playback, subtitle, or
-conversion matrices.
+is complete and remains inherited. The remaining focused physical check is the
+new route-list presentation (Automatic Local-only, All interfaces complete,
+Custom explicit) plus the separately displayed Tailscale / Remote PocketCinema
+route, if that topology is to be supported in this development configuration.
+It does not require rerunning the M21 or M22 playback, subtitle, or conversion
+matrices.
 
 ## Persistent paths and privacy boundary
 
