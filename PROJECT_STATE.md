@@ -245,8 +245,8 @@ R1 visible track change/off transition before exiting normally.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `257a63e`
-Remote verified: YES (`257a63e` is reachable from `origin/main`)
+Checkpoint commit: `914d00d`
+Remote verified: pending push and fetch verification
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
