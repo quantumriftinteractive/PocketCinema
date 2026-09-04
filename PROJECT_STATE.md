@@ -279,7 +279,7 @@ Production PASS audit until this focused desktop observation is closed.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `f362f3e`
+Checkpoint commit: `030b2e9`
 Remote verified: pending push and fetch verification
 Machine: Windows development checkout
 Branch: `main`
@@ -365,16 +365,20 @@ Completed:
   live renderer/display symptom (tracks switch but captions are not visible)
   remains open.
 
-- M22 renderer/display regression boundary identified and scoped repair
-  implemented: a migrated pre-rename FFplay binary expects legacy
-  `POCKETSTREMIO_*` subtitle/font bindings and its migrated fontconfig pointed
-  at the old app path. The normal client now binds both identities and the
-  normal deployer rewrites the path. The normal deployer now uses the documented
-  `root` target and successfully installed the repair; remote static validation
-  confirms both bindings, the migrated fontconfig path, no diagnostic marker,
-  and shell syntax. Captions are now physically reported visible; readability
-  polish requires a rebuilt app-local ARM player because the deployed
-  selected-track filter has no runtime subtitle-size control.
+- M22 renderer/display migration repair is physically restored: the normal
+  client supplies both compiled subtitle/font identities, deployment rewrites
+  migrated fontconfig paths, and the rebuilt app-local ARM player supplies the
+  1.5x libass font scale. The deployed hash matches the local rebuilt binary,
+  and Apps-context observation confirms captions are noticeably larger and
+  acceptable. The change does not alter tracks, R1, subtitle-off, playback, or
+  cleanup, so the existing M22 acceptance evidence is inherited. Configurable
+  subtitle size and position remain a future normal-UI UX feature.
+
+- M23 Windows desktop-shell responsiveness repair implemented and focused
+  automated-tested: recurring Windows route/tool discovery and owned lifecycle
+  waits no longer block the Tk thread, operations are serialized, and unchanged
+  logs are not re-rendered. The remaining risk is a short physical Windows GUI
+  responsiveness smoke only.
 
 Pending:
 
@@ -382,11 +386,9 @@ Pending:
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
 
-- M22 focused subtitle readability polish: rebuild and deploy the app-local
-  FFplay selected-track filter with the production caption scale, then from
-  Apps confirm larger captions and one R1 visible change/off transition before
-  exiting normally. Do not repeat the M22 discovery, provider, conversion, or
-  playback matrix.
+- M23 focused Windows desktop responsiveness smoke: launch the desktop shell,
+  check service/connections, start, briefly use, then stop or restart without a
+  frozen window. Do not start the global Production PASS audit yet.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
