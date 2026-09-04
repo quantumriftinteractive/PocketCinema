@@ -55,7 +55,8 @@ index d9b0dd4..ab8c50d 100644
 -        if (vfilters && *vfilters)
 -            snprintf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s,%s",
 -                     subtitle_args, vfilters);
-+        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s",
++        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
++                    "subtitles=%s:original_size=426x240",
 +                    subtitle_args);
 +    }
 +    if (subtitle_filter_file && subtitle_notice_font &&

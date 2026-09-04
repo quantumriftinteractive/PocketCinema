@@ -1007,6 +1007,12 @@ ARM FFplay with that filter style, then one focused larger-caption/R1 visual
 check. Do not use fontconfig, a marker, provider work, or conversion changes as
 a substitute.
 
+The reproducible app-local patch now adds FFmpeg 2.4's
+`original_size=426x240` subtitle-filter reference, producing a bounded 1.5x
+scale for the known 640x360 envelope. The ARM candidate rebuild succeeds on the
+Windows checkout under Git Bash and remains un-deployed and physically pending
+until the Miyoo can be reached.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.

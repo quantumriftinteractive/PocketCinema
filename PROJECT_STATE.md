@@ -219,6 +219,14 @@ rebuild of that app-local ARM binary with a bounded production subtitle style,
 then normal deployment and one focused visual/R1 check. It does not justify a
 fontconfig-only change, a marker, or a provider/Matroska/conversion change.
 
+The reproducible app-local patch now adds `original_size=426x240` to the
+selected-track subtitle filter, giving a bounded 1.5x scale for the known
+640x360 video envelope. The ARM candidate rebuild succeeds under Git Bash on
+the current Windows checkout and validates as a stripped ARM ELF with the
+expected subtitle-filter string. Deployment and the focused Apps visual/R1
+check remain pending because the documented Miyoo address is not reachable
+from this machine; no device state was changed.
+
 Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
 Custom shows only its explicit route. Return to All interfaces, use the
