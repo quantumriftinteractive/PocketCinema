@@ -290,6 +290,26 @@ to skip deployment.
 
 ## Regression Impact and Evidence Inheritance
 
+### Production PASS invariant
+
+A test, acceptance item, release gate, or milestone marked **PASS** means its
+validated behavior is accepted production behavior. It must be enabled through
+the normal supported product path, with its required runtime assets and
+configuration included in normal deployment. It must not require a test-only
+flag, marker, fixture, environment override, developer launcher, or manual
+intervention.
+
+If later work makes a passed behavior disappear or require test-only activation,
+classify it immediately as a regression against the accepted production
+baseline. Locate and restore only the smallest regression boundary; do not spend
+user time or compute reconstructing whether historical PASS evidence depended on
+experimental configuration. The PASS itself defines the expected production
+state. Its historical evidence remains valid after restoration unless the
+validated behavior or a material dependency actually changed.
+
+Do not mark a milestone PASS in the future until its accepted behavior is
+already promoted into the normal production/default path.
+
 Historical automated and physical evidence remains valid unless a later change
 materially intersects the behavior it validated. Do not equate a new commit,
 time elapsed, or a test not repeated in the current session with an invalidated

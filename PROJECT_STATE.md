@@ -46,6 +46,11 @@ burn-in when Matroska setup cannot proceed or the user explicitly opts out.
 - Selectable Matroska mode retains multiple tracks (up to three per preferred
   language), R1 switching, and the off toggle. Converted multi-audio retains
   manual track selection.
+- Any accepted PASS behavior is production behavior: its normal deployment
+  includes the required assets/configuration and it must not require test-only
+  activation. Later loss of that normal path is a regression to restore at its
+  smallest boundary; historical PASS evidence remains valid after restoration
+  unless the accepted behavior or material dependency changed.
 
 ## Current Identity Refactor
 

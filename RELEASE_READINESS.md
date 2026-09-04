@@ -147,6 +147,11 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
 
 ### Release gates
 
+- Every passed acceptance behavior is present through the normal shipped path:
+  required runtime assets/configuration are deployed, and no test-only flag,
+  marker, fixture, environment override, developer launcher, or manual
+  intervention is required. Treat a later loss of that path as a regression,
+  not a release-scope ambiguity.
 - Keep the physically confirmed Milestone 20 acceptance evidence aligned in
   `docs/bounded-transcoding.md` and `docs/roadmap.md`; do not regress its
   production MPEG-TS burn-in fallback.
