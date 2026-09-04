@@ -272,6 +272,7 @@ class PocketCinemaServerTest(unittest.TestCase):
         self.server.media_dir = media_dir
         self.server.fixture_dir = fixture_dir
         self.server.public_host = "127.0.0.1"
+        self.server.public_hosts = ("127.0.0.1",)
         self.server.server_port = self.server.server_address[1]
         self.server.stream_addons = []
         self.server.stremio_service = stremio_service.StremioServiceBackend("", [])
@@ -319,6 +320,43 @@ class PocketCinemaServerTest(unittest.TestCase):
     def get_json(self, path):
         with urllib.request.urlopen(self.base + path, timeout=5) as response:
             return response.status, json.load(response)
+
+    def get_json_with_host(self, path, host):
+        request = urllib.request.Request(self.base + path, headers={"Host": host})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return response.status, json.load(response)
+
+    def post_json_with_host(self, path, payload, host):
+        request = urllib.request.Request(
+            self.base + path,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Host": host},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return response.status, json.load(response)
+
+    def route_test_play_response(self, host):
+        source_url = "https://cdn.example/route-test.mp4"
+        self.server.stream_cache["route-test"] = {
+            "id": "route-test", "url": source_url, "name": "Route test",
+        }
+        self.server.probe_cache.set(source_url, {
+            "status": "confirmed", "container": "mp4", "video_codec": "h264",
+            "audio_codec": "aac", "width": 640, "height": 360,
+        })
+        return self.post_json_with_host(
+            "/api/play", {"type": "movie", "id": "tt0000001", "stream_id": "route-test"}, host
+        )[1]
+
+    def test_approved_request_host_keeps_fixture_urls_on_that_route(self):
+        self.server.public_hosts = ("127.0.0.1", "100.64.10.20")
+        payload = self.route_test_play_response(f"100.64.10.20:{self.server.server_port}")
+        self.assertTrue(payload["url"].startswith(f"http://100.64.10.20:{self.server.server_port}/"))
+
+    def test_unapproved_host_cannot_change_returned_route(self):
+        self.server.public_hosts = ("127.0.0.1", "100.64.10.20")
+        payload = self.route_test_play_response(f"unapproved.example:{self.server.server_port}")
+        self.assertTrue(payload["url"].startswith(f"http://127.0.0.1:{self.server.server_port}/"))
 
     def post_json(self, path, payload):
         request = urllib.request.Request(

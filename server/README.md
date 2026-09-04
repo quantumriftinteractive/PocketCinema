@@ -52,9 +52,11 @@ python3 server/pocketcinema_desktop.py
 The Stremio Service field accepts a validated HTTP origin on the PCServer host
 or another reachable host. The Miyoo never sees or contacts that endpoint.
 
-PCServer advertises one preferred device-facing address on UDP `8754` for the
-Miyoo's local-network scan. Give each instance a short machine name and a
-descriptive transport label:
+PCServer advertises one preferred Local device-facing address on UDP `8754` for
+the Miyoo's local-network scan. A wildcard-bound instance may also accept an
+additional approved device host; returned play URLs preserve the Local or
+Remote request route without creating another PCServer process. Give each
+instance a short machine name and a descriptive transport label:
 
 ```sh
 ./server/manage-server.sh start \
@@ -64,13 +66,24 @@ descriptive transport label:
   --network-name "Tailscale"
 ```
 
+For a host with both direct-LAN and independently managed Remote connectivity,
+keep discovery Local and add the Remote device host explicitly:
+
+```sh
+python3 ./server/pocketcinema_server.py \
+  --host 0.0.0.0 \
+  --public-host LAN_ADDRESS \
+  --device-host REMOTE_ADDRESS
+```
+
 The scan displays `name - IP:port - network`. A machine with both LAN and
-overlay addresses still appears once because the PCServer advertises only its
-configured `--public-host`; repeated replies are deduplicated by a persistent,
-ignored PCServer instance ID. Use `--disable-discovery` where UDP broadcast is not
-wanted. Discovery exposes no Stremio ports, addon transports, media URLs, or
-account credentials, and each reply must pass `/api/status` validation before
-the Miyoo offers it.
+overlay addresses still appears once because discovery is Local-only and uses
+its configured `--public-host`; repeated replies are deduplicated by a
+persistent, ignored PCServer instance ID. Remote setup remains a separately
+entered PCServer URL plus generic proxy. Use `--disable-discovery` where UDP
+broadcast is not wanted. Discovery exposes no Stremio ports, addon transports,
+media URLs, or account credentials, and each reply must pass `/api/status`
+validation before the Miyoo offers it.
 
 For a split-host development setup, keep Stremio Service on the Windows host
 and forward it through an externally managed SSH tunnel bound only to macOS

@@ -71,7 +71,7 @@ class PCServerLifecycle:
             for line in process.stdout:
                 self._append_log(line)
 
-    def _command(self, settings):
+    def _command(self, settings, device_hosts=()):
         addon_port = self._available_loopback_port()
         command = [
             self.python_executable, "-m", "server.desktop.server_child",
@@ -88,6 +88,12 @@ class PCServerLifecycle:
             "--stream-addons", str(self.data_root / "config" / "stream_addons.json"),
             "--open-media-addon-port", str(addon_port),
         ]
+        seen = {settings.advertised_address}
+        for host in device_hosts:
+            host = str(host).strip()
+            if host and host not in seen:
+                seen.add(host)
+                command.extend(("--device-host", host))
         return self.command_factory(settings, command) if self.command_factory else command
 
     @staticmethod
@@ -115,7 +121,7 @@ class PCServerLifecycle:
         except (OSError, urllib.error.URLError, urllib.error.HTTPError):
             return False
 
-    def start(self, settings, timeout=8):
+    def start(self, settings, device_hosts=(), timeout=8):
         settings = validate_settings(settings)
         if self.status().state in {"Starting", "Running"}:
             raise RuntimeError("PCServer is already owned by this desktop application")
@@ -123,12 +129,13 @@ class PCServerLifecycle:
             self._set_status("Error", "Selected listen address is no longer assigned to this machine.")
             return self.status()
         self.data_root.mkdir(parents=True, exist_ok=True)
-        endpoint = f"http://{settings.listen_address}:{settings.listen_port}"
+        health_host = "127.0.0.1" if settings.listen_address == "0.0.0.0" else settings.listen_address
+        endpoint = f"http://{health_host}:{settings.listen_port}"
         self._logs.clear()
         self._set_status("Starting", "Starting owned PCServer process…", endpoint=endpoint)
         try:
             process = subprocess.Popen(
-                self._command(settings), cwd=str(Path(__file__).resolve().parents[2]),
+                self._command(settings, device_hosts), cwd=str(Path(__file__).resolve().parents[2]),
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", start_new_session=True,
             )

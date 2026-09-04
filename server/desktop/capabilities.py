@@ -5,10 +5,13 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 
 from .config import ConfigurationError, validate_stremio_service_url
+from .config import DeviceEndpoint
 
 
 @dataclass(frozen=True)
@@ -35,26 +38,110 @@ def detect_tool(name, manual_path=""):
 
 
 def local_addresses():
-    """Return unique usable addresses without inferring a network provider."""
-    values = [("Loopback", "127.0.0.1")]
+    """Compatibility view of concrete Local network addresses."""
+    return [("Loopback", "127.0.0.1")] + [
+        (endpoint.interface or endpoint.label, endpoint.address)
+        for endpoint in device_endpoints()
+        if endpoint.kind == "local"
+    ]
+
+
+def _ifconfig_addresses(output):
+    """Parse active IPv4 addresses from macOS ``ifconfig`` output.
+
+    This reads operating-system interface information only.  It does not call,
+    configure, or inspect any network-provider process or state.
+    """
+    current = ""
+    active = False
+    candidates = []
+    for raw_line in output.splitlines():
+        if raw_line and not raw_line[0].isspace() and ":" in raw_line:
+            current = raw_line.split(":", 1)[0]
+            active = "UP" in raw_line and "RUNNING" in raw_line
+            continue
+        line = raw_line.strip()
+        if line == "status: active":
+            active = True
+            continue
+        if not active or not line.startswith("inet "):
+            continue
+        address = line.split()[1]
+        if _usable_device_address(address):
+            candidates.append((current, address))
+    return candidates
+
+
+def _hostname_addresses():
     try:
         records = socket.getaddrinfo(socket.gethostname(), None, type=socket.SOCK_STREAM)
     except OSError:
         records = []
-    seen = {"127.0.0.1"}
-    for record in records:
-        address = record[4][0]
+    return [(socket.gethostname(), record[4][0]) for record in records]
+
+
+def host_interface_addresses(platform=None, ifconfig_output=None):
+    """Return usable host IPv4 candidates with their OS interface identity."""
+    platform = platform or sys.platform
+    if platform == "darwin":
+        if ifconfig_output is None:
+            try:
+                ifconfig_output = subprocess.run(
+                    ["/sbin/ifconfig", "-a"], check=False, text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                ).stdout
+            except OSError:
+                ifconfig_output = ""
+        records = _ifconfig_addresses(ifconfig_output)
+    else:
+        records = _hostname_addresses()
+    seen = set()
+    return tuple(
+        (interface, address)
+        for interface, address in records
+        if _usable_device_address(address) and not (address in seen or seen.add(address))
+    )
+
+
+def _tailnet_interface_address(interface, address):
+    """Recognize the host's active tailnet-style tunnel address as interface data.
+
+    The check deliberately requires both a tunnel-like interface and the shared
+    tailnet IPv4 range; it neither contacts nor controls a network provider.
+    """
+    try:
+        network = ipaddress.ip_network("100.64.0.0/10")
+        candidate = ipaddress.ip_address(address)
+        return candidate in network and interface.lower().startswith(("utun", "tailscale"))
+    except (ValueError, AttributeError):
+        return False
+
+
+def device_endpoints(records=None):
+    """Derive concrete Local and optional Tailscale/Remote PCServer routes."""
+    records = host_interface_addresses() if records is None else records
+    endpoints = []
+    seen = set()
+    for interface, address in records:
         if address in seen or not _usable_device_address(address):
             continue
         seen.add(address)
-        values.append((socket.gethostname(), address))
-    return values
+        if _tailnet_interface_address(interface, address):
+            endpoints.append(DeviceEndpoint("Tailscale / Remote", address, "remote", interface))
+        else:
+            endpoints.append(DeviceEndpoint("Local network", address, "local", interface))
+    return tuple(endpoints)
 
 
 def preferred_local_address(addresses=None):
-    """Choose the first non-loopback host address without naming its transport."""
+    """Choose the first concrete Local address, never the Remote tunnel route."""
     addresses = local_addresses() if addresses is None else addresses
-    for _, address in addresses:
+    for value in addresses:
+        if isinstance(value, DeviceEndpoint):
+            if value.kind == "local" and _usable_device_address(value.address):
+                return value.address
+            continue
+        _, address = value
         if _usable_device_address(address):
             return address
     return ""

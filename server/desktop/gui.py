@@ -8,10 +8,11 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from .capabilities import detect_tool, preferred_local_address, probe_stremio_service
+from .capabilities import device_endpoints, detect_tool, preferred_local_address, probe_stremio_service
 from .config import (
     ConfigurationError,
     DesktopSettings,
+    derive_device_endpoints,
     load_settings,
     pocketcinema_url,
     resolve_network_settings,
@@ -123,11 +124,19 @@ class PocketCinemaDesktop:
         row += 1
         self._field(outer, row, "Port", "listen_port")
         row += 1
-        ttk.Label(outer, text="PocketCinema address").grid(row=row, column=0, sticky="w", padx=(0, 12), pady=3)
-        self.address_display = ttk.Entry(outer, textvariable=self.device_url, state="readonly")
-        self.address_display.grid(row=row, column=1, sticky="ew", pady=3)
-        self.copy_button = ttk.Button(outer, text="Copy address", command=self.copy_endpoint)
-        self.copy_button.grid(row=row, column=2, padx=(8, 0), pady=3)
+        ttk.Label(outer, text="PocketCinema connections", font=("TkDefaultFont", 13, "bold")).grid(
+            row=row, column=0, columnspan=3, sticky="w", pady=(7, 3)
+        )
+        row += 1
+        ttk.Label(
+            outer,
+            text="Use Local on the same network. Use Tailscale / Remote only with the Miyoo's separately configured proxy.",
+            wraplength=660,
+        ).grid(row=row, column=0, columnspan=3, sticky="w", pady=(0, 4))
+        row += 1
+        self.connections_frame = ttk.Frame(outer)
+        self.connections_frame.grid(row=row, column=0, columnspan=3, sticky="ew")
+        self.connections_frame.columnconfigure(1, weight=1)
         row += 1
 
         ttk.Separator(outer).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
@@ -179,7 +188,7 @@ class PocketCinemaDesktop:
         row += 1
         self._status_row(outer, row, "PocketCinema Server", self.server_state)
         row += 1
-        self._status_row(outer, row, "PocketCinema address", self.device_url)
+        self._status_row(outer, row, "PocketCinema connections", self.device_url)
         row += 1
         self._status_row(outer, row, "Stremio Service", self.service_state)
         row += 1
@@ -219,7 +228,15 @@ class PocketCinemaDesktop:
         return DesktopSettings(**values)
 
     def effective_settings(self):
-        return resolve_network_settings(self.settings(), preferred_local_address())
+        endpoints = device_endpoints()
+        return resolve_network_settings(
+            self.settings(),
+            preferred_local_address(endpoints),
+            remote_available=any(endpoint.kind == "remote" for endpoint in endpoints),
+        )
+
+    def effective_endpoints(self, settings):
+        return derive_device_endpoints(settings, device_endpoints())
 
     def on_listen_mode_changed(self, event=None):
         custom = LISTEN_LABELS[self.listen_choice.get()] == "custom"
@@ -234,17 +251,43 @@ class PocketCinemaDesktop:
     def refresh_network_summary(self):
         try:
             settings = self._effective_settings or self.effective_settings()
-            address = pocketcinema_url(settings.advertised_address, settings.listen_port)
-            self.device_url.set(address)
+            endpoints = self.effective_endpoints(settings)
+            urls = [(endpoint.label, pocketcinema_url(endpoint.address, settings.listen_port)) for endpoint in endpoints]
+            self.device_url.set("; ".join(f"{label}: {url}" for label, url in urls) or "Not available")
+            self._render_connections(urls)
             if settings.listen_mode == "automatic":
-                self.listen_detail.set(f"Automatically uses {settings.listen_address} when the server starts.")
+                if settings.listen_address == "0.0.0.0":
+                    self.listen_detail.set("Automatically serves the detected Local and Remote connections with one PCServer.")
+                else:
+                    self.listen_detail.set(f"Automatically uses {settings.listen_address} when the server starts.")
             elif settings.listen_mode == "all_interfaces":
-                self.listen_detail.set(f"Listens on all interfaces; PocketCinema uses {settings.advertised_address}.")
+                self.listen_detail.set("Listens once on all current interfaces and keeps Local and Remote routes separate.")
             else:
                 self.listen_detail.set("Uses the custom address configured below.")
         except ConfigurationError as exc:
             self.device_url.set("Not available")
+            self._render_connections(())
             self.listen_detail.set(str(exc))
+
+    def _render_connections(self, urls):
+        for child in self.connections_frame.winfo_children():
+            child.destroy()
+        if not urls:
+            ttk.Label(self.connections_frame, text="No reachable PocketCinema address is available.").grid(
+                row=0, column=0, columnspan=3, sticky="w"
+            )
+            return
+        for row, (label, url) in enumerate(urls):
+            ttk.Label(self.connections_frame, text=label).grid(
+                row=row, column=0, sticky="w", padx=(0, 12), pady=2
+            )
+            value = ttk.Entry(self.connections_frame)
+            value.insert(0, url)
+            value.configure(state="readonly")
+            value.grid(row=row, column=1, sticky="ew", pady=2)
+            ttk.Button(
+                self.connections_frame, text="Copy", command=lambda endpoint=url: self.copy_endpoint(endpoint)
+            ).grid(row=row, column=2, padx=(8, 0), pady=2)
 
     def choose_tool(self, name):
         selected = filedialog.askopenfilename(title="Choose " + name.replace("_", " "))
@@ -325,7 +368,8 @@ class PocketCinemaDesktop:
             self.root.after(0, lambda: messagebox.showerror("Server cannot start", str(exc)))
             return
         self._effective_settings = settings
-        result = self.lifecycle.start(settings)
+        endpoints = self.effective_endpoints(settings)
+        result = self.lifecycle.start(settings, [endpoint.address for endpoint in endpoints])
         self.root.after(0, lambda: self.show_lifecycle(result))
 
     def start(self):
@@ -354,8 +398,8 @@ class PocketCinemaDesktop:
         self.server_state.set("Starting")
         threading.Thread(target=worker, daemon=True).start()
 
-    def copy_endpoint(self):
-        endpoint = self.device_url.get()
+    def copy_endpoint(self, endpoint=None):
+        endpoint = endpoint or self.device_url.get()
         if endpoint != "Not available":
             self.root.clipboard_clear()
             self.root.clipboard_append(endpoint)

@@ -8,10 +8,18 @@ import threading
 import time
 import unittest
 
-from server.desktop.capabilities import detect_tool, preferred_local_address, probe_stremio_service
+from server.desktop.capabilities import (
+    device_endpoints,
+    detect_tool,
+    host_interface_addresses,
+    preferred_local_address,
+    probe_stremio_service,
+)
 from server.desktop.config import (
     ConfigurationError,
+    DeviceEndpoint,
     DesktopSettings,
+    derive_device_endpoints,
     load_settings,
     pocketcinema_url,
     resolve_network_settings,
@@ -49,6 +57,49 @@ class SettingsTests(unittest.TestCase):
         )
         self.assertEqual(effective.listen_address, "0.0.0.0")
         self.assertEqual(effective.advertised_address, "192.0.2.44")
+
+    def test_all_interfaces_exposes_local_and_remote_routes(self):
+        endpoints = derive_device_endpoints(
+            DesktopSettings(listen_mode="all_interfaces"),
+            (
+                DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+                DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
+            ),
+        )
+        self.assertEqual(
+            [endpoint.address for endpoint in endpoints], ["192.0.2.44", "100.64.10.20"]
+        )
+
+    def test_automatic_uses_one_wildcard_bind_when_remote_is_available(self):
+        effective = resolve_network_settings(
+            DesktopSettings(), "192.0.2.44", remote_available=True
+        )
+        self.assertEqual(effective.listen_address, "0.0.0.0")
+        self.assertEqual(effective.network_name, "Local + Remote")
+        endpoints = derive_device_endpoints(
+            effective,
+            (
+                DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+                DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
+            ),
+        )
+        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44", "100.64.10.20"])
+
+    def test_specific_bind_exposes_only_its_matching_route(self):
+        settings = DesktopSettings(listen_mode="automatic", listen_address="192.0.2.44")
+        endpoints = derive_device_endpoints(
+            settings,
+            (
+                DeviceEndpoint("Local network", "192.0.2.44", "local", "en0"),
+                DeviceEndpoint("Tailscale / Remote", "100.64.10.20", "remote", "utun4"),
+            ),
+        )
+        self.assertEqual([endpoint.address for endpoint in endpoints], ["192.0.2.44"])
+
+    def test_manual_address_override_remains_single_compatible_route(self):
+        settings = DesktopSettings(advertised_mode="manual", advertised_address="remote.example")
+        endpoints = derive_device_endpoints(settings, (DeviceEndpoint("Local", "192.0.2.44"),))
+        self.assertEqual(endpoints, (DeviceEndpoint("Custom", "remote.example", "manual"),))
 
     def test_custom_and_manual_address_remain_available(self):
         settings = DesktopSettings(
@@ -113,6 +164,31 @@ class StremioHandler(BaseHTTPRequestHandler):
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_macos_interface_records_keep_local_and_tailnet_routes_distinct(self):
+        records = host_interface_addresses(
+            "darwin",
+            """en0: flags=8863<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tinet 192.0.2.44 netmask 0xffffff00 broadcast 192.0.2.255
+\tstatus: active
+utun4: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1280
+\tinet 100.64.10.20 --> 100.64.10.20 netmask 0xffffffff
+utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
+\tinet 100.90.1.2 --> 100.90.1.2 netmask 0xffffffff
+""",
+        )
+        self.assertEqual(records, (("en0", "192.0.2.44"), ("utun4", "100.64.10.20")))
+        endpoints = device_endpoints(records)
+        self.assertEqual([(item.label, item.address) for item in endpoints], [
+            ("Local network", "192.0.2.44"),
+            ("Tailscale / Remote", "100.64.10.20"),
+        ])
+
+    def test_tailscale_route_is_absent_without_a_detected_tunnel(self):
+        endpoints = device_endpoints((("en0", "192.0.2.44"),))
+        self.assertEqual(
+            [(item.label, item.address) for item in endpoints], [("Local network", "192.0.2.44")]
+        )
+
     def test_preferred_local_address_skips_loopback(self):
         self.assertEqual(
             preferred_local_address(
@@ -163,6 +239,16 @@ class LifecycleTests(unittest.TestCase):
             self.assertIsNotNone(started.pid)
             stopped = manager.stop()
             self.assertEqual(stopped.state, "Stopped")
+
+    def test_child_receives_all_approved_device_hosts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            manager = PCServerLifecycle(temporary, python_executable=sys.executable)
+            command = manager._command(
+                DesktopSettings(listen_port=self.free_port(), advertised_address="192.0.2.44"),
+                ("192.0.2.44", "100.64.10.20"),
+            )
+        self.assertEqual(command.count("--device-host"), 1)
+        self.assertEqual(command[command.index("--device-host") + 1], "100.64.10.20")
 
     def test_unexpected_owned_child_exit_is_reported(self):
         with tempfile.TemporaryDirectory() as temporary:

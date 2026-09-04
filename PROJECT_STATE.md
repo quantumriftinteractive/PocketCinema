@@ -125,17 +125,33 @@ The current development shell uses Homebrew Python 3.14 with `python-tk@3.14`
 (Tcl/Tk 9.0.4). Apple Tcl/Tk 8.5 opened a blank dark-mode window and is not a
 supported development launcher.
 The M23 UX refinement is implemented and visually confirmed on macOS: the main
-screen now derives a non-loopback PocketCinema address through Automatic / Local
+screen now derives concrete PocketCinema connections through Automatic / Local
 network, keeps Stremio Service clearly separate, reports detected media tools,
 and moves manual address/label/tool paths behind Advanced Settings. Existing
 desktop preferences preserve their explicit Custom/manual behavior.
 
+The M23 networking-model correction is implemented and automated-tested. The
+desktop shell now treats PCServer bind, Local PocketCinema route, optional
+Tailscale/Remote PocketCinema route, and the PCServer-only Stremio Service
+endpoint as separate concepts. It reads ordinary macOS interface data without
+managing or inspecting Tailscale state, displays concrete Local and detected
+Remote routes for one all-interface PCServer child, and keeps returned device
+URLs on the approved request route. The Mac's observed LAN address changed from
+`192.168.20.x` to `192.168.0.x` during diagnosis; this means the earlier Local
+failure cannot establish an address-selector regression. The current development
+Mac cannot reach the gaming PC's intentionally localhost-contained Stremio
+Service through its tailnet address; that is an expected split-host limitation,
+not a Stremio or historical playback regression.
+
 Next exact action: perform the focused macOS desktop-shell physical acceptance:
-save and reload one harmless setting, configure the known Stremio endpoint,
-start/stop the owned PCServer, and run one `friday` Miyoo connection/search
-smoke test using the displayed PocketCinema address. Do not rerun M21/M22
-playback matrices unless this new lifecycle/configuration path exposes a
-specific regression.
+save and reload one harmless setting, start the owned PCServer with the old
+server stopped, confirm that the main screen displays Local and (when detected)
+Tailscale/Remote routes, then run one `friday` Miyoo Remote connection/search
+smoke using the displayed Remote route and existing generic proxy. Test Local
+only if the current Miyoo network actually has a direct LAN path; otherwise
+record that environmental limitation. Stop the owned server afterward. Do not
+rerun M21/M22 playback matrices or account playback for this M23 networking/UI
+change.
 
 ## Latest Verified Checkpoint
 
@@ -182,15 +198,24 @@ Completed:
   Physical relaunch confirmation remains pending.
 
 - M23 user-facing UX refinement implemented, visual macOS launch confirmed, and
-  automated-tested: Automatic / Local network derives a concrete usable address;
+  automated-tested: Automatic / Local network derives concrete usable routes;
   All interfaces and Custom remain available; manual address/label/tool paths
   are secondary; Stremio Service is distinct; primary server actions are
   state-aware. Full owned-start/stop and Miyoo `friday` acceptance remains pending.
 
+- M23 networking-model correction implemented and automated-tested: macOS host
+  interface discovery derives Local plus an informational existing
+  Tailscale/Remote route without Tailscale lifecycle/state access; a single
+  all-interface owned child exposes both concrete PCServer URLs; discovery
+  remains Local-only; and approved Host handling preserves the client route in
+  returned play/subtitle URLs. Live Mac owned-child health checks passed through
+  both routes. M21/M22 media and client evidence is inherited; only focused
+  desktop/Miyoo routing acceptance remains pending.
+
 Pending:
 
-- M23 focused macOS desktop-shell physical acceptance, then later macOS
-  packaging and the required Windows clean-machine bundle/distribution phases.
+- M23 focused macOS desktop-shell routing acceptance, then later macOS packaging
+  and the required Windows clean-machine bundle/distribution phases.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

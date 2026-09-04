@@ -156,33 +156,57 @@ Tk desktop UI
   as the Tk window/application icon; it is not modified. A derived `.icns` is
   deferred to macOS packaging and a derived `.ico` to Windows packaging.
 
-### Initial UX refinement (implemented, visual launch confirmed)
+### Desktop networking model correction (implemented and automated-tested)
 
-The normal screen now asks only for the PCServer name, a simple **Listen on**
-choice, port, Stremio Service endpoint, and Start/Stop actions. The derived
-**PocketCinema address** is read-only and copyable; it is the address entered on
-the Miyoo. It is deliberately distinct from the Stremio Service endpoint, which
-PCServer alone uses upstream.
+The desktop shell distinguishes four concepts which must not be conflated:
 
-- **Automatic / Local network** resolves a usable non-loopback, non-link-local
-  local address when displayed and started. This is the new-profile default.
-- **All interfaces** binds `0.0.0.0` but still displays a concrete derived
-  PocketCinema address rather than a wildcard.
-- **Custom address** reveals the explicit bind field.
-- Advanced Settings retains manual PocketCinema-address override, network label,
-  and FFmpeg/FFprobe paths. Version-1 stored settings load as Custom plus manual
+1. **PCServer bind address** is the server-side socket choice. A wildcard bind
+   such as `0.0.0.0` can serve more than one interface through one owned
+   PCServer process.
+2. **Local PocketCinema connection** is a concrete LAN address copied into the
+   Miyoo's direct Local route.
+3. **Tailscale / Remote PocketCinema connection** is an optional concrete
+   tunnel address copied into the Miyoo's Remote route, which remains subject
+   to the Miyoo's independently configured generic HTTP proxy.
+4. **Stremio Service endpoint** is PCServer-only upstream configuration. It is
+   never displayed as a Miyoo route or exposed to the Miyoo.
+
+The main screen shows every concrete route supported by the selected bind mode,
+with an individual Copy button. On macOS the shell reads ordinary OS interface
+data to recognize an active LAN interface and, when an existing tunnel interface
+has the tailnet address shape, an informational **Tailscale / Remote** route. It
+does not call, authenticate, start, stop, configure, or read state from
+Tailscale. If the remote route is absent, PocketCinema continues as a normal
+Local-only server.
+
+- **Automatic / Local network** binds and displays the selected Local route when
+  no Remote route is detected. When an existing Remote route is detected, it
+  binds once to all interfaces and displays both routes without requiring
+  Advanced Settings.
+- **All interfaces** binds `0.0.0.0` once and displays both Local and optional
+  Tailscale / Remote routes; it never displays the wildcard itself.
+- **Custom address** remains available for unusual deployments.
+- The child receives all displayed routes as approved device hosts. Returned
+  play, subtitle, and fixture URLs stay on the approved Host route used by the
+  request, so Local and Remote clients do not switch routes mid-playback.
+- UDP discovery on `8754` remains Local-only and advertises its one preferred
+  Local route. Remote setup continues to use an explicitly configured URL and
+  generic proxy; it does not depend on discovery.
+- Advanced Settings retains manual route override, network label, and
+  FFmpeg/FFprobe paths. Version-1 stored settings load as Custom plus manual
   address override, preserving their existing behavior without rewriting them.
-- The normal Media tools section reports Available or Missing. Manual paths are
-  secondary because successful automatic detection needs no user action.
-- Start and Stop are state-aware primary actions; Restart, connection checking,
-  copying, and manual overrides are secondary.
+
+The normal Media tools section reports Available or Missing. Start and Stop are
+state-aware primary actions; Restart, connection checking, copying, and manual
+overrides are secondary.
 
 ### Regression impact matrix for the initial shell
 
 | Changed area | Classification | Required verification | Inherited evidence and reason |
 | --- | --- | --- | --- |
 | Tk UI, preferences, capability checks, icon | Desktop-only | desktop construction and configuration tests; focused macOS UI check | M21/M22 browsing, playback, subtitle, conversion, and controller evidence is unchanged because no Miyoo code or media path changed. |
-| Owned-child command and per-user paths | Server lifecycle/configuration | start, health, stop, crash, and occupied-port tests; one focused Miyoo search after manual start | Existing API/stream/play implementation is unchanged; the focused search only proves the new launch path reaches it. |
+| Multi-route endpoint derivation and owned-child arguments | Server lifecycle/configuration | interface parsing, Local/Remote route, absent-remote, manual-compatibility, start/health/stop, and focused Miyoo search tests | Existing resolver, conversion, subtitle, controller, and transport-client code is unchanged. |
+| Approved Host route for returned device URLs | Existing PCServer configuration | Local/Remote URL-selection and unapproved-Host tests; existing API/play/Range suite | A request keeps its existing route only; opaque stream handling and media pipeline behavior are unchanged. |
 | Stremio Service origin validation | Existing PCServer configuration modified | URL validation and full server suite; configured-endpoint status check | The secure local default and opaque Local Files handling remain covered by existing tests. Historical account/playback evidence remains valid because its resolver, proxy, conversion, and client paths were not changed. |
 
 The remaining physical acceptance is deliberately limited to the desktop shell:
@@ -244,30 +268,35 @@ The exact schema should be finalized against implementation tests. Do not store
 auth keys, addon tokens, or upstream media/subtitle URLs in this file, process
 arguments, logs, release archives, or ordinary diagnostic output.
 
-## Listen and advertised addresses
+## Bind and PocketCinema connection addresses
 
-The UI must treat these as different values:
+The UI must treat the bind socket and every device route as different values:
 
 - **Listen address:** the local address passed to `--host`.
-- **Advertised address:** the device-reachable address passed to `--public-host`
-  and displayed for Miyoo configuration.
+- **Preferred Local address:** the address passed to `--public-host` for Local
+  discovery and fallback compatibility.
+- **Additional device hosts:** optional approved Local/Remote addresses passed
+  to the server for route-preserving returned URLs.
+- **PocketCinema connections:** copyable concrete Local and optional Remote
+  URLs. They are not separate PCServer instances.
+- **Stremio Service endpoint:** a separate PCServer-only upstream URL.
 
-Interface enumeration should return stable records rather than presentation
-strings, including interface identity, display name, address, address family,
-and operational state where the platform exposes it. Filter out loopback,
-link-local, multicast, unspecified, and duplicate addresses from normal remote
-choices. Do not infer a transport provider merely from an address range or
-process inspection. A user-facing label such as LAN or Tailscale remains explicit
-configuration.
+Interface enumeration returns stable records rather than presentation strings,
+including interface identity, address, and operational state where the platform
+exposes it. Filter loopback, link-local, multicast, unspecified, inactive, and
+duplicate addresses. The shell uses only host interface data; it does not inspect
+provider processes or state. On platforms where a tailnet tunnel is not safely
+recognizable, it simply omits the optional Remote route rather than guessing.
 
 Safe initial behavior:
 
 - New desktop profiles default to Automatic / Local network, which chooses a
-  usable device-reachable local address. Existing stored profiles retain their
-  prior explicit addresses as Custom/manual settings.
-- Show interface name and IP together when available.
-- Offer All interfaces only with an exposure warning and a separately selected
-  advertised address; never display `0.0.0.0` as the Miyoo URL.
+  usable Local address and additionally exposes the detected Remote route when
+  one is available. Existing stored profiles retain their prior explicit
+  addresses as Custom/manual settings.
+- Show each Local/Remote connection with its concrete address and Copy action.
+- Never display `0.0.0.0` as a Miyoo URL; show only the concrete routes it
+  serves.
 - Retain Custom for routed HTTP(S) deployments.
 - Revalidate the selected local address before startup and report when it is no
   longer assigned.

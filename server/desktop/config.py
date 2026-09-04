@@ -25,6 +25,16 @@ class ConfigurationError(ValueError):
     """A user-editable desktop setting is invalid."""
 
 
+@dataclass(frozen=True)
+class DeviceEndpoint:
+    """One concrete PCServer route derived from existing host interfaces."""
+
+    label: str
+    address: str
+    kind: str = "local"
+    interface: str = ""
+
+
 @dataclass
 class DesktopSettings:
     schema_version: int = SCHEMA_VERSION
@@ -208,18 +218,23 @@ def save_settings(settings, root=None):
 
 
 def address_is_assigned(address):
-    """Best-effort local-address check; wildcard remains a deliberate choice."""
+    """Verify a concrete address remains bindable without hostname inference."""
     if address in {"0.0.0.0", "::"}:
         return True
     try:
-        candidates = socket.getaddrinfo(socket.gethostname(), None)
-    except OSError:
-        candidates = []
-    candidates.extend(socket.getaddrinfo("localhost", None))
-    return any(item[4][0] == address for item in candidates)
+        candidate = ipaddress.ip_address(address.split("%", 1)[0])
+        family = socket.AF_INET6 if candidate.version == 6 else socket.AF_INET
+        probe = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            probe.bind((address, 0))
+        finally:
+            probe.close()
+        return True
+    except (OSError, ValueError):
+        return False
 
 
-def resolve_network_settings(settings, local_address):
+def resolve_network_settings(settings, local_address, remote_available=False):
     """Return the effective child configuration for the selected listen mode.
 
     Automatic choices are intentionally resolved at start/display time, while
@@ -230,8 +245,8 @@ def resolve_network_settings(settings, local_address):
     if settings.listen_mode == "automatic":
         if not local_address:
             raise ConfigurationError("No usable local network address was found")
-        listen_address = local_address
-        network_name = "Local network"
+        listen_address = "0.0.0.0" if remote_available else local_address
+        network_name = "Local + Remote" if remote_available else "Local network"
     elif settings.listen_mode == "all_interfaces":
         if not local_address:
             raise ConfigurationError("Choose a device-facing address in Advanced Settings")
@@ -254,6 +269,33 @@ def resolve_network_settings(settings, local_address):
         advertised_address=advertised_address,
         network_name=network_name,
     )
+
+
+def derive_device_endpoints(settings, endpoints):
+    """Choose the concrete Miyoo routes that this bind mode can actually serve.
+
+    The bind socket and the routes a Miyoo can use are deliberately separate.
+    A wildcard listener may serve more than one Local/Remote endpoint, while a
+    specific listener must advertise only its matching address.  A manual
+    advertised address remains an explicit compatibility override.
+    """
+    settings = validate_settings(settings)
+    if settings.advertised_mode == "manual":
+        return (DeviceEndpoint("Custom", settings.advertised_address, "manual"),)
+
+    unique = []
+    seen = set()
+    for endpoint in endpoints:
+        if not isinstance(endpoint, DeviceEndpoint):
+            endpoint = DeviceEndpoint(*endpoint)
+        if endpoint.address in seen or not _valid_advertised_address(endpoint.address):
+            continue
+        seen.add(endpoint.address)
+        unique.append(endpoint)
+
+    if settings.listen_mode == "all_interfaces" or settings.listen_address in {"0.0.0.0", "::"}:
+        return tuple(unique)
+    return tuple(endpoint for endpoint in unique if endpoint.address == settings.listen_address)
 
 
 def pocketcinema_url(address, port):

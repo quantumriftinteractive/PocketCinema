@@ -61,6 +61,26 @@ MAX_TOTAL_SUBTITLE_TRACKS = (
 )
 MAX_STREAM_LIST_PREFLIGHT = 12
 MAX_STREAM_LIST_PREFLIGHT_WORKERS = 4
+
+
+def format_http_host(host):
+    """Format an IPv4, hostname, or IPv6 literal for an HTTP authority."""
+    host = str(host).strip()
+    return f"[{host}]" if ":" in host and not host.startswith("[") else host
+
+
+def select_device_host(request_host, allowed_hosts, fallback_host, server_port):
+    """Choose an approved request route without reflecting arbitrary Host input."""
+    allowed = {str(host).strip().lower().strip("[]") for host in allowed_hosts if host}
+    try:
+        parsed = urllib.parse.urlsplit("//" + str(request_host).strip())
+        host = (parsed.hostname or "").lower()
+        port = parsed.port
+    except (TypeError, ValueError):
+        return fallback_host
+    if parsed.username or parsed.password or (port is not None and port != server_port):
+        return fallback_host
+    return host if host in allowed else fallback_host
 COMPATIBILITY_FIXTURES = (
     {
         "filename": "test-video.mp4",
@@ -861,6 +881,16 @@ class ProgressStore:
 
 
 class PocketCinemaHandler(BaseHTTPRequestHandler):
+    def device_url(self, path):
+        """Return a URL on the approved Local or Remote route of this request."""
+        host = select_device_host(
+            self.headers.get("Host", ""),
+            getattr(self.server, "public_hosts", (self.server.public_host,)),
+            self.server.public_host,
+            self.server.server_port,
+        )
+        return f"http://{format_http_host(host)}:{self.server.server_port}{path}"
+
     server_version = "PocketCinema/0.9"
 
     def refresh_generic_progress_titles(self, items):
@@ -1255,10 +1285,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
         }
         if transcode:
             source_session_id = self.server.play_sessions.create(session_data)
-            source_url = (
-                f"http://{self.server.public_host}:{self.server.server_port}"
-                f"/play/{source_session_id}"
-            )
+            source_url = self.device_url(f"/play/{source_session_id}")
             session_data = {
                 "stream_id": stream_id,
                 "name": stream.get("name", ""),
@@ -1279,7 +1306,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
 
         self.write_json(
             {
-                "url": f"http://{self.server.public_host}:{self.server.server_port}/play/{session_id}",
+                "url": self.device_url(f"/play/{session_id}"),
                 "session_id": session_id,
                 "stream_id": stream_id,
                 "duration_seconds": duration_seconds,
@@ -1297,7 +1324,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                     for track in matroska_tracks
                 ],
                 "subtitle_pack_url": (
-                    f"http://{self.server.public_host}:{self.server.server_port}/subtitle-pack/{session_id}"
+                    self.device_url(f"/subtitle-pack/{session_id}")
                     if matroska_subtitles
                     else ""
                 ),
@@ -1713,8 +1740,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                 path = self.server.media_dir / fixture["filename"]
                 if not path.is_file() and not fixture.get("required"):
                     continue
-                stream_url = (
-                    f"http://{self.server.public_host}:{self.server.server_port}"
+                stream_url = self.device_url(
                     f"/media/compatibility/{urllib.parse.quote(fixture['filename'])}"
                 )
                 streams.append(
@@ -1736,8 +1762,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
             if not path.is_file():
                 fixture = COMPATIBILITY_FIXTURES[0]
                 path = self.server.media_dir / fixture["filename"]
-            stream_url = (
-                f"http://{self.server.public_host}:{self.server.server_port}"
+            stream_url = self.device_url(
                 f"/media/compatibility/{urllib.parse.quote(fixture['filename'])}"
             )
             streams.append(
@@ -2002,7 +2027,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                         "name": "English (PocketCinema test)",
                         "lang": "eng",
                         "source": "pocketcinema-sample",
-                        "url": f"http://{self.server.public_host}:{self.server.server_port}/media/test-subtitle.srt",
+                        "url": self.device_url("/media/test-subtitle.srt"),
                         "local_path": str(fixture.resolve()),
                         "item_type": item_type,
                         "item_id": item_id,
@@ -2899,6 +2924,10 @@ def main():
     parser.add_argument("--port", type=int, default=8755)
     parser.add_argument("--public-host", default=None)
     parser.add_argument(
+        "--device-host", action="append", default=[],
+        help="Additional approved Local/Remote host used for returned Miyoo URLs",
+    )
+    parser.add_argument(
         "--server-name",
         default=socket.gethostname(),
         help="Friendly PCServer name shown by device discovery",
@@ -2995,6 +3024,7 @@ def main():
     httpd.media_dir = media_dir
     httpd.fixture_dir = fixture_dir
     httpd.public_host = args.public_host or args.host
+    httpd.public_hosts = tuple(dict.fromkeys([httpd.public_host, *args.device_host]))
     httpd.server_port = args.port
     httpd.discovery_name = discovery.safe_name(args.server_name)
     httpd.discovery_network = discovery.safe_name(args.network_name)
