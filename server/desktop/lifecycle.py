@@ -87,6 +87,10 @@ class PCServerLifecycle:
             "--stremio-account-config", str(self.data_root / "credentials" / "stremio_account.json"),
             "--stream-addons", str(self.data_root / "config" / "stream_addons.json"),
             "--open-media-addon-port", str(addon_port),
+            # The established desktop-independent managers enable the bounded
+            # selectable-Matroska path by default.  Keep the owned desktop
+            # child at that startup parity without changing the core default.
+            "--enable-matroska-subtitles",
         ]
         seen = {settings.advertised_address}
         for host in device_hosts:

@@ -151,7 +151,9 @@ Tk desktop UI
 - The desktop child receives per-user data, credentials, and private-addon
   paths rather than source-tree writable paths. It uses a private ephemeral
   loopback port for the open-media helper and emits a bounded, URL-sanitized
-  log view.
+  log view. It enables the established bounded selectable-Matroska subtitle
+  path by default, matching the source managers without changing the server
+  core's opt-in default.
 - The canonical `UI_concept/Icons/PocketCinema_Server_icon.png` is used directly
   as the Tk window/application icon; it is not modified. A derived `.icns` is
   deferred to macOS packaging and a derived `.ico` to Windows packaging.
@@ -234,6 +236,21 @@ failure after recovery. `/api/status` and the desktop's explicit connection
 check retain their existing reachable/unreachable behavior; the latter still
 provides fresh visible feedback without changing PCServer lifecycle behavior.
 
+### Desktop subtitle startup parity (implemented; physical retest pending)
+
+The desktop lifecycle now passes `--enable-matroska-subtitles` for its owned
+PCServer child, matching the established macOS and Windows source managers.
+This scoped M23 correction was required because the development FFmpeg build
+does not provide the normal subtitle burn-in filter: without the selectable
+Matroska server capability, a Miyoo selectable-Matroska request falls back to
+normal discovery and returns no subtitle tracks before contacting configured
+subtitle providers. It does not change provider handling,
+stream preflight/filtering, cache contents, subtitle limits, conversion logic,
+or the server-core flag default. A focused Miyoo acceptance remains required:
+confirm the desktop child's status reports selectable Matroska subtitles, then
+use the existing Miyoo subtitle mode on one known title and confirm tracks are
+discovered.
+
 ### Regression impact matrix for the initial shell
 
 | Changed area | Classification | Required verification | Inherited evidence and reason |
@@ -243,6 +260,7 @@ provides fresh visible feedback without changing PCServer lifecycle behavior.
 | Approved Host route for returned device URLs | Existing PCServer configuration | Local/Remote URL-selection and unapproved-Host tests; existing API/play/Range suite | A request keeps its existing route only; opaque stream handling and media pipeline behavior are unchanged. |
 | Stremio Service origin validation | Existing PCServer configuration modified | URL validation and full server suite; configured-endpoint status check | The secure local default and opaque Local Files handling remain covered by existing tests. Historical account/playback evidence remains valid because its resolver, proxy, conversion, and client paths were not changed. |
 | Stremio Service status diagnostic | Server logging only | failure-transition/recovery unit test; existing status and lifecycle suites | Status payloads, upstream access, device routes, and lifecycle ownership are unchanged; M21/M22 evidence remains inherited. |
+| Desktop selectable-Matroska startup parity | Desktop child lifecycle/configuration | desktop command/status test and one focused Miyoo subtitle-discovery check | Existing M22 selectable-subtitle evidence is inherited: server-core defaults, resolver, conversion, client, and bounded track behavior are unchanged. |
 | Dynamic connection list | Desktop configuration/UI | mode, route filtering, port/custom-address update, concise-status, and lifecycle tests | The PCServer API, discovery protocol, Stremio boundary, Tailscale independence, and M21/M22 media behavior are unchanged. |
 
 The focused Local desktop-management and Miyoo `friday` connection/search smoke

@@ -392,6 +392,7 @@ class LifecycleTests(unittest.TestCase):
                 DesktopSettings(listen_port=self.free_port(), advertised_address="192.0.2.44"),
                 ("192.0.2.44", "100.64.10.20"),
             )
+        self.assertIn("--enable-matroska-subtitles", command)
         self.assertEqual(command.count("--device-host"), 1)
         self.assertEqual(command[command.index("--device-host") + 1], "100.64.10.20")
 
