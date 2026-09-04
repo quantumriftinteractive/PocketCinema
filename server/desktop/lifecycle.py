@@ -13,6 +13,7 @@ import time
 import urllib.error
 import urllib.request
 
+from .capabilities import detect_tool
 from .config import DesktopSettings, address_is_assigned, validate_settings
 
 
@@ -33,10 +34,11 @@ def sanitize_log_line(value):
 
 
 class PCServerLifecycle:
-    def __init__(self, data_root, python_executable=None, command_factory=None):
+    def __init__(self, data_root, python_executable=None, command_factory=None, tool_detector=detect_tool):
         self.data_root = Path(data_root)
         self.python_executable = python_executable or sys.executable
         self.command_factory = command_factory
+        self.tool_detector = tool_detector
         self._process = None
         self._logs = deque(maxlen=LOG_LIMIT)
         self._lock = threading.Lock()
@@ -73,6 +75,8 @@ class PCServerLifecycle:
 
     def _command(self, settings, device_hosts=()):
         addon_port = self._available_loopback_port()
+        ffmpeg = self.tool_detector("ffmpeg", settings.ffmpeg_path)
+        ffprobe = self.tool_detector("ffprobe", settings.ffprobe_path)
         command = [
             self.python_executable, "-m", "server.desktop.server_child",
             "--host", settings.listen_address,
@@ -81,8 +85,8 @@ class PCServerLifecycle:
             "--server-name", settings.server_name,
             "--network-name", settings.network_name,
             "--stremio-service-url", settings.stremio_service_url,
-            "--ffmpeg", settings.ffmpeg_path,
-            "--ffprobe", settings.ffprobe_path,
+            "--ffmpeg", ffmpeg.path if ffmpeg.available else "",
+            "--ffprobe", ffprobe.path if ffprobe.available else "",
             "--data-dir", str(self.data_root / "data"),
             "--stremio-account-config", str(self.data_root / "credentials" / "stremio_account.json"),
             "--stream-addons", str(self.data_root / "config" / "stream_addons.json"),

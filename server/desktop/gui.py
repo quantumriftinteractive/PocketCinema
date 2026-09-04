@@ -304,8 +304,14 @@ class PocketCinemaDesktop:
     def refresh_capabilities(self):
         ffmpeg = detect_tool("ffmpeg", self.values["ffmpeg_path"].get())
         ffprobe = detect_tool("ffprobe", self.values["ffprobe_path"].get())
-        self.tool_ffmpeg.set("Available" if ffmpeg.available else "Missing")
-        self.tool_ffprobe.set("Available" if ffprobe.available else "Missing")
+        self.tool_ffmpeg.set(self._tool_status_text(ffmpeg))
+        self.tool_ffprobe.set(self._tool_status_text(ffprobe))
+
+    @staticmethod
+    def _tool_status_text(status):
+        if not status.available:
+            return "Missing"
+        return "Available" if status.source == "manual" else f"Available ({status.source})"
 
     def open_advanced(self):
         dialog = tk.Toplevel(self.root)

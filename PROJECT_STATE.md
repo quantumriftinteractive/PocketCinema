@@ -179,6 +179,27 @@ inspect or manage Tailscale state/lifecycle, change the Stremio Service model,
 or alter PCServer API/discovery behavior. The existing Local physical acceptance
 is inherited; the new presentation and Remote route remain physically pending.
 
+Focused Windows M23 desktop-shell diagnosis found and repaired two independent
+desktop regressions. Windows previously fell back to hostname-only address
+enumeration, losing interface identity and consequently presenting the
+Tailscale IPv4/IPv6 tunnel and a WSL virtual adapter as Local. It now reads
+active Windows interface metadata only, retains hardware LAN routes and the
+recognized tunnel, omits generic virtual adapters, and labels the tunnel routes
+Tailscale / Remote. The desktop lifecycle and UI also now retain the established
+Windows-manager lookup for Stremio's existing per-user `ffmpeg.exe` and
+`ffprobe.exe` runtime; PocketCinema neither downloads nor redistributes them.
+This is automated-tested against representative Windows records and the live
+Windows host, but still requires the focused desktop/Miyoo observation.
+
+The contemporaneous empty-stream response is separately classified as current
+source availability, not a desktop-shell or preflight regression. The linked
+account is reread after linking and has stream-capable sources, but the checked
+movie returned zero acceptable candidates: one source was unavailable and one
+returned only policy-rejected P2P, external-player, private-address, or
+non-HTTP shapes. The missing FFprobe had disabled preflight but did not remove
+these streams; no provider, cache, eligibility, or account behavior was
+changed. Historical M21/M22 evidence remains inherited.
+
 The M22 production-promotion gap is corrected and locally verified. The Miyoo
 runtime fallback and shipped example now enable selectable Matroska subtitles;
 an explicit persisted or environment value of `0` remains the opt-out and
@@ -233,15 +254,15 @@ Remote verification confirmed the expected scale string, assets, executable
 permission, no diagnostic markers, and no stale client/player process. Only the
 focused Apps larger-caption/R1 visible change/off observation remains pending.
 
-Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
-shows only Local routes, All interfaces shows Local plus detected Remote, and
-Custom shows only its explicit route. Return to All interfaces, use the
-displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
-proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
-playback matrices or account playback. Keep the separate Matroska
-readability polish scoped to the deployed app-local FFplay build: from Apps,
-launch one known subtitle-bearing title and confirm the larger captions plus one
-R1 visible track change/off transition before exiting normally.
+Next exact action: relaunch `python server\\pocketcinema_desktop.py` from this
+updated checkout. Confirm Automatic offers only the Local LAN route, All
+interfaces separately labels the two recognized Tailscale / Remote routes and
+does not offer the WSL adapter, and both media tools show `Available (Stremio
+runtime)`. Start the owned child and use the Local route from the existing Miyoo
+Local profile. A subtitle-bearing title needs an account source that returns a
+safe direct HTTP(S) candidate; current linked providers return none for the
+checked movie. Once a stream appears, perform only the pending Apps check:
+larger captions, one visible R1 track change, subtitles Off, then Menu exit.
 
 ## Latest Verified Checkpoint
 

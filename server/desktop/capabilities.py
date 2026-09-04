@@ -1,6 +1,7 @@
 """Host capability discovery used by the desktop manager and tests."""
 from dataclasses import dataclass
 import ipaddress
+import json
 import os
 from pathlib import Path
 import shutil
@@ -28,11 +29,34 @@ class ServiceStatus:
     message: str
 
 
-def detect_tool(name, manual_path=""):
+def _usable_executable(path):
+    return path.is_file() and os.access(path, os.X_OK)
+
+
+def _stremio_runtime_tool(name, platform, environ):
+    """Return the supported Windows Stremio-runtime tool when it is present.
+
+    This preserves the existing Windows manager's lookup.  The executable is
+    installed by Stremio; PocketCinema neither downloads nor redistributes it.
+    """
+    if not platform.startswith("win") or name not in {"ffmpeg", "ffprobe"}:
+        return ""
+    local_app_data = environ.get("LOCALAPPDATA", "").strip()
+    if not local_app_data:
+        return ""
+    candidate = Path(local_app_data) / "Programs" / "LNV" / "Stremio-4" / f"{name}.exe"
+    return str(candidate) if _usable_executable(candidate) else ""
+
+
+def detect_tool(name, manual_path="", platform=None, environ=None):
     if manual_path:
         path = Path(manual_path).expanduser()
-        available = path.is_file() and os.access(path, os.X_OK)
+        available = _usable_executable(path)
         return ToolStatus(str(path), available, "manual")
+    platform = platform or sys.platform
+    runtime_path = _stremio_runtime_tool(name, platform, environ or os.environ)
+    if runtime_path:
+        return ToolStatus(runtime_path, True, "Stremio runtime")
     found = shutil.which(name)
     return ToolStatus(found or "", bool(found), "PATH" if found else "missing")
 
@@ -80,8 +104,59 @@ def _hostname_addresses():
     return [(socket.gethostname(), record[4][0]) for record in records]
 
 
-def host_interface_addresses(platform=None, ifconfig_output=None):
-    """Return usable host IPv4 candidates with their OS interface identity."""
+def _windows_interface_addresses(output):
+    """Parse safe, active Windows interface records collected by PowerShell."""
+    try:
+        payload = json.loads(output) if output.strip() else []
+    except (TypeError, json.JSONDecodeError):
+        return []
+    records = payload if isinstance(payload, list) else [payload]
+    candidates = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        interface = record.get("interface")
+        address = record.get("address")
+        if not isinstance(interface, str) or not isinstance(address, str):
+            continue
+        if not _usable_device_address(address):
+            continue
+        # Retain the provider tunnel for accurate remote classification, but
+        # do not advertise generic virtual/WSL adapters as a Miyoo LAN route.
+        if _tailnet_interface_address(interface, address) or (
+            not bool(record.get("virtual")) and bool(record.get("hardware"))
+        ):
+            candidates.append((interface, address))
+    return candidates
+
+
+def _read_windows_interface_addresses():
+    command = (
+        "$adapters = @{}; "
+        "Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue | "
+        "ForEach-Object { $adapters[[string]$_.ifIndex] = $_ }; "
+        "Get-NetIPAddress -AddressFamily IPv4,IPv6 -ErrorAction SilentlyContinue | "
+        "Where-Object { $_.AddressState -eq 'Preferred' } | ForEach-Object { "
+        "$ip = $_; $adapter = $adapters[[string]$ip.InterfaceIndex]; "
+        "if ($adapter -and $adapter.Status -eq 'Up') { [PSCustomObject]@{ "
+        "interface = $adapter.Name; address = $ip.IPAddress; "
+        "virtual = [bool]$adapter.Virtual; hardware = [bool]$adapter.HardwareInterface "
+        "} } } | ConvertTo-Json -Compress"
+    )
+    try:
+        return subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        ).stdout
+    except OSError:
+        return ""
+
+
+def host_interface_addresses(platform=None, ifconfig_output=None, windows_output=None):
+    """Return usable host IP candidates with their OS interface identity."""
     platform = platform or sys.platform
     if platform == "darwin":
         if ifconfig_output is None:
@@ -93,6 +168,10 @@ def host_interface_addresses(platform=None, ifconfig_output=None):
             except OSError:
                 ifconfig_output = ""
         records = _ifconfig_addresses(ifconfig_output)
+    elif platform.startswith("win"):
+        if windows_output is None:
+            windows_output = _read_windows_interface_addresses()
+        records = _windows_interface_addresses(windows_output)
     else:
         records = _hostname_addresses()
     seen = set()
@@ -110,9 +189,12 @@ def _tailnet_interface_address(interface, address):
     tailnet IPv4 range; it neither contacts nor controls a network provider.
     """
     try:
-        network = ipaddress.ip_network("100.64.0.0/10")
         candidate = ipaddress.ip_address(address)
-        return candidate in network and interface.lower().startswith(("utun", "tailscale"))
+        tunnel = interface.lower().startswith(("utun", "tailscale"))
+        return tunnel and (
+            candidate in ipaddress.ip_network("100.64.0.0/10")
+            or candidate in ipaddress.ip_network("fd7a:115c:a1e0::/48")
+        )
     except (ValueError, AttributeError):
         return False
 

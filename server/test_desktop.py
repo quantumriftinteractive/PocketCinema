@@ -11,6 +11,7 @@ from unittest import mock
 
 from server.desktop.capabilities import (
     ServiceStatus,
+    ToolStatus,
     device_endpoints,
     detect_tool,
     host_interface_addresses,
@@ -238,6 +239,28 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
             [(item.label, item.address) for item in endpoints], [("Local network", "192.0.2.44")]
         )
 
+    def test_windows_records_keep_lan_and_tailnet_routes_distinct(self):
+        records = host_interface_addresses(
+            "win32",
+            windows_output='''[
+                {"interface":"Tailscale","address":"100.85.171.67","virtual":true,"hardware":false},
+                {"interface":"Gaming Ethernet","address":"192.168.0.185","virtual":false,"hardware":true},
+                {"interface":"vEthernet (WSL)","address":"172.29.80.1","virtual":true,"hardware":false},
+                {"interface":"Tailscale","address":"fd7a:115c:a1e0:d201::ab43","virtual":true,"hardware":false}
+            ]''',
+        )
+        self.assertEqual(records, (
+            ("Tailscale", "100.85.171.67"),
+            ("Gaming Ethernet", "192.168.0.185"),
+            ("Tailscale", "fd7a:115c:a1e0:d201::ab43"),
+        ))
+        endpoints = device_endpoints(records)
+        self.assertEqual([(item.label, item.address) for item in endpoints], [
+            ("Tailscale / Remote", "100.85.171.67"),
+            ("Local network", "192.168.0.185"),
+            ("Tailscale / Remote", "fd7a:115c:a1e0:d201::ab43"),
+        ])
+
     def test_preferred_local_address_skips_loopback(self):
         self.assertEqual(
             preferred_local_address(
@@ -253,6 +276,20 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
         status = detect_tool("definitely-not-pocketcinema-tool", "/missing/tool")
         self.assertFalse(status.available)
         self.assertEqual(status.source, "manual")
+
+    def test_windows_tool_detection_uses_installed_stremio_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = Path(temporary) / "Programs" / "LNV" / "Stremio-4"
+            runtime.mkdir(parents=True)
+            tool = runtime / "ffprobe.exe"
+            tool.write_bytes(b"test")
+            tool.chmod(0o700)
+            status = detect_tool(
+                "ffprobe", platform="win32", environ={"LOCALAPPDATA": temporary}
+            )
+        self.assertTrue(status.available)
+        self.assertEqual(status.path, str(tool))
+        self.assertEqual(status.source, "Stremio runtime")
 
     def test_stremio_reachable_and_unreachable_status(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), StremioHandler)
@@ -387,12 +424,20 @@ class LifecycleTests(unittest.TestCase):
 
     def test_child_receives_all_approved_device_hosts(self):
         with tempfile.TemporaryDirectory() as temporary:
-            manager = PCServerLifecycle(temporary, python_executable=sys.executable)
+            manager = PCServerLifecycle(
+                temporary,
+                python_executable=sys.executable,
+                tool_detector=lambda name, manual: ToolStatus(
+                    f"C:/Stremio/{name}.exe", True, "Stremio runtime"
+                ),
+            )
             command = manager._command(
                 DesktopSettings(listen_port=self.free_port(), advertised_address="192.0.2.44"),
                 ("192.0.2.44", "100.64.10.20"),
             )
         self.assertIn("--enable-matroska-subtitles", command)
+        self.assertEqual(command[command.index("--ffmpeg") + 1], "C:/Stremio/ffmpeg.exe")
+        self.assertEqual(command[command.index("--ffprobe") + 1], "C:/Stremio/ffprobe.exe")
         self.assertEqual(command.count("--device-host"), 1)
         self.assertEqual(command[command.index("--device-host") + 1], "100.64.10.20")
 
