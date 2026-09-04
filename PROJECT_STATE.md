@@ -205,7 +205,7 @@ default-promotion correction as its resolution.
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `3ed29b8`
-Remote verified: YES (`1000731` is reachable from `origin/main`)
+Remote verified: YES (`3ed29b8` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
