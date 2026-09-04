@@ -17,9 +17,11 @@ reproducible release artifacts. Whether selectable Matroska ships in v1.0 is
 still an explicit release-scope decision. Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
-Until Milestone 23 is implemented and accepted from the actual packaged
-artifact, the Python/PowerShell workflow below remains a developer/source path,
-not the intended end-user v1.0 installation.
+The initial macOS source-development shell is implemented and automatically
+tested, but it is not yet physically confirmed or packaged. Until Milestone 23
+is accepted from an actual packaged artifact, the Python/PowerShell workflow
+below remains a developer/source path, not the intended end-user v1.0
+installation.
 
 ## Verified Connection and Onboarding Resolution
 

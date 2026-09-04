@@ -1,8 +1,9 @@
 # PocketCinema Server Desktop Distribution Plan
 
 This document records the desktop distribution architecture and acceptance plan.
-Milestone 21 is confirmed and Milestone 23 is Next, but no desktop
-implementation or packaged artifact exists yet.
+Milestone 21 is confirmed and Milestone 23 is Next. The initial macOS
+development shell is implemented and automatically tested; it is not a packaged
+artifact or a release claim.
 
 ## Milestone gate and sequencing
 
@@ -16,7 +17,7 @@ Implementation must not begin until all of the following are true:
    not only source code or automated tests.
 
 Milestone 21 is now **Confirmed**. Milestone 23 is the sole **Next** milestone,
-and this plan remains planning-only until implementation is explicitly started.
+and implementation began with the explicitly requested macOS development shell.
 Milestone 22 retains its existing number and confirmed evidence. Desktop
 Distribution is Milestone 23, ahead of Milestone 24 Offline Downloads and
 Milestone 25 Unified PocketCinema UI.
@@ -41,11 +42,10 @@ The existing PocketCinema server should remain the core implementation.
 - Optional addon manifests default to ignored
   `server/config/stream_addons.json`; an environment variable can override them.
 - The default Stremio Service URL is `http://127.0.0.1:11470` when it runs on
-  the PCServer host, and the current core intentionally validates loopback-only
-  origins. M23 must retain the default while replacing that hard restriction
-  with a validated, non-secret PCServer-only endpoint policy for a separately
-  reachable service host; the Miyoo never contacts Stremio Service directly.
-  Preserve the Windows Firewall block for the local service listener.
+  the PCServer host. M23 retains that secure default and validates a non-secret
+  PCServer-only HTTP origin for a separately reachable service host; the Miyoo
+  never contacts Stremio Service directly. Preserve the Windows Firewall block
+  for the local service listener.
 - FFprobe and FFmpeg accept explicit CLI paths. The Python core otherwise searches
   `PATH`; the Windows PowerShell managers additionally check Stremio's current
   per-user runtime location. The macOS manager discovers tools from `PATH`.
@@ -92,10 +92,14 @@ connectivity, and show a concise actionable unreachable or invalid-endpoint
 state. This setting changes only the PCServer's upstream connection; it never
 exposes Stremio Service to the Miyoo.
 
-`tkinter.ttk` is the provisional UI choice because it is Python's standard
-cross-platform Tk interface and avoids adding a large application framework. Its
-availability and appearance must be verified inside each packaged build; this is
-a packaging decision, not permission to couple lifecycle logic to widget code.
+`tkinter.ttk` is the chosen initial UI because it is Python's standard
+cross-platform Tk interface: it supports the required basic forms, status,
+buttons, log view, and PNG application/window artwork without introducing a
+large runtime dependency. It keeps the same Python implementation practical for
+later macOS and Windows packaging, while PyInstaller can bundle Python and the
+Tk runtime. Its availability and appearance must still be verified inside every
+packaged build; this is a packaging decision, not permission to couple lifecycle
+logic to widget code.
 
 PyInstaller one-directory mode is the provisional first bundler. PyInstaller's
 default one-folder output includes the Python interpreter and collected runtime
@@ -109,6 +113,60 @@ The server must remain independently runnable from source. The PowerShell and
 shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
 PowerShell.
+
+## Initial macOS development shell (implemented, not yet physically confirmed)
+
+The source entry point is `server/pocketcinema_desktop.py`. On the current Mac,
+use the Apple-supplied Tk-capable interpreter:
+
+```sh
+/usr/bin/python3 server/pocketcinema_desktop.py
+```
+
+The current Homebrew Python 3.14 installation lacks `_tkinter`, so it remains
+suitable for non-GUI automated checks but cannot launch this development shell.
+This is a local development prerequisite observation, not a macOS packaging
+claim.
+
+The implementation is deliberately split into testable layers:
+
+```text
+Tk desktop UI
+  -> desktop config / capabilities / lifecycle modules
+  -> one tracked owned PCServer child process
+  -> existing PocketCinema Server CLI core
+```
+
+- `server/desktop/config.py` persists only non-secret settings atomically under
+  the platform per-user application-data root. It does not migrate or copy
+  account credentials or addon configuration.
+- `server/desktop/capabilities.py` detects tools and probes the configured
+  Stremio Service from the PCServer host. A configured remote HTTP origin is
+  valid; the Miyoo never receives or contacts it.
+- `server/desktop/lifecycle.py` starts a child through the stable
+  `server.desktop.server_child` entry point, retains only that `Popen` handle,
+  polls `/api/status`, and terminates only that child. It does not discover or
+  kill arbitrary Python, FFmpeg, Stremio, or Tailscale processes.
+- The desktop child receives per-user data, credentials, and private-addon
+  paths rather than source-tree writable paths. It uses a private ephemeral
+  loopback port for the open-media helper and emits a bounded, URL-sanitized
+  log view.
+- The canonical `UI_concept/Icons/PocketCinema_Server_icon.png` is used directly
+  as the Tk window/application icon; it is not modified. A derived `.icns` is
+  deferred to macOS packaging and a derived `.ico` to Windows packaging.
+
+### Regression impact matrix for the initial shell
+
+| Changed area | Classification | Required verification | Inherited evidence and reason |
+| --- | --- | --- | --- |
+| Tk UI, preferences, capability checks, icon | Desktop-only | desktop construction and configuration tests; focused macOS UI check | M21/M22 browsing, playback, subtitle, conversion, and controller evidence is unchanged because no Miyoo code or media path changed. |
+| Owned-child command and per-user paths | Server lifecycle/configuration | start, health, stop, crash, and occupied-port tests; one focused Miyoo search after manual start | Existing API/stream/play implementation is unchanged; the focused search only proves the new launch path reaches it. |
+| Stremio Service origin validation | Existing PCServer configuration modified | URL validation and full server suite; configured-endpoint status check | The secure local default and opaque Local Files handling remain covered by existing tests. Historical account/playback evidence remains valid because its resolver, proxy, conversion, and client paths were not changed. |
+
+The remaining physical acceptance is deliberately limited to the desktop shell:
+title/icon, preference persistence, endpoint status, owned start/stop, and one
+Miyoo `friday` connection/search smoke. It does not require rerunning the M21 or
+M22 playback, subtitle, or conversion matrices.
 
 ## Persistent paths and privacy boundary
 

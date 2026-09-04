@@ -17,25 +17,35 @@ class StremioServiceError(RuntimeError):
     pass
 
 
-def validate_loopback_base_url(value):
+def validate_service_base_url(value):
+    """Validate the non-secret PCServer-to-Stremio-Service origin.
+
+    This is deliberately independent of the Miyoo-facing bind address. The
+    service can be local or on a separately reachable machine, but it is only
+    ever contacted by PCServer.
+    """
     if not value:
         return ""
     parsed = urllib.parse.urlparse(value)
     if (
         parsed.scheme != "http"
-        or parsed.hostname not in LOOPBACK_HOSTS
+        or not parsed.hostname
         or parsed.username
         or parsed.password
         or parsed.query
         or parsed.fragment
         or parsed.path not in {"", "/"}
     ):
-        raise ValueError("Stremio Service URL must be a loopback HTTP origin")
+        raise ValueError("Stremio Service URL must be an HTTP origin without credentials or a path")
     try:
         parsed.port
     except ValueError as exc:
         raise ValueError("Stremio Service URL has an invalid port") from exc
     return value.rstrip("/")
+
+
+# Kept as a source-compatible name for callers that imported the former helper.
+validate_loopback_base_url = validate_service_base_url
 
 
 def _file_url_path(value):
@@ -92,7 +102,7 @@ class StremioServiceBackend:
         timeout=DEFAULT_TIMEOUT,
         status_ttl=DEFAULT_STATUS_TTL,
     ):
-        self.base_url = validate_loopback_base_url(base_url)
+        self.base_url = validate_service_base_url(base_url)
         self.allowed_roots = tuple(
             Path(root).resolve() for root in allowed_roots if str(root).strip()
         )

@@ -38,6 +38,20 @@ POCKETCINEMA_HOST=100.x.y.z ./server/manage-server.sh start
 ./server/manage-server.sh stop
 ```
 
+The initial cross-platform PocketCinema Server desktop shell is a macOS source
+development workflow, not a release bundle. It persists only non-secret desktop
+settings under `~/Library/Application Support/PocketCinema/`, starts and stops
+only its owned PCServer child, and keeps credentials/addon configuration in its
+separate per-user directories. On this development Mac, launch it with the
+Tk-capable system interpreter:
+
+```sh
+/usr/bin/python3 server/pocketcinema_desktop.py
+```
+
+The Stremio Service field accepts a validated HTTP origin on the PCServer host
+or another reachable host. The Miyoo never sees or contacts that endpoint.
+
 PCServer advertises one preferred device-facing address on UDP `8754` for the
 Miyoo's local-network scan. Give each instance a short machine name and a
 descriptive transport label:

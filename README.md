@@ -11,9 +11,10 @@ Apps -> PocketCinema -> search -> select media or episode -> Play -> select stre
 ```
 
 It uses direct HTTP or an optional configured HTTP proxy, a lightweight SDL 1.2
-selector, a Python server on the gaming PC, and the PC's localhost-only Stremio
-Service as an optional backend. The PCServer can also run on macOS while reaching a
-Windows Stremio Service through a loopback-only SSH tunnel. Tailscale is an
+selector, a Python server on the gaming PC, and the PC's local-default Stremio
+Service as an optional backend. The PCServer can also run on macOS while reaching
+a configured PCServer-only Stremio Service endpoint, including a loopback-only
+SSH tunnel to a Windows host. Tailscale is an
 independent network provider, not a PocketCinema runtime dependency. The
 known-compatible Big Buck Bunny test
 stream plays as H.264 640x360 with AAC audio. See

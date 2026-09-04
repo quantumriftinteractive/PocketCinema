@@ -36,8 +36,8 @@ decision.
 - The Miyoo never reaches Stremio Service directly; PocketCinema Server is the
   device-facing boundary. The current local default is `http://127.0.0.1:11470`;
   preserve the inbound firewall block for TCP `11470-11474` and `12470` when
-  the service runs locally on the PCServer host. M23 planning permits a
-  validated, PCServer-only configurable endpoint on another reachable host.
+  the service runs locally on the PCServer host. M23 implements a validated,
+  PCServer-only configurable endpoint on another reachable host.
 - PocketCinema is transport-agnostic: direct HTTP is normal, an optional generic
   HTTP proxy supports Remote routing, and it never manages Tailscale.
 - Automatic routing tries Local PCServer directly, then Remote PCServer through
@@ -111,9 +111,19 @@ Tailscale, or PCServer behavior change.
 
 ## Active Work and Next Action
 
-Milestone 23 is the sole **Next** milestone, but its desktop-server shell remains
-planning-only. The focused post-rename Apps-context smoke test is complete. Do
-not begin Milestone 23 implementation without an explicit request.
+Milestone 23 is active. The initial functional macOS source-development desktop
+shell is implemented and automatically tested, but is not physically confirmed
+or packaged. Its Tk UI owns only a tracked PCServer child, persists non-secret
+settings under the per-user PocketCinema directory, validates the editable
+PCServer-only Stremio Service HTTP origin, detects FFmpeg/FFprobe, displays
+sanitized status/log output, and uses the canonical server PNG as its window
+icon. The server core remains independently source-runnable.
+
+Next exact action: perform the focused macOS desktop-shell physical acceptance:
+launch, verify title/icon, save and reload one harmless setting, configure the
+known Stremio endpoint, start/stop the owned PCServer, and run one `friday`
+Miyoo connection/search smoke test. Do not rerun M21/M22 playback matrices
+unless this new lifecycle/configuration path exposes a specific regression.
 
 ## Latest Verified Checkpoint
 
@@ -138,14 +148,23 @@ Completed:
   the Apps-menu icon, normal Home/UI and server status, B exit, and separate
   Tailscale icon are physically confirmed.
 - Durable regression-impact/evidence-inheritance policy recorded. It preserves
-  M21/M22 confirmation, requires diff/history-based targeted testing, and keeps
-  M23 planning-only while specifying its configurable PCServer-only Stremio
-  Service endpoint requirement.
+  M21/M22 confirmation, requires diff/history-based targeted testing, and
+  specified M23's configurable PCServer-only Stremio Service endpoint before
+  implementation began.
 - Python compilation, 70 server unit tests, shell syntax and focused
   connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
   Range verification, and `git diff --check`.
 
+- M23 initial macOS desktop shell implemented and automated-tested: stdlib Tk
+  presentation, atomic non-secret config, tool/status checks, PCServer-only
+  remote-or-local Stremio Service origin validation, explicit per-user child
+  paths, and owned-process start/stop/crash handling. This is not a release
+  artifact and awaits the focused physical macOS/Miyoo acceptance above.
+
 Pending:
+
+- M23 focused macOS desktop-shell physical acceptance, then later macOS
+  packaging and the required Windows clean-machine bundle/distribution phases.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

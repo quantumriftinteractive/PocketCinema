@@ -148,8 +148,8 @@ Scope:
 - Identify one reproducible direct-URL stream source for a movie.
 - Resolve it behind `/api/streams/{type}/{id}` without exposing its upstream URL
   to the Miyoo.
-- Preserve loopback-only PocketCinema access and firewall containment for
-  Stremio Service.
+- Preserve the local-default Stremio Service firewall containment while keeping
+  any configured endpoint PCServer-only.
 - Handle common upstream redirects, Range requests, content types, and failures.
 - Show useful stream names and concise failure messages in the Miyoo client.
 - Keep the hosted Big Buck Bunny stream as a deterministic regression fixture.
@@ -985,8 +985,10 @@ smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.
 **Status: Next**
 
 Replace the developer-oriented PocketCinema server launch experience with a
-small Windows-first desktop control application while preserving the existing
-Python server as the core implementation. Milestone 23 implementation must not
+small cross-platform desktop control application while preserving the existing
+Python server as the core implementation. The first implementation target is a
+macOS development shell; Windows remains the required first end-user release
+target. Milestone 23 implementation must not
 begin until Milestone 21 is marked **Confirmed** and its device-facing
 acceptance criteria are supported by the required evidence. Code presence alone
 does not satisfy that gate.

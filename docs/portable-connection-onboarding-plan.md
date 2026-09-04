@@ -167,7 +167,8 @@ It must not bundle, start, stop, inspect, authenticate, or configure that client
 ## Security, failure, and persistence requirements
 
 - Keep PCServer off public port forwarding; it has no public-facing authentication.
-- Keep Stremio Service loopback-only and preserve its firewall boundary.
+- Keep the secure local-default Stremio Service firewall boundary; any later
+  configured endpoint remains PCServer-only and is never exposed to the Miyoo.
 - Never place proxy credentials, Tailscale identity/state, Stremio auth keys, addon URLs, media/subtitle URLs, or tokens in Miyoo configuration, logs, process arguments, or archives.
 - Store PCServer settings only under PocketCinema; the companion owns its app directory.
 - Validate input and use atomic writes. A failed save/test leaves prior known-good config usable.

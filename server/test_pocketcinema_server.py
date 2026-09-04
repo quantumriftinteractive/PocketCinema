@@ -697,10 +697,14 @@ class PocketCinemaServerTest(unittest.TestCase):
         self.assertEqual(rejected.exception.code, 404)
         self.assertEqual(json.load(rejected.exception)["error"], "local_media_unavailable")
 
-    def test_stremio_service_url_must_be_loopback(self):
-        with self.assertRaisesRegex(ValueError, "loopback HTTP origin"):
+    def test_stremio_service_url_may_be_a_pcserver_only_remote_origin(self):
+        backend = stremio_service.StremioServiceBackend(
+            "http://192.0.2.55:11470", [self.server.media_dir]
+        )
+        self.assertEqual(backend.base_url, "http://192.0.2.55:11470")
+        with self.assertRaisesRegex(ValueError, "HTTP origin"):
             stremio_service.StremioServiceBackend(
-                "http://100.85.171.67:11470", [self.server.media_dir]
+                "https://user:secret@example.test/service", [self.server.media_dir]
             )
 
     def test_real_episode_meta_is_resolved_from_parent_series(self):
