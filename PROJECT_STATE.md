@@ -108,8 +108,8 @@ not begin Milestone 23 implementation without an explicit request.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `f459e6d98042197e605e097e847069001996c3ef`
-Remote verified: YES (`f459e6d` is reachable from `origin/main`)
+Checkpoint commit: `efd69d708fb0f21f5fa168e6d8ac060b34f6b93e`
+Remote verified: pending push and fetch
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
@@ -125,6 +125,10 @@ Completed:
   documented, and wired as a 74×74 app-local runtime icon without a label or
   runtime behavior change; Apps-context display and normal companion screen
   behavior are physically confirmed.
+- Durable regression-impact/evidence-inheritance policy recorded. It preserves
+  M21/M22 confirmation, requires diff/history-based targeted testing, and keeps
+  M23 planning-only while specifying its configurable PCServer-only Stremio
+  Service endpoint requirement.
 - Python compilation, 70 server unit tests, shell syntax and focused
   connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
   Range verification, and `git diff --check`.
