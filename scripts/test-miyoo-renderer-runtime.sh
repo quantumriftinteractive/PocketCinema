@@ -26,5 +26,6 @@ assert_contains "$FONTCONFIG" '/mnt/SDCARD/App/PocketCinema/experiments/ffplay/f
 assert_contains "$DEPLOY_SCRIPT" 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g'
 assert_contains "$DEPLOY_SCRIPT" 's|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g'
 assert_contains "$DEPLOY_SCRIPT" '$deviceTarget = "root@$DeviceHost"'
+assert_contains "$DEPLOY_SCRIPT" '$migration = $migration -replace "`r`n", "`n"'
 
 printf 'Miyoo renderer runtime tests passed\n'

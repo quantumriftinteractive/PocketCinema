@@ -223,9 +223,15 @@ The reproducible app-local patch now adds `original_size=426x240` to the
 selected-track subtitle filter, giving a bounded 1.5x scale for the known
 640x360 video envelope. The ARM candidate rebuild succeeds under Git Bash on
 the current Windows checkout and validates as a stripped ARM ELF with the
-expected subtitle-filter string. Deployment and the focused Apps visual/R1
-check remain pending because the documented Miyoo address is not reachable
-from this machine; no device state was changed.
+expected subtitle-filter string.
+
+The Miyoo is now reachable. A Windows CRLF issue in the normal deployer's
+one-time migration shell command was repaired and covered by its focused
+runtime test. The normal deployer then installed the rebuilt player and full
+app-local bundle, preserving live config and all networking-provider state.
+Remote verification confirmed the expected scale string, assets, executable
+permission, no diagnostic markers, and no stale client/player process. Only the
+focused Apps larger-caption/R1 visible change/off observation remains pending.
 
 Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
@@ -233,15 +239,14 @@ Custom shows only its explicit route. Return to All interfaces, use the
 displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
 proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
 playback matrices or account playback. Keep the separate Matroska
-readability polish scoped to the app-local FFplay build: rebuild it with the
-production caption scale, deploy normally, then launch one known
-subtitle-bearing title from Apps and confirm the larger captions plus one R1
-visible track change/off transition before exiting normally.
+readability polish scoped to the deployed app-local FFplay build: from Apps,
+launch one known subtitle-bearing title and confirm the larger captions plus one
+R1 visible track change/off transition before exiting normally.
 
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `257a63e`
-Remote verified: pending push and fetch verification
+Remote verified: YES (`257a63e` is reachable from `origin/main`)
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution

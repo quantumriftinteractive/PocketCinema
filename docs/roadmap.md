@@ -1010,8 +1010,14 @@ a substitute.
 The reproducible app-local patch now adds FFmpeg 2.4's
 `original_size=426x240` subtitle-filter reference, producing a bounded 1.5x
 scale for the known 640x360 envelope. The ARM candidate rebuild succeeds on the
-Windows checkout under Git Bash and remains un-deployed and physically pending
-until the Miyoo can be reached.
+Windows checkout under Git Bash; its focused device evidence remains pending.
+
+The normal deployer now normalizes its one-time migration command to Unix line
+endings before SSH execution. The rebuilt player and complete app-local runtime
+bundle were deployed and remotely verified on the Miyoo: expected scale string,
+assets, executable permission, no diagnostic markers, and no stale client or
+player processes. The focused Apps larger-caption/R1 visual confirmation remains
+pending.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains

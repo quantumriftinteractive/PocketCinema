@@ -66,6 +66,7 @@ if [ -d "`$legacy" ]; then
   fi
 fi
 "@
+$migration = $migration -replace "`r`n", "`n"
 Invoke-Checked "ssh" ($sshOptions + @($deviceTarget, $migration))
 
 $directories = @(
