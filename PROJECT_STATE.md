@@ -198,7 +198,7 @@ playback matrices or account playback.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `5fc7e07`
+Checkpoint commit: `caf41b8`
 Remote verified: YES (`5fc7e07` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
