@@ -218,7 +218,7 @@ once to confirm the visible track changes or turns off, then exit normally.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `3ed29b8`
+Checkpoint commit: `33c09c1`
 Remote verified: YES (`3ed29b8` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
