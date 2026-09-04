@@ -70,8 +70,10 @@ tracked at `UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png`. Its
 74×74 app-local runtime copy, `onion-tailscale/icon.png`, is referenced by
 `onion-tailscale/config.json` and copied by the normal deployer to
 `/mnt/SDCARD/App/Tailscale/`. This visual-only packaging update retains the
-companion's separate `Tailscale` application label and has not yet had its
-required Apps-context icon check.
+companion's separate `Tailscale` application label. It is **Physically
+Confirmed**: the Apps menu displayed the custom icon without a reboot, the
+normal companion screen retained its current state, proxy endpoint, and tailnet
+IP, and B exited cleanly.
 
 ## Intentional Legacy Identifiers
 
@@ -113,7 +115,8 @@ Completed:
   and canonical client/server artwork documentation.
 - Canonical independent OnionOS Tailscale companion source artwork tracked,
   documented, and wired as a 74×74 app-local runtime icon without a label or
-  runtime behavior change.
+  runtime behavior change; Apps-context display and normal companion screen
+  behavior are physically confirmed.
 - Python compilation, 70 server unit tests, shell syntax and focused
   connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
   Range verification, and `git diff --check`.
@@ -124,6 +127,3 @@ Pending:
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
   retained and documented.
-- Apps-context confirmation that the Tailscale companion displays its custom
-  icon and retains its existing enabled/disabled screen, proxy endpoint, and
-  tailnet IP behavior.

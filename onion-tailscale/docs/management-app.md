@@ -37,6 +37,15 @@ Enabled. The first-account Connect account screen is implemented with its
 pending URL restricted to `/tmp`, but was not physically tested because the
 working node was already authenticated and was not logged out or reset.
 
+On September 4, 2026, the normal companion deployer updated its app-local
+74×74 runtime icon while retaining the installed binaries, state, and logs. The
+user confirmed that Apps displayed the custom companion artwork immediately
+instead of the generic terminal icon, without a reboot. The companion then
+opened its normal screen with the expected current state, HTTP proxy endpoint,
+and tailnet IP, and B exited cleanly. This is physical confirmation of the
+visual metadata/package update only; the separate existing PocketStremio app
+was not deployed or renamed by this companion update.
+
 On August 14, 2026, the home screen was extended with a locally rendered QR code
 for `https://login.tailscale.com/admin/machines`. The user confirmed that the
 screen and QR were right-side-up, the IP remained readable, the code opened the
