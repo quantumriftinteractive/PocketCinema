@@ -139,8 +139,8 @@ specific regression.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `8221983918e9b01d5b677f5074b5b8c4cd6b8ffb`
-Remote verified: YES (`8221983` is reachable from `origin/main`)
+Checkpoint commit: `b5d5116a4a0b9f9703b64c9c55a29c2c37c0e2f7`
+Remote verified: YES (`b5d5116` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
