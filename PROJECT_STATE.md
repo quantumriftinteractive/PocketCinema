@@ -1,7 +1,7 @@
 # PocketCinema Current Project State
 
 Last updated: 2026-09-04
-Last updated by machine: macOS development checkout
+Last updated by machine: Windows development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
@@ -209,36 +209,14 @@ opt-out; desktop and source managers retain compatible explicit startup
 behavior. This changes no providers, filters, limits, cache, conversion, or
 M21/M22 media behavior. Historical M22 subtitle evidence is inherited.
 
-The current renderer/display issue remains separate and unresolved: the live
-Miyoo configured with Matroska mode enabled discovered six tracks and logged R1
-stream switches, but captions were not visible. This promotion correction does
-not claim to fix that renderer/display symptom.
-
-The smallest renderer regression boundary is identified. The normal
-PocketStremio-to-PocketCinema deployment migration retained the physically
-accepted pre-rename app-local FFplay binary, which reads
-`POCKETSTREMIO_*` subtitle/font bindings, while the renamed production client
-provided only `POCKETCINEMA_*`; it also retained a `fonts.conf` pointing to the
-old app directory. Native FFplay still switches the Matroska streams, but the
-track-aware subtitle filter does not receive its subtitle package. The scoped
-repair supplies the same normal app-local assets under both compiled identities
-and rewrites migrated fontconfig paths. The normal deployer now explicitly
-targets the documented Miyoo `root` account rather than inheriting the macOS
-login name; it successfully installed and remotely verified the repair while
-preserving live configuration and networking-provider state. No marker,
-provider, Matroska-mode, conversion, or renderer redesign is involved. The
-focused visible-caption/R1 Apps observation remains the only outstanding
-evidence.
-
-The deployed production repair has since been physically observed to render
-selectable captions again. The active readability polish is limited to that
-same normal app-local renderer: captions are visible but its default scale is
-too small on the 640×480 Miyoo display. The deployed pre-rename FFplay binary
-builds its selected-track filter as `filename=…:si=…`; it has no runtime
-font-size/`force_style` control. A safe scale change therefore requires a
-rebuild of that app-local ARM binary with a bounded production subtitle style,
-then normal deployment and one focused visual/R1 check. It does not justify a
-fontconfig-only change, a marker, or a provider/Matroska/conversion change.
+The renderer migration regression is resolved. The PocketStremio-to-PocketCinema
+deployment transition retained an app-local FFplay binary that reads legacy
+`POCKETSTREMIO_*` subtitle/font bindings while the renamed client supplied only
+`POCKETCINEMA_*`; its migrated `fonts.conf` also named the old app directory.
+The normal client now supplies both internal identities, deployment rewrites the
+fontconfig path, and the rebuilt app-local FFplay is deployed with the accepted
+libass scale. This changed no provider, Matroska selection, conversion, R1, or
+cleanup behavior; the corresponding M22 physical evidence is inherited.
 
 The first readability attempt is **not accepted**: it deployed and ran, but
 captions remained too small. Its `original_size=426x240` hypothesis was wrong:
@@ -274,13 +252,14 @@ Next exact action: relaunch `python server\\pocketcinema_desktop.py` and perform
 only a short Windows responsiveness smoke: check service/connections, start,
 briefly use, then stop or restart without a frozen window. The font-scale change
 does not alter M22 track switching, subtitle-off, playback, or cleanup, so its
-previously confirmed M22 physical evidence is inherited. Do not begin the full
-Production PASS audit until this focused desktop observation is closed.
+previously confirmed M22 physical evidence is inherited. The Production PASS
+audit is complete; M23 packaging remains separately scoped after the pending
+Windows responsiveness observation.
 
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `030b2e9`
-Remote verified: pending push and fetch verification
+Remote verified: YES — `030b2e9` and its metadata seal are reachable from `origin/main`
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
@@ -303,9 +282,15 @@ Completed:
   M21/M22 confirmation, requires diff/history-based targeted testing, and
   specified M23's configurable PCServer-only Stremio Service endpoint before
   implementation began.
-- Python compilation, 70 server unit tests, shell syntax and focused
+- Python compilation, 105 server/desktop unit tests, shell syntax and focused
   connection/proxy/status tests, PowerShell parsing, alternate-port API/play/
   Range verification, and `git diff --check`.
+
+- Production PASS audit completed against the current normal paths. It found no
+  current M21/M22 behavior regression or configuration gap, fixed a
+  Windows-only desktop-test path assertion, and recorded the already-known
+  fresh-deployment renderer-asset packaging/licensing gap as a release blocker
+  for separate M23 packaging work. See `docs/production-pass-audit.md`.
 
 - M23 initial macOS desktop shell implemented and automated-tested: stdlib Tk
   presentation, atomic non-secret config, tool/status checks, PCServer-only
@@ -388,7 +373,8 @@ Pending:
 
 - M23 focused Windows desktop responsiveness smoke: launch the desktop shell,
   check service/connections, start, briefly use, then stop or restart without a
-  frozen window. Do not start the global Production PASS audit yet.
+  frozen window. With the audit recorded, M23 packaging may then continue as
+  separately scoped work.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

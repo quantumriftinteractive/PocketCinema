@@ -236,7 +236,7 @@ failure after recovery. `/api/status` and the desktop's explicit connection
 check retain their existing reachable/unreachable behavior; the latter still
 provides fresh visible feedback without changing PCServer lifecycle behavior.
 
-### Desktop subtitle startup parity (implemented; physical retest pending)
+### Desktop subtitle startup parity (implemented; M22 evidence inherited)
 
 The desktop lifecycle explicitly passes `--enable-matroska-subtitles` for its
 owned PCServer child, matching the established macOS and Windows source
@@ -248,9 +248,10 @@ Matroska server capability, a Miyoo selectable-Matroska request falls back to
 normal discovery and returns no subtitle tracks before contacting configured
 subtitle providers. It does not change provider handling,
 stream preflight/filtering, cache contents, subtitle limits, conversion logic,
-or provider behavior. Existing M22 physical evidence remains inherited; a
-separate current renderer/display observation is tracked outside this startup
-default correction.
+or provider behavior. Existing M22 physical evidence remains inherited. The
+later normal renderer migration repair and its 1.5x libass font-scale default
+are separately deployed and physically confirmed readable; no additional
+subtitle startup recheck is required for this desktop argument.
 
 ### Regression impact matrix for the initial shell
 

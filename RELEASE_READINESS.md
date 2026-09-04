@@ -18,6 +18,11 @@ product default, with an explicit opt-out retaining the bounded burn-in path.
 Its app-local renderer's 1.5x subtitle-font default is now physically confirmed
 as readable; UI-configurable subtitle size and position are future UX work, not
 a current release repair.
+The Production PASS audit confirms that accepted M21/M22 behavior remains on
+the current normal paths. It also confirms the existing release blocker: a
+fresh Miyoo deployment still depends on ignored rebuilt-player, font, and
+runtime-library inputs until M23 packaging/licensing work provides reproducible
+release artifacts. See `docs/production-pass-audit.md`.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.

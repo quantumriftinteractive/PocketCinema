@@ -39,7 +39,11 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(DesktopSettings().listen_port, 8755)
         self.assertEqual(DesktopSettings().stremio_service_url, "http://127.0.0.1:11470")
         self.assertEqual(str(user_data_root("darwin", {})), str(Path.home() / "Library" / "Application Support" / "PocketCinema"))
-        self.assertEqual(str(user_data_root("win32", {"APPDATA": "C:/Users/Test/AppData/Roaming"})), "C:/Users/Test/AppData/Roaming/PocketCinema")
+        expected_windows_root = str(Path("C:/Users/Test/AppData/Roaming") / "PocketCinema")
+        self.assertEqual(
+            str(user_data_root("win32", {"APPDATA": "C:/Users/Test/AppData/Roaming"})),
+            expected_windows_root,
+        )
 
     def test_settings_are_atomic_and_persisted(self):
         with tempfile.TemporaryDirectory() as temporary:
