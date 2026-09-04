@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
+import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -10,6 +11,23 @@ from tkinter import filedialog, messagebox, ttk
 from .capabilities import detect_tool, probe_stremio_service
 from .config import ConfigurationError, DesktopSettings, load_settings, save_settings, user_data_root, validate_settings
 from .lifecycle import PCServerLifecycle
+
+
+def configure_tk_theme(root):
+    """Keep Apple Tcl/Tk 8.5 controls visible under modern macOS dark mode."""
+    version = tuple(int(part) for part in root.tk.call("info", "patchlevel").split("."))
+    if sys.platform != "darwin" or version >= (8, 6):
+        return
+    style = ttk.Style(root)
+    style.theme_use("clam")
+    background = "#f2f2f2"
+    foreground = "#202124"
+    style.configure(".", background=background, foreground=foreground)
+    style.configure("TFrame", background=background)
+    style.configure("TLabel", background=background, foreground=foreground)
+    style.configure("TButton", background=background, foreground=foreground, padding=6)
+    style.configure("TEntry", fieldbackground="#ffffff", foreground=foreground)
+    root.configure(background=background)
 
 
 class PocketCinemaDesktop:
@@ -37,6 +55,7 @@ class PocketCinemaDesktop:
 
     def _build(self):
         self.root.title("PocketCinema Server")
+        configure_tk_theme(self.root)
         icon = Path(__file__).resolve().parents[2] / "UI_concept" / "Icons" / "PocketCinema_Server_icon.png"
         try:
             self.root.iconphoto(True, tk.PhotoImage(file=str(icon)))
@@ -76,7 +95,10 @@ class PocketCinemaDesktop:
             row += 1
         ttk.Label(outer, text="Sanitized server log", font=("TkDefaultFont", 12, "bold")).grid(row=row, column=0, columnspan=3, sticky="w", pady=(10, 3))
         row += 1
-        self.log = tk.Text(outer, height=9, width=86, state="disabled", wrap="word")
+        self.log = tk.Text(
+            outer, height=9, width=86, state="disabled", wrap="word",
+            background="#ffffff", foreground="#202124", insertbackground="#202124",
+        )
         self.log.grid(row=row, column=0, columnspan=3, sticky="nsew")
         outer.rowconfigure(row, weight=1)
         self.root.protocol("WM_DELETE_WINDOW", self.close)

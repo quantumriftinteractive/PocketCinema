@@ -125,8 +125,10 @@ use the Apple-supplied Tk-capable interpreter:
 
 The current Homebrew Python 3.14 installation lacks `_tkinter`, so it remains
 suitable for non-GUI automated checks but cannot launch this development shell.
-This is a local development prerequisite observation, not a macOS packaging
-claim.
+The Apple-supplied Tcl/Tk 8.5 runtime is also dark-mode-incompatible on this
+Mac, so the shell explicitly selects its visible `clam` theme only for that
+legacy runtime. This is a local development prerequisite observation, not a
+macOS packaging claim.
 
 The implementation is deliberately split into testable layers:
 
