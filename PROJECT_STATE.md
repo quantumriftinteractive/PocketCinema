@@ -209,15 +209,26 @@ provider, Matroska-mode, conversion, or renderer redesign is involved. The
 focused visible-caption/R1 Apps observation remains the only outstanding
 evidence.
 
+The deployed production repair has since been physically observed to render
+selectable captions again. The active readability polish is limited to that
+same normal app-local renderer: captions are visible but its default scale is
+too small on the 640×480 Miyoo display. The deployed pre-rename FFplay binary
+builds its selected-track filter as `filename=…:si=…`; it has no runtime
+font-size/`force_style` control. A safe scale change therefore requires a
+rebuild of that app-local ARM binary with a bounded production subtitle style,
+then normal deployment and one focused visual/R1 check. It does not justify a
+fontconfig-only change, a marker, or a provider/Matroska/conversion change.
+
 Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
 Custom shows only its explicit route. Return to All interfaces, use the
 displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
 proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
 playback matrices or account playback. Keep the separate Matroska
-renderer/display symptom open until one known subtitle-bearing title launched
-from Apps shows captions; press R1 once to confirm the visible track changes or
-turns off, then exit normally.
+readability polish scoped to the app-local FFplay build: rebuild it with the
+production caption scale, deploy normally, then launch one known
+subtitle-bearing title from Apps and confirm the larger captions plus one R1
+visible track change/off transition before exiting normally.
 
 ## Latest Verified Checkpoint
 
@@ -314,7 +325,9 @@ Completed:
   normal deployer rewrites the path. The normal deployer now uses the documented
   `root` target and successfully installed the repair; remote static validation
   confirms both bindings, the migrated fontconfig path, no diagnostic marker,
-  and shell syntax. One visible-caption/R1 Apps check remains pending.
+  and shell syntax. Captions are now physically reported visible; readability
+  polish requires a rebuilt app-local ARM player because the deployed
+  selected-track filter has no runtime subtitle-size control.
 
 Pending:
 
@@ -322,9 +335,10 @@ Pending:
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
 
-- M22 focused renderer restoration: from Apps open one known subtitle-bearing
-  title, confirm visible captions and one R1 visible change/off transition, and
-  exit normally. Do not repeat the M22 discovery, provider, conversion, or
+- M22 focused subtitle readability polish: rebuild and deploy the app-local
+  FFplay selected-track filter with the production caption scale, then from
+  Apps confirm larger captions and one R1 visible change/off transition before
+  exiting normally. Do not repeat the M22 discovery, provider, conversion, or
   playback matrix.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the

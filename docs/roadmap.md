@@ -997,6 +997,16 @@ preserving live configuration and networking-provider state. One focused normal
 Apps playback—visible captions plus one R1 transition and clean exit—remains
 required before marking the regression restored.
 
+The repaired normal path is now physically reported to render selectable
+captions again, but their default size is too small on the 640×480 Miyoo
+display. This is a renderer readability follow-up, not a discovery or Matroska
+mode regression: the deployed app-local binary hard-codes its selected-track
+filter as `filename=…:si=…` and exposes no runtime font-size/`force_style`
+setting. A bounded production scale therefore requires rebuilding the app-local
+ARM FFplay with that filter style, then one focused larger-caption/R1 visual
+check. Do not use fontconfig, a marker, provider work, or conversion changes as
+a substitute.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.
