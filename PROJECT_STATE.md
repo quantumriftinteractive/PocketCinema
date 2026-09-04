@@ -132,8 +132,8 @@ unless this new lifecycle/configuration path exposes a specific regression.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `55d12ba130869e422c1682a5807efaeeed1a8b1f`
-Remote verified: YES (`55d12ba` is reachable from `origin/main`)
+Checkpoint commit: `50ebf4ad6c08872a2ab0096ec525f5c64750afd5`
+Remote verified: YES (`50ebf4a` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
