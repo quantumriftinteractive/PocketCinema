@@ -6,6 +6,7 @@ ROOT_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 UI_SCRIPT="$ROOT_DIR/client/miyoo/pocketcinema-ui.sh"
 DEPLOY_SCRIPT="$ROOT_DIR/scripts/deploy-miyoo.ps1"
 FONTCONFIG="$ROOT_DIR/experiments/ffplay/fonts.conf"
+SUBTITLE_PATCH="$ROOT_DIR/experiments/ffplay/ffmpeg-2.4.14-subtitle-notice.patch"
 
 assert_contains() {
   grep -F -q -- "$2" "$1" || {
@@ -23,6 +24,8 @@ for name in POCKETCINEMA POCKETSTREMIO; do
   assert_contains "$UI_SCRIPT" "export ${name}_SUBTITLE_FILE=\"\$FIELD_TEST_SUBTITLE_FILE\""
 done
 assert_contains "$FONTCONFIG" '/mnt/SDCARD/App/PocketCinema/experiments/ffplay/fonts'
+assert_contains "$SUBTITLE_PATCH" 'subtitles=%s:font_scale=1.5'
+assert_contains "$SUBTITLE_PATCH" 'ass_set_font_scale(ass->renderer, ass->font_scale);'
 assert_contains "$DEPLOY_SCRIPT" 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g'
 assert_contains "$DEPLOY_SCRIPT" 's|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g'
 assert_contains "$DEPLOY_SCRIPT" '$deviceTarget = "root@$DeviceHost"'

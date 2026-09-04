@@ -56,7 +56,7 @@ index d9b0dd4..ab8c50d 100644
 -            snprintf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s,%s",
 -                     subtitle_args, vfilters);
 +        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
-+                    "subtitles=%s:original_size=426x240",
++                    "subtitles=%s:font_scale=1.5",
 +                    subtitle_args);
 +    }
 +    if (subtitle_filter_file && subtitle_notice_font &&
@@ -149,4 +149,28 @@ index d9b0dd4..ab8c50d 100644
 +    subtitle_notice_font = getenv("POCKETCINEMA_DEFAULT_FONT");
  }
 
- static int opt_codec(void *optctx, const char *opt, const char *arg)
+static int opt_codec(void *optctx, const char *opt, const char *arg)
+
+diff --git a/libavfilter/vf_subtitles.c b/libavfilter/vf_subtitles.c
+index 1111111..2222222 100644
+--- a/libavfilter/vf_subtitles.c
++++ b/libavfilter/vf_subtitles.c
+@@ -54,6 +54,7 @@ typedef struct {
+     uint8_t rgba_map[4];
+     int     pix_step[4];       ///< steps per pixel for each plane of the main output
+     int original_w, original_h;
++    double font_scale;
+     FFDrawContext draw;
+ } AssContext;
+@@ -249,6 +250,7 @@ static const AVOption subtitles_options[] = {
+    COMMON_OPTIONS
++    {"font_scale", "set subtitle font scale", OFFSET(font_scale),       AV_OPT_TYPE_DOUBLE, {.dbl = 1.0}, 0.5,       3.0,      FLAGS},
+     {"charenc",      "set input character encoding", OFFSET(charenc),      AV_OPT_TYPE_STRING, {.str = NULL}, CHAR_MIN, CHAR_MAX, FLAGS},
+     {"stream_index", "set stream index",             OFFSET(stream_index), AV_OPT_TYPE_INT,    { .i64 = -1 }, -1,       INT_MAX,  FLAGS},
+@@ -364,6 +366,7 @@ static av_cold int init_subtitles(AVFilterContext *ctx)
+     /* Initialize fonts */
+     ass_set_fonts(ass->renderer, getenv("POCKETSTREMIO_DEFAULT_FONT"), NULL, 1,
+                   getenv("POCKETSTREMIO_FONTCONFIG_FILE"), 1);
++    ass_set_font_scale(ass->renderer, ass->font_scale);
+    /* Open decoder */
+ }

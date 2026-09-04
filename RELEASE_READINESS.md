@@ -15,6 +15,9 @@ exit/cleanup. Remaining blockers are fresh-SD and final movie/episode/converted
 regressions, app-local player packaging and licensing, privacy review, and
 reproducible release artifacts. Selectable Matroska is promoted to the normal
 product default, with an explicit opt-out retaining the bounded burn-in path.
+Its app-local renderer's 1.5x subtitle-font default is now physically confirmed
+as readable; UI-configurable subtitle size and position are future UX work, not
+a current release repair.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
@@ -499,8 +502,10 @@ separately reviewed authentication and transport design.
   opt-outs retain the bounded burn-in path. Generalized multi-language
   packaging is automated-tested but still needs a six-track Apps-context run.
   The normal deployment now packages the app-local player, runtime libraries,
-  font configuration, and font asset; fresh-SD validation and licensing review
-  remain release gates.
+  font configuration, and font asset; its 1.5x font-scale default is physically
+  confirmed as readable. User-selectable size presets and Normal, Bottom-clamped,
+  or Top-clamped position belong to a later normal-UI UX feature. Fresh-SD
+  validation and licensing review remain release gates.
 - The converted MPEG-TS path is nonseekable; D-pad seeking remains restricted.
 - Resume positions are approximate and exclude startup/A-button pause time but
   do not model every buffering or seek interval.

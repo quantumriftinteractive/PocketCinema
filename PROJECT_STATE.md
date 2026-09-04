@@ -240,29 +240,42 @@ rebuild of that app-local ARM binary with a bounded production subtitle style,
 then normal deployment and one focused visual/R1 check. It does not justify a
 fontconfig-only change, a marker, or a provider/Matroska/conversion change.
 
-The reproducible app-local patch now adds `original_size=426x240` to the
-selected-track subtitle filter, giving a bounded 1.5x scale for the known
-640x360 video envelope. The ARM candidate rebuild succeeds under Git Bash on
-the current Windows checkout and validates as a stripped ARM ELF with the
-expected subtitle-filter string.
+The first readability attempt is **not accepted**: it deployed and ran, but
+captions remained too small. Its `original_size=426x240` hypothesis was wrong:
+the FFmpeg 2.4 subtitles filter passes only the input and original *aspect
+ratios* to libass, and both `426x240` and `640x360` are 16:9. It therefore did
+not produce an absolute font-size increase. The replacement app-local filter
+adds a bounded `font_scale` option and calls libass's unconditional
+`ass_set_font_scale`; the selected Matroska track now passes `font_scale=1.5`.
+That applies to both generated SRT and styled ASS events without changing track
+selection, providers, packaging, R1, or fallback behavior. The ARM rebuild and
+normal deployment succeeded; the deployed player hash matches the rebuilt local
+binary and contains the new filter string. Apps-context observation now confirms
+that captions are noticeably larger and acceptable at the 1.5x production
+default.
 
-The Miyoo is now reachable. A Windows CRLF issue in the normal deployer's
-one-time migration shell command was repaired and covered by its focused
-runtime test. The normal deployer then installed the rebuilt player and full
-app-local bundle, preserving live config and all networking-provider state.
-Remote verification confirmed the expected scale string, assets, executable
-permission, no diagnostic markers, and no stale client/player process. Only the
-focused Apps larger-caption/R1 visible change/off observation remains pending.
+Configurable subtitle size and position are future PocketCinema UX work, not a
+repair or release gate. They must be exposed through the normal PocketCinema UI
+rather than markers or manual configuration, with a bounded size choice (for
+example 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, and 3.0x) and Normal, Bottom-clamped, and
+Top-clamped position behavior. Until that future work is designed and measured,
+the normal default remains 1.5x.
 
-Next exact action: relaunch `python server\\pocketcinema_desktop.py` from this
-updated checkout. Confirm Automatic offers only the Local LAN route, All
-interfaces separately labels the two recognized Tailscale / Remote routes and
-does not offer the WSL adapter, and both media tools show `Available (Stremio
-runtime)`. Start the owned child and use the Local route from the existing Miyoo
-Local profile. A subtitle-bearing title needs an account source that returns a
-safe direct HTTP(S) candidate; current linked providers return none for the
-checked movie. Once a stream appears, perform only the pending Apps check:
-larger captions, one visible R1 track change, subtitles Off, then Menu exit.
+Focused Windows M23 observation found a separate desktop UI freeze boundary:
+the 700 ms Tk poll synchronously refreshed routes, which on Windows spawned
+PowerShell interface discovery on the UI thread. Connection refresh now runs in
+a worker, start/restart/stop/close waits remain off the UI thread with owned
+operations serialized, and unchanged log text is not redrawn each poll. Service
+checks and child log draining remain background work. This requires only the
+focused Windows responsiveness smoke; it does not change PCServer ownership,
+network-provider behavior, or the API.
+
+Next exact action: relaunch `python server\\pocketcinema_desktop.py` and perform
+only a short Windows responsiveness smoke: check service/connections, start,
+briefly use, then stop or restart without a frozen window. The font-scale change
+does not alter M22 track switching, subtitle-off, playback, or cleanup, so its
+previously confirmed M22 physical evidence is inherited. Do not begin the full
+Production PASS audit until this focused desktop observation is closed.
 
 ## Latest Verified Checkpoint
 

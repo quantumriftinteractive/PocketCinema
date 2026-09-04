@@ -993,31 +993,30 @@ subtitle package/font settings and rewrites migrated fontconfig paths. It does
 not alter providers, Matroska mode, conversion, stream selection, or the
 renderer algorithm. The normal deployment script now explicitly targets the
 documented Miyoo `root` account, and successfully installed the repair while
-preserving live configuration and networking-provider state. One focused normal
-Apps playback—visible captions plus one R1 transition and clean exit—remains
-required before marking the regression restored.
+preserving live configuration and networking-provider state. The focused
+caption observation is now complete; the unchanged M22 R1, subtitle-off, and
+cleanup acceptance is inherited, so no additional Apps playback is required for
+this renderer-scale repair.
 
-The repaired normal path is now physically reported to render selectable
-captions again, but their default size is too small on the 640×480 Miyoo
-display. This is a renderer readability follow-up, not a discovery or Matroska
-mode regression: the deployed app-local binary hard-codes its selected-track
-filter as `filename=…:si=…` and exposes no runtime font-size/`force_style`
-setting. A bounded production scale therefore requires rebuilding the app-local
-ARM FFplay with that filter style, then one focused larger-caption/R1 visual
-check. Do not use fontconfig, a marker, provider work, or conversion changes as
-a substitute.
-
-The reproducible app-local patch now adds FFmpeg 2.4's
-`original_size=426x240` subtitle-filter reference, producing a bounded 1.5x
-scale for the known 640x360 envelope. The ARM candidate rebuild succeeds on the
-Windows checkout under Git Bash; its focused device evidence remains pending.
+The repaired normal path is physically reported to render selectable captions
+again, but its former default size was too small on the 640×480 Miyoo display.
+This is a renderer readability follow-up, not a discovery or Matroska-mode
+regression. The first `original_size=426x240` attempt was ineffective because
+FFmpeg 2.4 passes its aspect ratio to libass, and it has the same 16:9 ratio as
+the 640x360 input. The replacement reproducible app-local patch adds the bounded
+`font_scale` subtitles-filter option and calls `ass_set_font_scale`; the normal
+selected track supplies `font_scale=1.5` for both generated SRT and styled ASS.
+The ARM rebuild/deployment and local/deployed hash verification succeeded, and
+Apps-context observation confirms captions are noticeably larger and acceptable.
+M22's track switching, subtitle-off, smooth A/V, and cleanup evidence is
+inherited because this scope changes only renderer font scaling.
 
 The normal deployer now normalizes its one-time migration command to Unix line
 endings before SSH execution. The rebuilt player and complete app-local runtime
 bundle were deployed and remotely verified on the Miyoo: expected scale string,
 assets, executable permission, no diagnostic markers, and no stale client or
-player processes. The focused Apps larger-caption/R1 visual confirmation remains
-pending.
+player processes. No additional subtitle Apps retest is required for this scale
+repair.
 
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
@@ -1141,6 +1140,9 @@ behavior are stable:
 - Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites and watch history (the unified UI refresh is Milestone 25);
+- normal-UI subtitle presentation preferences: bounded size presets (for
+  example 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, and 3.0x) plus Normal, Bottom-clamped,
+  and Top-clamped position behavior;
 - torrent ingestion and addon results that do not provide direct HTTP media.
 
 Each deferred feature should become a separate milestone with its own device

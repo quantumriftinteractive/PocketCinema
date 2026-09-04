@@ -315,6 +315,18 @@ class DesktopServiceCheckTests(unittest.TestCase):
         self.assertEqual(connection_summary(2), "2 available")
 
     def test_stopped_desktop_refreshes_rows_for_mode_port_and_custom_address(self):
+        class Root:
+            @staticmethod
+            def after(_delay, callback):
+                callback()
+
+        class ImmediateThread:
+            def __init__(self, target, daemon):
+                self.target = target
+
+            def start(self):
+                self.target()
+
         class Value:
             def __init__(self, value=""):
                 self.value = value
@@ -338,9 +350,12 @@ class DesktopServiceCheckTests(unittest.TestCase):
         desktop.listen_choice = Value("Automatic / Local network")
         desktop.device_url = Value()
         desktop.listen_detail = Value()
+        desktop.root = Root()
         desktop._effective_settings = None
         desktop._render_connections = mock.Mock()
-        with mock.patch("server.desktop.gui.device_endpoints", return_value=routes):
+        with mock.patch("server.desktop.gui.device_endpoints", return_value=routes), mock.patch(
+            "server.desktop.gui.threading.Thread", ImmediateThread
+        ):
             desktop.refresh_network_summary()
             self.assertEqual(
                 desktop._render_connections.call_args.args[0],

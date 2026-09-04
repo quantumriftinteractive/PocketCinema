@@ -44,6 +44,7 @@ affect the OnionOS FFplay or production MPEG-TS fallback.
 FFmpeg 2.4 also requires `--enable-libfreetype`; the app-local pkg-config shim
 exposes the headers and library already present in the staged Miyoo sysroot.
 
-The selected-track filter uses `original_size=426x240` for the known 640x360
-video envelope. This is the bounded 1.5x readability scale for the 640x480
-Miyoo display; it is part of the app-local build and has no runtime setting.
+The selected-track filter uses `font_scale=1.5`. It invokes libass's font-scale
+path, so it applies the bounded 1.5x multiplier to both generated SRT and
+styled ASS subtitle events in the 640x360/640x480 production path. It is part
+of the app-local build and has no runtime setting.

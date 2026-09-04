@@ -79,6 +79,9 @@ class PocketCinemaDesktop:
         self.tool_ffmpeg = tk.StringVar(value="Checking…")
         self.tool_ffprobe = tk.StringVar(value="Checking…")
         self._effective_settings = None
+        self._operation_lock = threading.Lock()
+        self._last_logs = ()
+        self._closing = False
         self._build()
         for name in ("listen_port", "listen_address", "advertised_address"):
             self.values[name].trace_add("write", self._on_route_setting_changed)
@@ -258,22 +261,36 @@ class PocketCinemaDesktop:
             self.refresh_network_summary()
 
     def refresh_network_summary(self):
-        try:
-            settings = self._effective_settings or self.effective_settings()
-            endpoints = self.effective_endpoints(settings)
-            urls = [(endpoint.label, pocketcinema_url(endpoint.address, settings.listen_port)) for endpoint in endpoints]
-            self.device_url.set(connection_summary(len(urls)))
-            self._render_connections(urls)
-            if settings.listen_mode == "automatic":
-                self.listen_detail.set("Automatically serves detected Local network connections only.")
-            elif settings.listen_mode == "all_interfaces":
-                self.listen_detail.set("Listens once on all current interfaces and keeps Local and Remote routes separate.")
-            else:
-                self.listen_detail.set("Uses the custom address configured below.")
-        except ConfigurationError as exc:
-            self.device_url.set("None available")
-            self._render_connections(())
-            self.listen_detail.set(str(exc))
+        requested_settings = self._effective_settings or self.settings()
+        pinned_settings = self._effective_settings
+
+        def worker():
+            try:
+                routes = device_endpoints()
+                settings = pinned_settings or resolve_network_settings(
+                    requested_settings, preferred_local_address(routes)
+                )
+                endpoints = derive_device_endpoints(settings, routes)
+                urls = [
+                    (endpoint.label, pocketcinema_url(endpoint.address, settings.listen_port))
+                    for endpoint in endpoints
+                ]
+                if settings.listen_mode == "automatic":
+                    detail = "Automatically serves detected Local network connections only."
+                elif settings.listen_mode == "all_interfaces":
+                    detail = "Listens once on all current interfaces and keeps Local and Remote routes separate."
+                else:
+                    detail = "Uses the custom address configured below."
+            except ConfigurationError as exc:
+                urls, detail = (), str(exc)
+            self.root.after(0, lambda: self._show_network_summary(urls, detail))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_network_summary(self, urls, detail):
+        self.device_url.set(connection_summary(len(urls)))
+        self._render_connections(urls)
+        self.listen_detail.set(detail)
 
     def _render_connections(self, urls):
         for child in self.connections_frame.winfo_children():
@@ -302,8 +319,17 @@ class PocketCinemaDesktop:
             self.refresh_capabilities()
 
     def refresh_capabilities(self):
-        ffmpeg = detect_tool("ffmpeg", self.values["ffmpeg_path"].get())
-        ffprobe = detect_tool("ffprobe", self.values["ffprobe_path"].get())
+        ffmpeg_path = self.values["ffmpeg_path"].get()
+        ffprobe_path = self.values["ffprobe_path"].get()
+
+        def worker():
+            ffmpeg = detect_tool("ffmpeg", ffmpeg_path)
+            ffprobe = detect_tool("ffprobe", ffprobe_path)
+            self.root.after(0, lambda: self._show_capabilities(ffmpeg, ffprobe))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_capabilities(self, ffmpeg, ffprobe):
         self.tool_ffmpeg.set(self._tool_status_text(ffmpeg))
         self.tool_ffprobe.set(self._tool_status_text(ffprobe))
 
@@ -373,41 +399,58 @@ class PocketCinemaDesktop:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _start_with_current_settings(self):
+    def _start_with_settings(self, requested_settings):
         try:
-            settings = self.effective_settings()
+            routes = device_endpoints()
+            settings = resolve_network_settings(
+                requested_settings, preferred_local_address(routes)
+            )
+            endpoints = derive_device_endpoints(settings, routes)
         except ConfigurationError as exc:
             self.root.after(0, lambda: messagebox.showerror("Server cannot start", str(exc)))
             return
-        self._effective_settings = settings
-        endpoints = self.effective_endpoints(settings)
         result = self.lifecycle.start(settings, [endpoint.address for endpoint in endpoints])
-        self.root.after(0, lambda: self.show_lifecycle(result))
+        self.root.after(0, lambda: self.show_lifecycle(result, settings))
 
     def start(self):
         try:
-            validate_settings(self.settings())
+            settings = validate_settings(self.settings())
         except ConfigurationError as exc:
             messagebox.showerror("Server cannot start", str(exc))
             return
         self.server_state.set("Starting")
-        threading.Thread(target=self._start_with_current_settings, daemon=True).start()
+        self.update_actions("Starting")
+
+        def worker():
+            with self._operation_lock:
+                self._start_with_settings(settings)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def stop(self):
         self.server_state.set("Stopping")
 
         def worker():
-            result = self.lifecycle.stop()
+            with self._operation_lock:
+                result = self.lifecycle.stop()
             self.root.after(0, lambda: self.show_lifecycle(result))
 
         threading.Thread(target=worker, daemon=True).start()
 
     def restart(self):
+        try:
+            settings = validate_settings(self.settings())
+        except ConfigurationError as exc:
+            messagebox.showerror("Server cannot restart", str(exc))
+            return
+
         def worker():
-            self.lifecycle.stop()
-            self._start_with_current_settings()
+            with self._operation_lock:
+                self.lifecycle.stop()
+                self._start_with_settings(settings)
 
         self.server_state.set("Starting")
+        self.update_actions("Starting")
         threading.Thread(target=worker, daemon=True).start()
 
     def copy_endpoint(self, endpoint=None):
@@ -415,7 +458,7 @@ class PocketCinemaDesktop:
             self.root.clipboard_clear()
             self.root.clipboard_append(endpoint)
 
-    def show_lifecycle(self, result):
+    def show_lifecycle(self, result, effective_settings=None, refresh_routes=True):
         self.server_state.set(result.state)
         if result.state == "Error":
             self.server_detail.set(result.message)
@@ -423,7 +466,10 @@ class PocketCinemaDesktop:
             self.server_detail.set("")
         if result.state == "Stopped":
             self._effective_settings = None
-        self.refresh_network_summary()
+        elif effective_settings is not None and result.state == "Running":
+            self._effective_settings = effective_settings
+        if refresh_routes:
+            self.refresh_network_summary()
         self.update_actions(result.state)
 
     def update_actions(self, state):
@@ -433,16 +479,29 @@ class PocketCinemaDesktop:
         self.restart_button.configure(state="normal" if state == "Running" else "disabled")
 
     def poll(self):
-        self.show_lifecycle(self.lifecycle.status())
-        self.log.configure(state="normal")
-        self.log.delete("1.0", "end")
-        self.log.insert("1.0", "\n".join(self.lifecycle.logs))
-        self.log.configure(state="disabled")
-        self.root.after(700, self.poll)
+        self.show_lifecycle(self.lifecycle.status(), refresh_routes=False)
+        logs = tuple(self.lifecycle.logs)
+        if logs != self._last_logs:
+            self.log.configure(state="normal")
+            self.log.delete("1.0", "end")
+            self.log.insert("1.0", "\n".join(logs))
+            self.log.configure(state="disabled")
+            self._last_logs = logs
+        if not self._closing:
+            self.root.after(700, self.poll)
 
     def close(self):
-        self.lifecycle.stop()
-        self.root.destroy()
+        if self._closing:
+            return
+        self._closing = True
+        self.server_state.set("Stopping")
+
+        def worker():
+            with self._operation_lock:
+                self.lifecycle.stop()
+            self.root.after(0, self.root.destroy)
+
+        threading.Thread(target=worker, daemon=True).start()
 
 
 def main():
