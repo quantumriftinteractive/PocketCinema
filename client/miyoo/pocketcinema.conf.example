@@ -29,4 +29,6 @@ SUBTITLE_FALLBACK=ask
 # R1 during playback to cycle them and off. Setup failure returns to the normal
 # subtitle selector and unchanged MPEG-TS burn-in path.
 MAX_SUBTITLES_PER_LANGUAGE=3
-POCKETCINEMA_MATROSKA_SUBTITLES=0
+# Enabled by default. Set to 0 only to opt out and use the normal subtitle
+# selection / MPEG-TS burn-in path instead.
+POCKETCINEMA_MATROSKA_SUBTITLES=1

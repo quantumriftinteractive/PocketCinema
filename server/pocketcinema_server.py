@@ -2918,7 +2918,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                 remaining -= len(chunk)
 
 
-def main():
+def build_argument_parser():
     parser = argparse.ArgumentParser(description="Minimal PocketCinema Server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8755)
@@ -2975,10 +2975,19 @@ def main():
         action="store_true",
         help="Enable the app-local embedded-subtitle field-test route",
     )
-    parser.add_argument(
+    matroska_subtitles = parser.add_mutually_exclusive_group()
+    matroska_subtitles.add_argument(
         "--enable-matroska-subtitles",
+        dest="enable_matroska_subtitles",
         action="store_true",
-        help="Enable bounded selectable Matroska subtitles for the app-local player",
+        default=True,
+        help="Enable bounded selectable Matroska subtitles for the app-local player (default)",
+    )
+    matroska_subtitles.add_argument(
+        "--disable-matroska-subtitles",
+        dest="enable_matroska_subtitles",
+        action="store_false",
+        help="Disable bounded selectable Matroska subtitles for the app-local player",
     )
     parser.add_argument(
         "--test-transcode-failure",
@@ -3010,6 +3019,11 @@ def main():
         default=str(Path(__file__).resolve().parent / "data"),
         help="Directory for persistent server state",
     )
+    return parser
+
+
+def main():
+    parser = build_argument_parser()
     args = parser.parse_args()
 
     media_dir = Path(args.media_dir).resolve()

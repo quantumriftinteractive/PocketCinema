@@ -20,14 +20,13 @@ The committed baseline supports movie/series search, season and episode browsing
 opaque server-side stream selection and play sessions, direct-compatible and
 bounded converted playback, Continue Watching/Resume/Play from Start,
 host-isolated account playback, converted audio-track selection, bounded subtitle
-burn-in/downscaling, opt-in selectable Matroska subtitles, and clean Miyoo Menu
-exit/cleanup.
+burn-in/downscaling, selectable Matroska subtitles enabled by default with an
+explicit opt-out, and clean Miyoo Menu exit/cleanup.
 
 Milestone 22's three-track English Matroska acceptance—R1 cycling, subtitles
 off, synchronized A/V/subtitles, progress saving, and cleanup—is physically
 confirmed. The normal production fallback remains server-mediated MPEG-TS
-burn-in. Whether the selectable Matroska player ships in v1.0 remains a release
-decision.
+burn-in when Matroska setup cannot proceed or the user explicitly opts out.
 
 ## Production Invariants
 
@@ -175,26 +174,28 @@ inspect or manage Tailscale state/lifecycle, change the Stremio Service model,
 or alter PCServer API/discovery behavior. The existing Local physical acceptance
 is inherited; the new presentation and Remote route remain physically pending.
 
-The desktop subtitle-startup parity correction is implemented and locally
-verified. A live owned desktop child reported `subtitle_burn_in=false` and
-`matroska_subtitles=false`, whereas the established source managers enable
-selectable Matroska subtitles by default. The desktop lifecycle now supplies
-only `--enable-matroska-subtitles`, preserving the server-core default and all
-provider, stream-filter, cache, limit, conversion, and M21/M22 behavior.
-Focused Miyoo acceptance is pending: confirm the managed child reports Matroska
-enabled, then use the existing subtitle mode on one known title and confirm
-track discovery. M22 subtitle evidence remains physically confirmed and
-inherited.
+The M22 production-promotion gap is corrected and locally verified. The Miyoo
+runtime fallback and shipped example now enable selectable Matroska subtitles;
+an explicit persisted or environment value of `0` remains the opt-out and
+existing configurations are preserved. Direct PCServer invocation now enables
+the same mode by default with `--disable-matroska-subtitles` as its clear
+opt-out; desktop and source managers retain compatible explicit startup
+behavior. This changes no providers, filters, limits, cache, conversion, or
+M21/M22 media behavior. Historical M22 subtitle evidence is inherited.
 
-Next exact action: start the desktop-managed PCServer, confirm `/api/status`
-reports selectable Matroska subtitles enabled, then use the existing Miyoo
-subtitle mode on one known title and confirm tracks are discovered. Afterwards,
-continue the focused dynamic-list/Remote check: visually confirm Automatic
+The current renderer/display issue remains separate and unresolved: the live
+Miyoo configured with Matroska mode enabled discovered six tracks and logged R1
+stream switches, but captions were not visible. This promotion correction does
+not claim to fix that renderer/display symptom.
+
+Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
 Custom shows only its explicit route. Return to All interfaces, use the
 displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
 proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
-playback matrices or account playback.
+playback matrices or account playback. Keep the separate Matroska
+renderer/display symptom open for focused diagnosis rather than treating this
+default-promotion correction as its resolution.
 
 ## Latest Verified Checkpoint
 
@@ -276,23 +277,19 @@ Completed:
   available-route count in Status. Existing Local physical acceptance is
   inherited; the new presentation and Remote smoke are pending.
 
-- M23 desktop subtitle-startup parity correction implemented and locally
-  verified: its owned child now enables selectable Matroska subtitles exactly
-  as the established source managers do. A live pre-fix desktop status showed
-  subtitle burn-in unavailable and selectable Matroska disabled; the scoped
-  lifecycle correction leaves server-core defaults and all resolver/media logic
-  unchanged. Focused Miyoo subtitle discovery acceptance remains pending; M22
-  subtitle evidence is inherited.
+- M22 production-promotion correction implemented and locally verified: the
+  Miyoo runtime and shipped configuration enable selectable Matroska subtitles
+  by default, explicit `0` remains an opt-out, and direct PCServer startup
+  matches desktop/manual manager semantics with a clear CLI opt-out. Existing
+  configurations remain untouched. M22 evidence is inherited; the separate
+  live renderer/display symptom (tracks switch but captions are not visible)
+  remains open.
 
 Pending:
 
 - M23 focused dynamic-list presentation and desktop-managed Tailscale / Remote
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
-
-- M23 focused desktop subtitle parity acceptance: start the owned child, confirm
-  `/api/status` reports Matroska subtitles enabled, then use the existing Miyoo
-  subtitle mode on one known title and confirm selectable tracks are discovered.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

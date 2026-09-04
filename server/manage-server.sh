@@ -18,7 +18,7 @@ usage() {
     "  --ffmpeg PATH" \
     "  --local-media-root PATH" \
     "  --enable-field-test" \
-    "  --enable-matroska-subtitles"
+    "  --enable-matroska-subtitles" \
     "  --disable-matroska-subtitles"
 }
 
@@ -172,6 +172,8 @@ start_server() {
   fi
   if [ "$ENABLE_MATROSKA_SUBTITLES" = "1" ]; then
     set -- "$@" --enable-matroska-subtitles
+  else
+    set -- "$@" --disable-matroska-subtitles
   fi
   if [ "$DISABLE_DISCOVERY" = "1" ]; then
     set -- "$@" --disable-discovery

@@ -167,7 +167,9 @@ AUDIO_GAIN="${AUDIO_GAIN:-2.0}"
 AUDIO_FALLBACK="${AUDIO_FALLBACK:-ask}"
 SUBTITLE_FALLBACK="${SUBTITLE_FALLBACK:-ask}"
 MAX_SUBTITLES_PER_LANGUAGE="${MAX_SUBTITLES_PER_LANGUAGE:-3}"
-MATROSKA_SUBTITLES="${MATROSKA_SUBTITLES:-0}"
+# Selectable Matroska subtitles are the accepted normal production path.  An
+# explicit environment or persisted configuration value of 0 remains the opt-out.
+MATROSKA_SUBTITLES="${MATROSKA_SUBTITLES:-1}"
 case "$PROXY" in
   '') ;;
   *)

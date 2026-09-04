@@ -115,6 +115,8 @@ function Start-ManagedServer {
   }
   if (-not $DisableMatroskaSubtitles -and $env:POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES -ne "0") {
     $arguments += "--enable-matroska-subtitles"
+  } else {
+    $arguments += "--disable-matroska-subtitles"
   }
   if ($DisableDiscovery) {
     $arguments += "--disable-discovery"

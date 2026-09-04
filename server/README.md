@@ -38,6 +38,13 @@ POCKETCINEMA_HOST=100.x.y.z ./server/manage-server.sh start
 ./server/manage-server.sh stop
 ```
 
+Selectable Matroska subtitles are enabled by default for direct PCServer,
+desktop, and source-manager startup. Use
+`--disable-matroska-subtitles` for a deliberate server opt-out; the existing
+`--enable-matroska-subtitles` spelling remains compatible. The source managers'
+existing `--disable-matroska-subtitles` / `-DisableMatroskaSubtitles` controls
+and `POCKETCINEMA_ENABLE_MATROSKA_SUBTITLES=0` retain the same opt-out behavior.
+
 The initial cross-platform PocketCinema Server desktop shell is a macOS source
 development workflow, not a release bundle. It persists only non-secret desktop
 settings under `~/Library/Application Support/PocketCinema/`, starts and stops

@@ -976,6 +976,14 @@ from streams 2 to 3, 3 to 4, and 4 to 5 through R1, and saved progress at 200
 seconds. This is physical confirmation of the no-libass Matroska packaging path,
 not a claim that burn-in is available on that host.
 
+The later M23 production-promotion correction makes this accepted mode the
+normal Miyoo and direct-PCServer default. An explicit Miyoo configuration value
+of `POCKETCINEMA_MATROSKA_SUBTITLES=0` and the PCServer
+`--disable-matroska-subtitles` option retain the bounded burn-in opt-out path.
+This configuration correction inherits the M22 acceptance evidence and does
+not resolve the separately reported renderer/display symptom where tracks
+switch but captions are not visible.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.

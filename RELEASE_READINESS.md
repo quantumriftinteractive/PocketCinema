@@ -13,8 +13,9 @@ English Matroska packaging, R1 cycling through tracks and subtitles-off,
 synchronized audio/video/subtitles, automatic burn-in fallback, and clean Menu
 exit/cleanup. Remaining blockers are fresh-SD and final movie/episode/converted
 regressions, app-local player packaging and licensing, privacy review, and
-reproducible release artifacts. Whether selectable Matroska ships in v1.0 is
-still an explicit release-scope decision. Milestone 23 now makes a
+reproducible release artifacts. Selectable Matroska is promoted to the normal
+product default, with an explicit opt-out retaining the bounded burn-in path.
+Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
 The initial macOS source-development shell is implemented and automatically
@@ -97,7 +98,7 @@ proxy, and all PCServer requests use the resolved route. The Both/Automatic
 three-second information message and pristine first run are physically
 confirmed. The release gate remains open for the separate remaining release
 requirements, not Phase 3 onboarding.
-The opt-in app-local FFplay/libass path now opens a real account stream without
+The app-local FFplay/libass path now opens a real account stream without
 a redundant subtitle picker, packages three English text tracks, cycles them
 and off with R1, displays a one-second track notice, and cleans up after Menu
 exit. Automatic fallback into the unchanged production MPEG-TS burn-in flow is
@@ -164,8 +165,9 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
   Service, disappeared-interface, clean stop/removal, and sanitized-log/privacy
   tests.
 - Milestone 22's selectable-Matroska acceptance criteria, including fallback
-  and synchronized A/V, are physically confirmed. If the feature does not ship
-  in v1.0, keep the mode disabled and omit its experimental player artifacts.
+  and synchronized A/V, are physically confirmed and promoted to the normal
+  default. Keep its explicit configuration/CLI opt-out and include the
+  app-local player runtime in any release that retains this behavior.
 - Resolve the current app-local-player packaging dependency explicitly: either
   ship a physically accepted, reproducible binary with its source/configuration
   and notices, or change the release configuration to a verified player that
@@ -362,8 +364,8 @@ development working tree:
       synchronization and cleanup.
 - [ ] If the selected source has multiple audio tracks, verify the displayed
       FFprobe labels and choose the intended track before converted playback.
-- [ ] If selectable Matroska subtitles are included, cycle all packaged tracks
-      and off, then force one setup failure and confirm automatic return to the
+- [ ] Confirm the fresh-install Matroska default, cycle all packaged tracks and
+      off, then force one setup failure and confirm automatic return to the
       normal subtitle/burn-in flow without stale state.
 - [ ] Test a bad server address and confirm a specific error followed by clean
       return to the UI.
@@ -488,7 +490,8 @@ separately reviewed authentication and transport design.
 - The Onion FFplay baseline has no built-in `subtitles` filter and cannot render
   external SRT directly.
 - Selectable Matroska subtitles are physically confirmed for three English
-  tracks and remain opt-in for release scope. Generalized multi-language
+  tracks and are the normal product default; explicit configuration and CLI
+  opt-outs retain the bounded burn-in path. Generalized multi-language
   packaging is automated-tested but still needs a six-track Apps-context run.
   The normal deployment now packages the app-local player, runtime libraries,
   font configuration, and font asset; fresh-SD validation and licensing review
@@ -600,8 +603,7 @@ confirm every version actually shipped and include the applicable notices.
 **Do not publish v1.0 yet.** The working burn-in/downscaling path remains the
 safe production fallback, and Milestone 20 is no longer an open release blocker.
 Milestone 22's selectable-Matroska path and corrected automatic fallback are
-physically confirmed. A v1.0 that excludes selectable Matroska must keep the
-option disabled and omit the experimental player artifacts. Fresh-SD
+physically confirmed and promoted to the normal default. Fresh-SD
 onboarding, final movie/episode/converted regressions, reproducible release
 artifacts, third-party notices, and the privacy review must still pass before
 publishing. Milestone 21 is confirmed, so Milestone 23 desktop implementation

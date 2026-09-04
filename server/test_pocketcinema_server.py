@@ -3,8 +3,11 @@ import contextlib
 import io
 import json
 import socket
+import subprocess
+import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -21,6 +24,68 @@ from server import pocketcinema_server as pocket
 from server import stremio_account
 from server import stremio_service
 from server import transcoding
+
+
+class CommandLineConfigurationTest(unittest.TestCase):
+    def test_matroska_subtitles_are_enabled_by_default_with_a_clear_opt_out(self):
+        parser = pocket.build_argument_parser()
+        self.assertTrue(parser.parse_args([]).enable_matroska_subtitles)
+        self.assertTrue(parser.parse_args(["--enable-matroska-subtitles"]).enable_matroska_subtitles)
+        self.assertFalse(parser.parse_args(["--disable-matroska-subtitles"]).enable_matroska_subtitles)
+
+    def test_direct_server_status_reflects_the_default_and_opt_out(self):
+        self.assertTrue(self._direct_server_matroska_status())
+        self.assertFalse(self._direct_server_matroska_status("--disable-matroska-subtitles"))
+
+    def _direct_server_matroska_status(self, *extra_arguments):
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+        listener.close()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            command = [
+                sys.executable,
+                "server/pocketcinema_server.py",
+                "--host", "127.0.0.1",
+                "--port", str(port),
+                "--disable-discovery",
+                "--disable-open-media-addon",
+                "--stremio-service-url", "",
+                "--data-dir", str(root / "data"),
+                "--media-dir", str(root / "media"),
+                "--fixture-dir", str(root / "fixtures"),
+                "--stream-addons", str(root / "stream_addons.json"),
+                *extra_arguments,
+            ]
+            process = subprocess.Popen(
+                command,
+                cwd=Path(__file__).resolve().parents[1],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                endpoint = f"http://127.0.0.1:{port}/api/status"
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    if process.poll() is not None:
+                        stdout, stderr = process.communicate()
+                        self.fail(f"direct PCServer exited: {stdout}{stderr}")
+                    try:
+                        with urllib.request.urlopen(endpoint, timeout=0.2) as response:
+                            return json.load(response)["transcodes"]["matroska_subtitles"]
+                    except (OSError, urllib.error.URLError):
+                        time.sleep(0.05)
+                self.fail("direct PCServer did not answer /api/status")
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                try:
+                    process.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.communicate(timeout=5)
 
 
 class DiscoveryResponderTest(unittest.TestCase):
