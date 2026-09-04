@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+ROOT_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
+UI_SCRIPT="$ROOT_DIR/client/miyoo/pocketcinema-ui.sh"
+DEPLOY_SCRIPT="$ROOT_DIR/scripts/deploy-miyoo.ps1"
+FONTCONFIG="$ROOT_DIR/experiments/ffplay/fonts.conf"
+
+assert_contains() {
+  grep -F -q -- "$2" "$1" || {
+    printf 'expected [%s] in %s\n' "$2" "$1" >&2
+    exit 1
+  }
+}
+
+# Production launch supplies the selected subtitle package and the bundled
+# fontconfig/font to both the current and migrated, accepted app-local FFplay
+# identities. Neither path relies on a user-set test mode.
+for name in POCKETCINEMA POCKETSTREMIO; do
+  assert_contains "$UI_SCRIPT" "export ${name}_FONTCONFIG_FILE=\"\$FIELD_TEST_DIR/fonts.conf\""
+  assert_contains "$UI_SCRIPT" "export ${name}_DEFAULT_FONT=\"\$FIELD_TEST_DIR/fonts/PocketCinema.ttf\""
+  assert_contains "$UI_SCRIPT" "export ${name}_SUBTITLE_FILE=\"\$FIELD_TEST_SUBTITLE_FILE\""
+done
+assert_contains "$FONTCONFIG" '/mnt/SDCARD/App/PocketCinema/experiments/ffplay/fonts'
+assert_contains "$DEPLOY_SCRIPT" 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g'
+assert_contains "$DEPLOY_SCRIPT" 's|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g'
+
+printf 'Miyoo renderer runtime tests passed\n'

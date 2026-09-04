@@ -609,10 +609,20 @@ run_ffplay() (
     export POCKETCINEMA_FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
     export POCKETCINEMA_DEFAULT_FONT="$FIELD_TEST_DIR/fonts/PocketCinema.ttf"
     export POCKETCINEMA_ASPECT_MODE="$aspect_mode"
+    # The normal deployment migration can retain the physically accepted
+    # pre-rename FFplay binary. It is compiled to read the legacy identifiers,
+    # so provide the same app-local production assets under both identities
+    # until a rebuilt binary replaces it. These are internal runtime bindings,
+    # not user-facing test activation.
+    export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
+    export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_DIR/fonts/PocketCinema.ttf"
+    export POCKETSTREMIO_ASPECT_MODE="$aspect_mode"
     if [ -n "$FIELD_TEST_SUBTITLE_FILE" ]; then
       export POCKETCINEMA_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
+      export POCKETSTREMIO_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
     else
       unset POCKETCINEMA_SUBTITLE_FILE
+      unset POCKETSTREMIO_SUBTITLE_FILE
     fi
   fi
   if [ -n "$REQUEST_PROXY" ]; then

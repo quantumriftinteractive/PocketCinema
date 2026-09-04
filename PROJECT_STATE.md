@@ -193,14 +193,28 @@ Miyoo configured with Matroska mode enabled discovered six tracks and logged R1
 stream switches, but captions were not visible. This promotion correction does
 not claim to fix that renderer/display symptom.
 
+The smallest renderer regression boundary is identified. The normal
+PocketStremio-to-PocketCinema deployment migration retained the physically
+accepted pre-rename app-local FFplay binary, which reads
+`POCKETSTREMIO_*` subtitle/font bindings, while the renamed production client
+provided only `POCKETCINEMA_*`; it also retained a `fonts.conf` pointing to the
+old app directory. Native FFplay still switches the Matroska streams, but the
+track-aware subtitle filter does not receive its subtitle package. The scoped
+repair supplies the same normal app-local assets under both compiled identities
+and rewrites migrated fontconfig paths. It is static-tested but not yet
+physically confirmed: the normal deployer encountered an interactive SSH
+connection close in this session before it could update the Miyoo. No marker,
+provider, Matroska-mode, conversion, or renderer redesign is involved.
+
 Next exact action: continue the focused dynamic-list/Remote check: visually confirm Automatic
 shows only Local routes, All interfaces shows Local plus detected Remote, and
 Custom shows only its explicit route. Return to All interfaces, use the
 displayed Remote URL in the existing Miyoo Remote profile and unchanged generic
 proxy, search `friday`, then stop the owned server. Do not rerun M21/M22
 playback matrices or account playback. Keep the separate Matroska
-renderer/display symptom open for focused diagnosis rather than treating this
-default-promotion correction as its resolution.
+renderer/display symptom open until the normal deployment repair is installed:
+launch one known subtitle-bearing title, confirm captions are visible, press R1
+once to confirm the visible track changes or turns off, then exit normally.
 
 ## Latest Verified Checkpoint
 
@@ -290,11 +304,23 @@ Completed:
   live renderer/display symptom (tracks switch but captions are not visible)
   remains open.
 
+- M22 renderer/display regression boundary identified and scoped repair
+  implemented: a migrated pre-rename FFplay binary expects legacy
+  `POCKETSTREMIO_*` subtitle/font bindings and its migrated fontconfig pointed
+  at the old app path. The normal client now binds both identities and the
+  normal deployer rewrites the path. Static validation passes; physical
+  deployment and one visible-caption/R1 Apps check remain pending.
+
 Pending:
 
 - M23 focused dynamic-list presentation and desktop-managed Tailscale / Remote
   route acceptance, if applicable to this Mac topology, then later macOS
   packaging and the required Windows clean-machine bundle/distribution phases.
+
+- M22 focused renderer restoration: deploy the tracked normal client/deployer
+  repair, then from Apps open one known subtitle-bearing title, confirm visible
+  captions and one R1 visible change/off transition, and exit normally. Do not
+  repeat the M22 discovery, provider, conversion, or playback matrix.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

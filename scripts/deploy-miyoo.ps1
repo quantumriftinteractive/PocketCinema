@@ -81,7 +81,7 @@ $directories = @(
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "mkdir -p $directories"))
 
 if ($ReuseInstalledPlayerAssets) {
-  $playerMigration = "legacy='$LegacyDestination'; destination='$Destination'; if [ ! -e `"`$destination/experiments/ffplay/bin/ffplay`" ] && [ -d `"`$legacy/experiments/ffplay`" ]; then cp -pR `"`$legacy/experiments/ffplay/.`" `"`$destination/experiments/ffplay/`"; fi; if [ ! -e `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`" ] && [ -f `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" ]; then mv `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`"; fi"
+  $playerMigration = "legacy='$LegacyDestination'; destination='$Destination'; if [ ! -e `"`$destination/experiments/ffplay/bin/ffplay`" ] && [ -d `"`$legacy/experiments/ffplay`" ]; then cp -pR `"`$legacy/experiments/ffplay/.`" `"`$destination/experiments/ffplay/`"; fi; if [ ! -e `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`" ] && [ -f `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" ]; then mv `"`$destination/experiments/ffplay/fonts/PocketStremio.ttf`" `"`$destination/experiments/ffplay/fonts/PocketCinema.ttf`"; fi; if [ -f `"`$destination/experiments/ffplay/fonts.conf`" ]; then sed 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g; s|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g' `"`$destination/experiments/ffplay/fonts.conf`" > `"`$destination/experiments/ffplay/fonts.conf.tmp`" && mv `"`$destination/experiments/ffplay/fonts.conf.tmp`" `"`$destination/experiments/ffplay/fonts.conf`"; fi"
   Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $playerMigration))
 }
 

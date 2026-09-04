@@ -984,6 +984,17 @@ This configuration correction inherits the M22 acceptance evidence and does
 not resolve the separately reported renderer/display symptom where tracks
 switch but captions are not visible.
 
+That display regression was traced to the identity migration boundary, not
+subtitle discovery: a retained pre-rename FFplay binary reads
+`POCKETSTREMIO_*` subtitle/font bindings while the renamed client supplied only
+`POCKETCINEMA_*`, and retained `fonts.conf` named the old app directory. The
+normal runtime repair supplies both compiled identities with the same selected
+subtitle package/font settings and rewrites migrated fontconfig paths. It does
+not alter providers, Matroska mode, conversion, stream selection, or the
+renderer algorithm. One focused normal Apps playback—visible captions plus one
+R1 transition and clean exit—remains required before marking the regression
+restored.
+
 Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.
