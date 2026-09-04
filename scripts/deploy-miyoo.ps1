@@ -87,6 +87,7 @@ if ($ReuseInstalledPlayerAssets) {
 
 $files = @(
   @{ Local = "app/config.json"; Remote = "config.json" },
+  @{ Local = "app/icon.png"; Remote = "icon.png" },
   @{ Local = "app/launch.sh"; Remote = "launch.sh" },
   @{ Local = "app/playback-poc.sh"; Remote = "playback-poc.sh" },
   @{ Local = "client/miyoo/pocketcinema-ui.sh"; Remote = "client/pocketcinema-ui.sh" },
@@ -174,7 +175,7 @@ $playerVerifyTargets = @(
   "$Destination/experiments/ffplay/fonts/PocketCinema.ttf"
 ) + ($libraries | ForEach-Object { "$Destination/experiments/ffplay/lib/$($_.Remote)" })
 $playerVerify = "for f in $($playerVerifyTargets -join ' '); do test -s `"`$f`" || exit 1; done"
-$verify = "$normalize && chmod +x $modeTargets && $playerVerify && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketcinema-ui.sh && /bin/sh -n $Destination/client/pocketcinema-proxy.sh && /bin/sh -n $Destination/client/pocketcinema-connection.sh && /bin/sh -n $Destination/client/pocketcinema-resource-monitor.sh"
+$verify = "test -s $Destination/icon.png && $normalize && chmod +x $modeTargets && $playerVerify && /bin/sh -n $Destination/launch.sh && /bin/sh -n $Destination/client/pocketcinema-ui.sh && /bin/sh -n $Destination/client/pocketcinema-proxy.sh && /bin/sh -n $Destination/client/pocketcinema-connection.sh && /bin/sh -n $Destination/client/pocketcinema-resource-monitor.sh"
 Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, $verify))
 if ($EnableButtonDiagnostic) {
   Invoke-Checked "ssh" ($sshOptions + @($DeviceHost, "touch $Destination/config/button-diagnostic.mode"))

@@ -1,6 +1,6 @@
 {
   "label": "PocketCinema",
-  "icon": "/mnt/SDCARD/Icons/Default/app/ffplay.png",
+  "icon": "/mnt/SDCARD/App/PocketCinema/icon.png",
   "launch": "launch.sh",
   "description": "PocketCinema playback proof"
 }

@@ -90,6 +90,14 @@ Confirmed**: the Apps menu displayed the custom icon without a reboot, the
 normal companion screen retained its current state, proxy endpoint, and tailnet
 IP, and B exited cleanly.
 
+The canonical PocketCinema client artwork is implemented as the tracked 74×74
+app-local runtime copy `app/icon.png`, deployed to
+`/mnt/SDCARD/App/PocketCinema/icon.png` and referenced by its `config.json`.
+Deployment and remote-file verification are complete; Apps-menu visual and
+launch/status/B-exit confirmation remains pending. This is visual metadata and
+packaging only, with no network, playback, migration, Tailscale, or PCServer
+behavior change.
+
 ## Intentional Legacy Identifiers
 
 - `POCKETSTREMIO_DISCOVER_V1` and `POCKETSTREMIO_PSS_V1` remain the private UDP
@@ -105,6 +113,10 @@ IP, and B exited cleanly.
 Milestone 23 is the sole **Next** milestone, but its desktop-server shell remains
 planning-only. The focused post-rename Apps-context smoke test is complete. Do
 not begin Milestone 23 implementation without an explicit request.
+
+Next physical action: from OnionOS Apps, confirm the PocketCinema icon replaces
+the generic icon, launch to Home/UI with normal server status, exit with B, and
+confirm the independent Tailscale icon remains separate.
 
 ## Latest Verified Checkpoint
 
