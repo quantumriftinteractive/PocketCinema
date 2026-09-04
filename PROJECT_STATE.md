@@ -199,7 +199,7 @@ default-promotion correction as its resolution.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `caf41b8`
+Checkpoint commit: `1000731`
 Remote verified: YES (`caf41b8` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
