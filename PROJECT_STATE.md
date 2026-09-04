@@ -233,7 +233,7 @@ visible track change/off transition before exiting normally.
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `1ef5f60`
-Remote verified: pending push/fetch verification
+Remote verified: YES (`1ef5f60` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
