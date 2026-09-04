@@ -266,7 +266,7 @@ larger captions, one visible R1 track change, subtitles Off, then Menu exit.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `914d00d`
+Checkpoint commit: `f362f3e`
 Remote verified: pending push and fetch verification
 Machine: Windows development checkout
 Branch: `main`
