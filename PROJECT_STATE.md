@@ -118,6 +118,8 @@ settings under the per-user PocketCinema directory, validates the editable
 PCServer-only Stremio Service HTTP origin, detects FFmpeg/FFprobe, displays
 sanitized status/log output, and uses the canonical server PNG as its window
 icon. The server core remains independently source-runnable.
+The documented direct macOS source entry point now resolves the repository
+package root correctly instead of requiring `PYTHONPATH` or `python -m`.
 
 Next exact action: perform the focused macOS desktop-shell physical acceptance:
 launch, verify title/icon, save and reload one harmless setting, configure the
@@ -160,6 +162,10 @@ Completed:
   remote-or-local Stremio Service origin validation, explicit per-user child
   paths, and owned-process start/stop/crash handling. This is not a release
   artifact and awaits the focused physical macOS/Miyoo acceptance above.
+
+- Direct source launch regression fixed and tested: `/usr/bin/python3
+  server/pocketcinema_desktop.py` now bootstraps the repository import path
+  before loading the Tk shell.
 
 Pending:
 
