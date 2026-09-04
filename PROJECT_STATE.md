@@ -101,8 +101,8 @@ test in `docs/pocketcinema-rename-migration.md`:
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `252736233e035d4be15560ac213beeb441bf0066`
-Remote verified: YES (`2527362` is reachable from `origin/main`)
+Checkpoint commit: `74459c9622f6376895f1875996689fa30364bef7`
+Remote verified: pending push
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
