@@ -258,8 +258,8 @@ Windows responsiveness observation.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `030b2e9`
-Remote verified: YES — `030b2e9` and its metadata seal are reachable from `origin/main`
+Checkpoint commit: `001a0bf`
+Remote verified: pending push and fetch verification
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
