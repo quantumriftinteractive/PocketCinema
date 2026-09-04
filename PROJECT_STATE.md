@@ -120,8 +120,8 @@ confirm the independent Tailscale icon remains separate.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `efd69d708fb0f21f5fa168e6d8ac060b34f6b93e`
-Remote verified: pending push and fetch
+Checkpoint commit: `b004f6f35129b257bc4bce1c7219b7f40849e84c`
+Remote verified: YES (`b004f6f` is reachable from `origin/main`)
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
