@@ -240,9 +240,9 @@ visible track change/off transition before exiting normally.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `1ef5f60`
-Remote verified: YES (`1ef5f60` is reachable from `origin/main`)
-Machine: macOS development checkout
+Checkpoint commit: `257a63e`
+Remote verified: pending push and fetch verification
+Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
 
