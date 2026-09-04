@@ -60,10 +60,13 @@ into `/mnt/SDCARD/App/PocketCinema/`, without copying, reading, moving, or
 changing Tailscale state. The old directory is preserved for manual post-test
 archival because it contains the protected rollback Tailscale state.
 
-Automated and static validation is complete. The renamed app has not yet had its
-required Apps-context smoke test, so this rename is **Implemented/tested but not
-physically confirmed**. Milestones 21 and 22 remain physically confirmed under
-their historical PocketStremio evidence.
+Automated and static validation is complete. The renamed app is **Physically
+Confirmed** by a focused Apps-context migration smoke test: PocketCinema
+appeared alongside the retained PocketStremio app, launched, searched `friday`,
+saved Local and Remote PCServer routes, traversed Local → Remote → Local under
+Automatic routing, and exited with B. This confirms rename/deployment wiring
+only; Milestones 21 and 22 remain physically confirmed under their historical
+PocketStremio evidence and were not re-qualified.
 
 The canonical source artwork for the independent OnionOS Tailscale companion is
 tracked at `UI_concept/Icons/PocketCinema_Tailscale_Companion_icon.png`. Its
@@ -88,16 +91,8 @@ IP, and B exited cleanly.
 ## Active Work and Next Action
 
 Milestone 23 is the sole **Next** milestone, but its desktop-server shell remains
-planning-only. First perform the post-rename PocketCinema Apps-context smoke
-test in `docs/pocketcinema-rename-migration.md`:
-
-1. Deploy with `scripts/deploy-miyoo.ps1`, preserving and migrating the current
-   development configuration.
-2. Confirm PocketCinema appears and launches from OnionOS Apps; verify the saved
-   route/profile, `friday` search, Local/Remote/Automatic routing, Continue
-   Watching, clean B/Menu exit, and untouched Tailscale companion state.
-3. Record the result before beginning Milestone 23 implementation, which still
-   requires an explicit request.
+planning-only. The focused post-rename Apps-context smoke test is complete. Do
+not begin Milestone 23 implementation without an explicit request.
 
 ## Latest Verified Checkpoint
 
@@ -110,7 +105,8 @@ Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
 Completed:
 
 - Controlled PocketCinema/PocketCinema Server/PCServer rename with no API-path
-  redesign and no Tailscale lifecycle change.
+  redesign and no Tailscale lifecycle change; focused Apps-context deployment,
+  connection-route, search, and B-exit smoke test physically confirmed.
 - Explicit Miyoo configuration/state migration, current documentation updates,
   and canonical client/server artwork documentation.
 - Canonical independent OnionOS Tailscale companion source artwork tracked,
@@ -123,7 +119,6 @@ Completed:
 
 Pending:
 
-- Apps-context rename smoke test and device log collection.
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
   retained and documented.

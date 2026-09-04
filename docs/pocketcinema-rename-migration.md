@@ -36,6 +36,16 @@ Apps-context smoke test passes, archive or remove the old development app only
 as a separate, manually verified action. A release image contains no dependency
 on the old directory.
 
+## Apps-context smoke test
+
+The focused rename smoke test was physically confirmed on September 4, 2026.
+PocketCinema appeared alongside the retained PocketStremio app, launched,
+searched `friday`, saved Local and Remote PCServer endpoints, traversed Local →
+Remote → Local under Automatic routing, and exited with B. The independent
+Tailscale companion remained separate and intact. This validates the
+rename/deployment/migration wiring only; it does not re-qualify the previously
+confirmed Milestone 21 or 22 playback behavior.
+
 ## Intentional compatibility exceptions
 
 The UDP discovery request/response markers remain
