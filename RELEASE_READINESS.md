@@ -26,9 +26,12 @@ release artifacts. See `docs/production-pass-audit.md`.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
-The initial macOS source-development shell is implemented and automatically
-tested, but it is not yet physically confirmed or packaged. Until Milestone 23
-is accepted from an actual packaged artifact, the Python/PowerShell workflow
+The source-development desktop shell is implemented and automatically tested.
+The Local desktop path, Remote-route smoke, and Windows desktop responsiveness
+are physically confirmed, as recorded in `PROJECT_STATE.md` and the Production
+PASS audit. Milestone 23 remains incomplete: packaged distribution and
+fresh-deployment work are still pending. Until Milestone 23 is accepted from an
+actual packaged artifact, the Python/PowerShell workflow
 below remains a developer/source path, not the intended end-user v1.0
 installation.
 
