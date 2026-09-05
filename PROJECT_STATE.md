@@ -474,10 +474,13 @@ Pending:
   result metadata. No provider, ordering, selection, playback or Live TV
   behavior was changed. Live TV removal remains a future v1 cleanup item.
   The candidate was rebuilt after these changes and the focused frozen-child
-  check passed; the new behavior still needs its targeted Windows/Miyoo
-  observation. The tracked Miyoo client was deployed through the independently
-  managed Tailscale route to `100.97.46.26`; live config and networking-provider
-  state were preserved. Physical label/search acceptance remains pending.
+  check passed. A focused Miyoo regression then showed the result list was
+  empty: jq 1.6 treats the temporary `$label` name as its reserved `label`
+  keyword. Renaming it to `$type_label` restores result generation while
+  preserving the bounded labels. The corrected tracked client was redeployed
+  through the independently managed Tailscale route to `100.97.46.26`; live
+  config and networking-provider state were preserved. Physical label/search
+  acceptance remains pending.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
