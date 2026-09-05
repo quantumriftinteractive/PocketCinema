@@ -307,6 +307,12 @@ running-settings lock packaged physical gate is also PASS: stopped controls are
 editable, Running presents the explicit message and disables runtime
 configuration, and Stop restores editing. Clean-machine acceptance remains
 separate. Library / Next Episode is the next intended product work.
+
+The subsequent focused Windows UX fix covers the remaining stream/source
+resolution subprocess paths: FFprobe probing, subtitle conversion and the
+resource monitor now use the same no-console semantics while preserving output
+capture. Its packaged physical check remains pending; no larger feature work is
+opened by this refinement.
 No playback, transport, subtitle, account, M21 or M22 retest is required.
 Renderer-asset/licensing and clean-machine/fresh-deployment validation remain
 subsequent M23 packaging gates.

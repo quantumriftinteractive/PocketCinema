@@ -466,6 +466,16 @@ Pending:
 
 - Next intended product work after this UX gate: **Library / Next Episode**.
 
+- Two focused production UX refinements are implemented and awaiting their
+  smallest physical checks: missed Windows background subprocess paths in
+  stream/source resolution now use hidden/no-console creation flags while
+  retaining captured output, errors, return codes and timeouts; Miyoo Search
+  rows now visibly append bounded `[MOVIE]` or `[SERIES]` labels from existing
+  result metadata. No provider, ordering, selection, playback or Live TV
+  behavior was changed. Live TV removal remains a future v1 cleanup item.
+  The normal package rebuild is pending because an existing packaged candidate
+  process still owns the output executable; it was not terminated.
+
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
   physically confirmed under the accepted focused tray UX evidence.

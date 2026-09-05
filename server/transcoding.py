@@ -136,6 +136,7 @@ def normalize_subtitle_payload(ffmpeg_path, payload, directory):
             stderr=subprocess.PIPE,
             timeout=10,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
         if result.returncode != 0 or not normalized_path.is_file() or not normalized_path.stat().st_size:
             raise OSError("Subtitle format is unsupported")

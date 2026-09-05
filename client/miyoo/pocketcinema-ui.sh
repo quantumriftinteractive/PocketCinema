@@ -2314,7 +2314,14 @@ search_flow() {
     return 0
   fi
 
-  "$JQ" -r '.items | to_entries[] | "\(.key + 1). \(.value.title) (\(.value.year // "????"))\t\(.value.type)\t\(.value.id)\t\(.value.title)\t\(.value.year // "")"' /tmp/pocketcinema-search.json >/tmp/pocketcinema-results.tsv
+  "$JQ" -r '
+    .items | to_entries[] |
+    .value as $item |
+    ($item.title // "") as $title |
+    (if $item.type == "series" then "SERIES" else "MOVIE" end) as $label |
+    (if ($title | length) > 25 then (($title[0:22]) + "...") else $title end) as $short |
+    "\(.key + 1). \($short) (\($item.year // "????")) [\($label)]\t\($item.type)\t\($item.id)\t\($item.title)\t\($item.year // "")"
+  ' /tmp/pocketcinema-search.json >/tmp/pocketcinema-results.tsv
   if [ "${POCKETCINEMA_DRY_RUN:-0}" = "1" ]; then
     head -n 5 /tmp/pocketcinema-results.tsv >> "$LOG_FILE"
     series_id=$("$JQ" -r '.items[] | select(.type == "series") | .id' /tmp/pocketcinema-search.json | head -n 1)

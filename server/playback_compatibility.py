@@ -1,6 +1,7 @@
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -209,6 +210,7 @@ def probe_media(ffprobe_path, url, timeout=20):
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except subprocess.TimeoutExpired as exc:
         raise ProbeError("Media inspection timed out") from exc

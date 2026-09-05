@@ -57,6 +57,12 @@ presentation, active-mode hover, one X notification, tray restore, Start/Stop/
 Restart, and exact-owned-child Quit cleanup. Library / Next Episode is the next
 intended product work after this UX gate.
 
+Two focused production UX fixes are implemented and await only targeted physical
+checks: stream/source-resolution helper processes are silent on Windows with
+their output and failure handling preserved, and Miyoo Search rows identify
+Movies and Series from existing metadata with bounded visible labels. Live TV is
+not removed in this task and remains a future v1 cleanup item.
+
 ## Verified Connection and Onboarding Resolution
 
 The pre-Phase-3 no-config test measured a tailnet onboarding gap: direct startup

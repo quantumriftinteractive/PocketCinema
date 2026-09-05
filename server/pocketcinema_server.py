@@ -748,6 +748,7 @@ class TranscodeResourceMonitor:
                     text=True,
                     timeout=3,
                     check=False,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
                 fields = result.stdout.split()
                 if result.returncode or len(fields) != 2:
