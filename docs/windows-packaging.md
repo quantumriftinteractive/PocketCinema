@@ -1,6 +1,6 @@
 # Windows standalone candidate (M23)
 
-Status: **Implemented, automated-tested, and packaged developer-machine smoke PASS; clean-machine acceptance pending**.
+Status: **Implemented, automated-tested, packaged developer-machine smoke PASS, and running-settings-lock physical PASS; clean-machine acceptance pending**.
 This is an unsigned Windows x64 one-directory candidate, not a public release
 or completion of M23. The accepted source desktop/tray PASS remains inherited.
 
@@ -152,6 +152,7 @@ It does not claim that the development machine is a clean Windows installation.
 | --- | --- | --- |
 | Frozen entry/child pipes and paths | Unit tests + real frozen child lifecycle | Core API/media behavior unchanged |
 | Packaged Tk/tray/dependencies | Native automated smoke; packaged developer-machine physical smoke PASS | Source tray UX PASS retained; clean-machine validation remains |
+| Running settings lock | 68 focused tests and packaged physical confirmation PASS | Configuration semantics remain unchanged; no broad retest |
 | Per-user settings and external-tool loading | Isolated profile, missing/manual tools, restart and content checks | Schema, route selection, validation and privacy semantics unchanged |
 | Media, M21/M22, transport, subtitles, accounts, Miyoo | No broad regression matrix | No code, assets, configuration semantics or deployed runtime changes in those paths |
 
@@ -160,15 +161,11 @@ native clicks are not a physical acceptance claim.
 
 ## Next physical gate and remaining release work
 
-The packaged developer-machine smoke above is complete and must not be repeated
-unless a later change materially affects those paths. The next focused physical
-confirmation is the runtime-settings lock: with the packaged app stopped, verify
-Server name, Listen on, Port, Stremio endpoint and Advanced settings are editable;
-Start and verify the exact message `Server is running. Stop the server to change
-its settings.` plus disabled runtime configuration; verify Stop/Restart, Copy,
-status and logs remain available; Stop and verify the message disappears and
-editing returns. Do not repeat playback, subtitle, account, Remote streaming or
-M21/M22 matrices.
+The packaged developer-machine smoke and running-settings-lock confirmation are
+complete PASS gates and must not be repeated unless later work materially affects
+those paths. Clean-Windows acceptance remains pending. Library / Next Episode is
+the next intended product work; do not reopen playback, subtitle, account,
+Remote streaming or M21/M22 matrices for this documentation update.
 
 Later, a clean supported Windows installation must verify no Python/repository/
 build-tool/launch-script requirement, normal launch/icon/no console, GUI/tray

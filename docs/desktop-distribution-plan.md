@@ -302,8 +302,11 @@ real owned-child start/stop and captured mode; changed Python files compile;
 
 This source-runtime physical gate is PASS and complete. It unblocked Windows
 packaging; the packaged developer-machine smoke is also physically PASS as
-recorded in [Windows packaging evidence](windows-packaging.md). The next focused
-gate is the running-settings lock refinement; clean-machine acceptance remains separate.
+recorded in [Windows packaging evidence](windows-packaging.md). The
+running-settings lock packaged physical gate is also PASS: stopped controls are
+editable, Running presents the explicit message and disables runtime
+configuration, and Stop restores editing. Clean-machine acceptance remains
+separate. Library / Next Episode is the next intended product work.
 No playback, transport, subtitle, account, M21 or M22 retest is required.
 Renderer-asset/licensing and clean-machine/fresh-deployment validation remain
 subsequent M23 packaging gates.

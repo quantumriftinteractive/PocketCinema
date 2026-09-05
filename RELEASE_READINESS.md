@@ -44,15 +44,18 @@ no broad retest is required. The first unsigned Windows x64 one-directory
 candidate is now implemented, automated-tested, and physically PASS on the
 development Windows machine; see
 [`docs/windows-packaging.md`](docs/windows-packaging.md) for build/artifact,
-dependency notices and audit. The next action is the focused runtime-settings
-lock confirmation. This does not mark clean-machine acceptance or Windows
+dependency notices and audit. The packaged running-settings-lock physical gate is
+also PASS: stopped controls are editable, Running shows the explicit lock message
+and disables runtime configuration while preserving Stop/Restart/Copy/status/logs,
+and Stop restores editing. This does not mark clean-machine acceptance or Windows
 distribution fully release-complete. The pinned Python 3.11.0/Tcl-Tk 8.6.12 candidate
 requires runtime updating/review before public release. Windows clean-machine,
 signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
 acceptance remain release gates; M23 is incomplete. The packaged smoke confirmed
 existing settings, no-console launch, canonical identity, Local/Remote route
 presentation, active-mode hover, one X notification, tray restore, Start/Stop/
-Restart, and exact-owned-child Quit cleanup.
+Restart, and exact-owned-child Quit cleanup. Library / Next Episode is the next
+intended product work after this UX gate.
 
 ## Verified Connection and Onboarding Resolution
 

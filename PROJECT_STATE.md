@@ -451,19 +451,20 @@ Completed:
   and the non-modal message `Server is running. Stop the server to change its
   settings.` appears only in Running. The active successful settings are shown;
   Stop/failed start/restart/unexpected exit restores editing. Tray actions use
-  the same synchronization. Physical confirmation of this refinement is next.
+  the same synchronization. The packaged physical gate is now PASS.
 
 Pending:
 
-- The packaged Windows developer-machine physical smoke is PASS and must not be
-  repeated unless a later change materially affects those frozen paths. The
-  focused running-settings lock smoke is next; no clean-machine or full M23
-  release claim is recorded. Source X-notification/Automatic-mode hover and
-  prior tray acceptance remain PASS.
+- The packaged Windows developer-machine physical smoke and running-settings
+  lock are PASS and must not be repeated unless later work materially affects
+  those frozen paths. Source X-notification/Automatic-mode hover and prior tray
+  acceptance remain PASS.
 
 - Windows clean-machine acceptance, public distribution/signing/runtime review,
   macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
   release work. Build/artifact instructions: `docs/windows-packaging.md`.
+
+- Next intended product work after this UX gate: **Library / Next Episode**.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
