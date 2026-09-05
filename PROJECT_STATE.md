@@ -315,9 +315,9 @@ remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: perform only the focused running-settings lock physical
-confirmation in `docs/windows-packaging.md`. The source tray UX and packaged
-Windows smoke gates are physical PASS. Production PASS and Impact-First Regression Testing preserve
+Next exact action: perform only the focused physical check for the rebuilt
+stream-search console behavior and Miyoo Movie/Series labels. The source tray
+UX and packaged Windows smoke gates are physical PASS. Production PASS and Impact-First Regression Testing preserve
 M21/M22 and accepted transport/playback/subtitle/account evidence without broad
 retests. Clean-Windows acceptance, public distribution/signing/runtime review,
 later macOS distribution and renderer-asset/licensing/fresh-deployment gates
@@ -473,8 +473,9 @@ Pending:
   rows now visibly append bounded `[MOVIE]` or `[SERIES]` labels from existing
   result metadata. No provider, ordering, selection, playback or Live TV
   behavior was changed. Live TV removal remains a future v1 cleanup item.
-  The normal package rebuild is pending because an existing packaged candidate
-  process still owns the output executable; it was not terminated.
+  The candidate was rebuilt after these changes and the focused frozen-child
+  check passed; the new behavior still needs its targeted Windows/Miyoo
+  observation.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now

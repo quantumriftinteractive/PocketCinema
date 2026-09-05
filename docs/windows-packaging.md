@@ -162,9 +162,9 @@ native clicks are not a physical acceptance claim.
 The packaged candidate source now also carries the focused stream-search
 no-console fix. FFprobe compatibility probing, subtitle-format conversion and
 the Windows resource monitor use hidden process creation while retaining their
-captured streams and existing errors/timeouts. A focused frozen-child check is
-pending after the normal rebuild; the earlier packaged GUI/tray/settings-lock
-PASS evidence remains inherited.
+captured streams and existing errors/timeouts. The normal rebuild completed
+with the focused frozen-child check **PASS**; the earlier packaged
+GUI/tray/settings-lock PASS evidence remains inherited.
 
 ## Next physical gate and remaining release work
 
