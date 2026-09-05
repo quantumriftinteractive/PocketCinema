@@ -307,8 +307,8 @@ Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `08c4de3100e9d3ded4e986c319b849debb99e966`
-Remote verified: YES — `08c4de3` is reachable from fetched `origin/main`
+Checkpoint commit: `7ecb6f059127fe8039a1fb585a625ad3132b0910`
+Remote verified: YES — `7ecb6f0` is reachable from fetched `origin/main`
 Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
