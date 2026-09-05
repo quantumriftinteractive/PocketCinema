@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from pathlib import Path
 import sys
 import threading
 import tkinter as tk
@@ -20,7 +19,9 @@ from .config import (
     user_data_root,
     validate_settings,
 )
-from .lifecycle import PCServerLifecycle
+from .lifecycle import PCServerLifecycle, sanitize_log_line
+from .tray import SERVER_ICON, WindowsTray, menu_state
+from .workers import DesktopWorkers
 
 
 def configure_tk_theme(root):
@@ -55,8 +56,9 @@ def connection_summary(count):
 
 
 class PocketCinemaDesktop:
-    def __init__(self, root):
+    def __init__(self, root, instance=None):
         self.root = root
+        self.instance = instance
         self.data_root = user_data_root()
         try:
             settings = load_settings(self.data_root)
@@ -82,11 +84,28 @@ class PocketCinemaDesktop:
         self._operation_lock = threading.Lock()
         self._last_logs = ()
         self._closing = False
+        self._busy = False
+        self.workers = DesktopWorkers()
+        self.tray = None
+        self._tray_failed = False
+        self._quit_error = None
         self._build()
         for name in ("listen_port", "listen_address", "advertised_address"):
             self.values[name].trace_add("write", self._on_route_setting_changed)
         self.refresh_capabilities()
         self.refresh_network_summary()
+        if sys.platform == "win32":
+            try:
+                self.tray = WindowsTray(
+                    lambda action: self.workers.post(lambda: self.tray_action(action)),
+                    self.tray_state,
+                )
+            except Exception:
+                self._tray_failed = True
+                messagebox.showerror("System tray unavailable",
+                    "Install server/requirements-desktop.txt and relaunch. "
+                    "The window will stay open; use Quit to exit.")
+        self.pump_workers()
         self.poll()
         if self.startup_warning:
             messagebox.showwarning("PocketCinema Server", self.startup_warning)
@@ -98,7 +117,7 @@ class PocketCinemaDesktop:
     def _build(self):
         self.root.title("PocketCinema Server")
         configure_tk_theme(self.root)
-        icon = Path(__file__).resolve().parents[2] / "UI_concept" / "Icons" / "PocketCinema_Server_icon.png"
+        icon = SERVER_ICON
         try:
             self.root.iconphoto(True, tk.PhotoImage(file=str(icon)))
         except tk.TclError:
@@ -192,6 +211,7 @@ class PocketCinemaDesktop:
         self.stop_button.grid(row=0, column=2, padx=8)
         self.restart_button = ttk.Button(actions, text="Restart", command=self.restart)
         self.restart_button.grid(row=0, column=3, padx=8)
+        ttk.Button(actions, text="Quit", command=self.quit).grid(row=0, column=4, padx=8)
         row += 1
 
         ttk.Label(outer, text="Status", font=("TkDefaultFont", 13, "bold")).grid(
@@ -283,9 +303,9 @@ class PocketCinemaDesktop:
                     detail = "Uses the custom address configured below."
             except ConfigurationError as exc:
                 urls, detail = (), str(exc)
-            self.root.after(0, lambda: self._show_network_summary(urls, detail))
+            self.workers.post(lambda: self._show_network_summary(urls, detail))
 
-        threading.Thread(target=worker, daemon=True).start()
+        self.workers.start(worker)
 
     def _show_network_summary(self, urls, detail):
         self.device_url.set(connection_summary(len(urls)))
@@ -325,9 +345,9 @@ class PocketCinemaDesktop:
         def worker():
             ffmpeg = detect_tool("ffmpeg", ffmpeg_path)
             ffprobe = detect_tool("ffprobe", ffprobe_path)
-            self.root.after(0, lambda: self._show_capabilities(ffmpeg, ffprobe))
+            self.workers.post(lambda: self._show_capabilities(ffmpeg, ffprobe))
 
-        threading.Thread(target=worker, daemon=True).start()
+        self.workers.start(worker)
 
     def _show_capabilities(self, ffmpeg, ffprobe):
         self.tool_ffmpeg.set(self._tool_status_text(ffmpeg))
@@ -395,63 +415,74 @@ class PocketCinemaDesktop:
         def worker():
             status = probe_stremio_service(url)
             label = "Connected" if status.reachable else "Unreachable"
-            self.root.after(0, lambda: self.service_state.set(label))
+            self.workers.post(lambda: self.service_state.set(label))
 
-        threading.Thread(target=worker, daemon=True).start()
+        self.workers.start(worker)
 
     def _start_with_settings(self, requested_settings):
-        try:
-            routes = device_endpoints()
-            settings = resolve_network_settings(
-                requested_settings, preferred_local_address(routes)
-            )
-            endpoints = derive_device_endpoints(settings, routes)
-        except ConfigurationError as exc:
-            self.root.after(0, lambda: messagebox.showerror("Server cannot start", str(exc)))
-            return
+        routes = device_endpoints()
+        settings = resolve_network_settings(
+            requested_settings, preferred_local_address(routes)
+        )
+        endpoints = derive_device_endpoints(settings, routes)
         result = self.lifecycle.start(settings, [endpoint.address for endpoint in endpoints])
-        self.root.after(0, lambda: self.show_lifecycle(result, settings))
+        self.workers.post(lambda: self.show_lifecycle(result, settings))
+
+    def _operation(self, action):
+        if self._closing or self._busy:
+            return
+        state = self.lifecycle.status().state
+        if action == "start" and state in {"Starting", "Running", "Stopping"}:
+            return
+        if action == "restart" and state != "Running":
+            return
+        settings = None
+        if action != "stop":
+            try:
+                settings = validate_settings(self.settings())
+            except ConfigurationError as exc:
+                self.show()
+                messagebox.showerror("Server cannot start", str(exc))
+                return
+        self._busy = True
+        self.server_state.set("Stopping" if action == "stop" else "Starting")
+        self.update_actions(self.server_state.get())
+
+        def worker():
+            try:
+                with self._operation_lock:
+                    if self._closing:
+                        return
+                    if action in {"stop", "restart"}:
+                        result = self.lifecycle.stop()
+                        if action == "stop":
+                            self.workers.post(lambda: self.show_lifecycle(result))
+                    if action != "stop" and not self._closing:
+                        self._start_with_settings(settings)
+            except Exception as exc:
+                detail = sanitize_log_line(str(exc))
+                self.workers.post(lambda: self._operation_error(detail))
+            finally:
+                self.workers.post(self._operation_done)
+
+        self.workers.start(worker)
+
+    def _operation_error(self, detail):
+        self.show()
+        messagebox.showerror("Server operation failed", detail)
+
+    def _operation_done(self):
+        self._busy = False
+        self.update_actions(self.lifecycle.status().state)
 
     def start(self):
-        try:
-            settings = validate_settings(self.settings())
-        except ConfigurationError as exc:
-            messagebox.showerror("Server cannot start", str(exc))
-            return
-        self.server_state.set("Starting")
-        self.update_actions("Starting")
-
-        def worker():
-            with self._operation_lock:
-                self._start_with_settings(settings)
-
-        threading.Thread(target=worker, daemon=True).start()
+        self._operation("start")
 
     def stop(self):
-        self.server_state.set("Stopping")
-
-        def worker():
-            with self._operation_lock:
-                result = self.lifecycle.stop()
-            self.root.after(0, lambda: self.show_lifecycle(result))
-
-        threading.Thread(target=worker, daemon=True).start()
+        self._operation("stop")
 
     def restart(self):
-        try:
-            settings = validate_settings(self.settings())
-        except ConfigurationError as exc:
-            messagebox.showerror("Server cannot restart", str(exc))
-            return
-
-        def worker():
-            with self._operation_lock:
-                self.lifecycle.stop()
-                self._start_with_settings(settings)
-
-        self.server_state.set("Starting")
-        self.update_actions("Starting")
-        threading.Thread(target=worker, daemon=True).start()
+        self._operation("restart")
 
     def copy_endpoint(self, endpoint=None):
         if endpoint:
@@ -459,6 +490,8 @@ class PocketCinemaDesktop:
             self.root.clipboard_append(endpoint)
 
     def show_lifecycle(self, result, effective_settings=None, refresh_routes=True):
+        if self._closing:
+            return
         self.server_state.set(result.state)
         if result.state == "Error":
             self.server_detail.set(result.message)
@@ -472,14 +505,38 @@ class PocketCinemaDesktop:
             self.refresh_network_summary()
         self.update_actions(result.state)
 
+    def tray_state(self):
+        return menu_state(self.lifecycle.status().state, self._busy, self._closing)
+
+    def tray_action(self, action):
+        if self._closing:
+            return
+        if action == "open":
+            self.show()
+        elif action == "quit":
+            self.quit()
+        elif action == "restart":
+            self.restart()
+        elif action == "toggle":
+            label, enabled, _ = self.tray_state()
+            if enabled:
+                self.stop() if label == "Stop server" else self.start()
+
     def update_actions(self, state):
-        running = state in {"Starting", "Running"}
-        self.start_button.configure(state="disabled" if running else "normal")
-        self.stop_button.configure(state="normal" if running else "disabled")
-        self.restart_button.configure(state="normal" if state == "Running" else "disabled")
+        _, enabled, restart = menu_state(state, self._busy, self._closing)
+        self.start_button.configure(state="normal" if enabled and state != "Running" else "disabled")
+        self.stop_button.configure(state="normal" if enabled and state == "Running" else "disabled")
+        self.restart_button.configure(state="normal" if restart else "disabled")
+        if self.tray:
+            self.tray.update()
 
     def poll(self):
-        self.show_lifecycle(self.lifecycle.status(), refresh_routes=False)
+        if self._closing:
+            return
+        if self.instance and self.instance.restore_requested():
+            self.show()
+        if not self._busy:
+            self.show_lifecycle(self.lifecycle.status(), refresh_routes=False)
         logs = tuple(self.lifecycle.logs)
         if logs != self._last_logs:
             self.log.configure(state="normal")
@@ -487,24 +544,81 @@ class PocketCinemaDesktop:
             self.log.insert("1.0", "\n".join(logs))
             self.log.configure(state="disabled")
             self._last_logs = logs
-        if not self._closing:
-            self.root.after(700, self.poll)
+        if self.tray and (self.tray.error or not self.tray.thread.is_alive()) and not self._tray_failed:
+            self._tray_failed = True
+            self.show()
+            messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
+        self.root.after(700, self.poll)
+
+    def pump_workers(self):
+        if self._closing:
+            if self.workers.idle():
+                if self._quit_error:
+                    detail, self._quit_error = self._quit_error, None
+                    self.workers.discard()
+                    self._closing = False
+                    self._busy = False
+                    self.show()
+                    messagebox.showerror("Quit incomplete", detail)
+                    self.poll()
+                    self.root.after(50, self.pump_workers)
+                    return
+                self.root.destroy()
+                return
+        else:
+            self.workers.drain()
+            self.workers.idle()
+        self.root.after(50, self.pump_workers)
+
+    def show(self):
+        if self._closing:
+            return
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
 
     def close(self):
         if self._closing:
             return
+        if sys.platform == "win32":
+            if self.tray and self.tray.available:
+                self.root.withdraw()
+            else:
+                messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
+        else:
+            self.quit()
+
+    def quit(self):
+        if self._closing:
+            return
         self._closing = True
         self.server_state.set("Stopping")
+        self.update_actions("Stopping")
 
         def worker():
-            with self._operation_lock:
-                self.lifecycle.stop()
-            self.root.after(0, self.root.destroy)
+            try:
+                with self._operation_lock:
+                    self.lifecycle.stop()
+                if self.tray:
+                    self.tray.stop()
+            except Exception as exc:
+                self._quit_error = sanitize_log_line(str(exc)) or "Could not finish shutdown; retry Quit."
 
-        threading.Thread(target=worker, daemon=True).start()
+        self.workers.start(worker)
 
 
 def main():
-    root = tk.Tk()
-    PocketCinemaDesktop(root)
-    root.mainloop()
+    instance = None
+    if sys.platform == "win32":
+        from .instance import WindowsInstance
+        instance = WindowsInstance(user_data_root())
+        if not instance.primary:
+            instance.close()
+            return
+    try:
+        root = tk.Tk()
+        PocketCinemaDesktop(root, instance=instance)
+        root.mainloop()
+    finally:
+        if instance:
+            instance.close()

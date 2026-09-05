@@ -355,6 +355,9 @@ class DesktopServiceCheckTests(unittest.TestCase):
         desktop.device_url = Value()
         desktop.listen_detail = Value()
         desktop.root = Root()
+        desktop.workers = mock.Mock()
+        desktop.workers.start.side_effect = lambda target: target()
+        desktop.workers.post.side_effect = lambda callback: callback()
         desktop._effective_settings = None
         desktop._render_connections = mock.Mock()
         with mock.patch("server.desktop.gui.device_endpoints", return_value=routes), mock.patch(
@@ -413,6 +416,9 @@ class DesktopServiceCheckTests(unittest.TestCase):
         desktop.values = {"stremio_service_url": Value("http://192.0.2.55:11470")}
         desktop.service_state = Value()
         desktop.root = Root()
+        desktop.workers = mock.Mock()
+        desktop.workers.start.side_effect = lambda target: target()
+        desktop.workers.post.side_effect = lambda callback: callback()
         unavailable = ServiceStatus(
             True, False, "Configured Stremio Service is currently unreachable from this machine."
         )

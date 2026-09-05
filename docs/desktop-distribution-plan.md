@@ -114,7 +114,87 @@ shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
 PowerShell.
 
-## Initial macOS development shell (implemented, not yet physically confirmed)
+## Windows system-tray lifecycle (implemented/tested; physical acceptance pending)
+
+This is an M23 lifecycle requirement before Windows packaging. Windows X hides
+the existing Tk window and leaves its owned PCServer running. Open PCServer
+restores and focuses that same window. The tray provides Open PCServer, Restart
+server, state-dependent Start server / Stop server, and Quit. GUI and tray use
+the same serialized lifecycle operations; transitions disable conflicting
+actions. A second launch for the same per-user data root signals the existing
+controller to restore, using Windows session-local named handles without
+process discovery. A failed tray keeps/restores the accessible GUI and its
+explicit Quit action rather than hiding an unreachable controller.
+
+Quit requests graceful shutdown through the owned child's anonymous stdin
+pipe, waits for normal server cleanup and the log reader, then stops/joins the
+tray and waits for outstanding desktop workers before destroying Tk. A bounded
+fallback terminates/kills only that exact retained `Popen` child if graceful
+shutdown times out. The child also shuts down on parent-pipe EOF. Its Windows
+launch suppresses a separate console. Background callbacks reach Tk through a
+queue; no tray or background worker calls Tk. Failed Quit keeps the controller
+available for retry. This adds no service, login startup, network-provider
+management, settings migration, or media/API behavior. Start with Windows is
+future UX. macOS retains its existing source-shell close/quit behavior; macOS
+tray integration is outside this Windows acceptance.
+
+### Dependency and future bundle inputs
+
+The inspected baseline used stdlib Tk with no desktop requirements file and a
+provisional PyInstaller one-directory plan. `server/requirements-desktop.txt`
+now pins Windows-only pystray 0.19.5 (LGPLv3), Pillow 12.3.0 (MIT-CMU), and
+pystray's six 1.17.0 dependency (MIT). Pystray supplies the native tray/menu and
+event-loop integration; Pillow decodes the existing canonical server PNG for
+its icon interface. This removes the need to maintain bespoke Win32 tray/menu
+bindings or introduce another GUI toolkit. The server itself stays stdlib-only.
+The adapter is isolated and imports these packages only on Windows desktop
+startup. See [pystray's Windows/Tk threading and menu guidance](https://pystray.readthedocs.io/en/latest/usage.html).
+
+Install source prerequisites with `python -m pip install -r
+server/requirements-desktop.txt`, then launch `pythonw
+server/pocketcinema_desktop.py` on Windows to avoid a source-launch console.
+Later packaging must include the Win32 pystray backend, these pinned dependency
+notices/source obligations, Tcl/Tk, and the unchanged canonical
+`UI_concept/Icons/PocketCinema_Server_icon.png` at its resource-relative path.
+No new branding asset or packaged distribution is created here. Dependency
+versions/licenses were read from the installed distribution metadata; final
+bundle licensing and clean-machine validation remain release work.
+
+### Focused regression impact and acceptance
+
+Baseline: `26b2252`, including GUI responsiveness repair `030b2e9` and the
+Local/Remote/Windows observations recorded in `PROJECT_STATE.md` and the
+Production PASS audit. Previously X stopped the child and destroyed Tk; this
+is the intentionally changed lifecycle boundary.
+
+| Changed area | Affected workflow | Required verification | Inherited evidence and reason |
+| --- | --- | --- | --- |
+| X, tray, restore, duplicate launch | Windows desktop visibility and control | Mocked visibility/menu tests, native named-handle test, one Windows smoke | Local/Remote transport remains unchanged |
+| Shared actions, worker queue, Quit | Responsiveness and owned-child shutdown | Busy/race tests, graceful real-child exit, occupied-port isolation, tray worker start/stop, physical lifecycle smoke | Earlier responsiveness PASS retained; new tray interactions require focused observation |
+| Private shutdown pipe and child console flags | Desktop-owned server cleanup | Child exits with code 0 without terminate/kill; log reader joined | Source-manager paths and device-facing APIs unchanged |
+| Settings, routing, media, accounts, subtitles | M21/M22 and Local/Remote playback | No repeat physical matrix | Code and semantics unchanged; accepted evidence inherited |
+
+Focused validation: 20 desktop/tray/lifecycle tests pass; changed Python modules
+compile; `git diff --check` passes. A live native Windows pystray instance became
+available, refreshed its menu, and stopped with its worker joined. These are
+automated observations, not physical acceptance.
+
+One physical Windows smoke remains:
+
+1. Start PocketCinema Server and start its server.
+2. Close the main window with X.
+3. Confirm its PocketCinema `/api/status` remains reachable/running.
+4. Confirm only its tray icon remains, without a main/taskbar or child-console window.
+5. Select Open PCServer and confirm the same window/state returns.
+6. Use tray Restart server and wait for Running.
+7. Use tray Stop server, then Start server, checking menu/GUI state agreement.
+8. Close to tray again.
+9. Choose tray Quit and confirm the icon/application exits and PCServer stops.
+
+Windows packaging remains blocked until this lifecycle is physically accepted.
+No Local/Remote playback, M21/M22, subtitle, or account retest is required.
+
+## Initial macOS development shell (source implementation)
 
 The source entry point is `server/pocketcinema_desktop.py`. On the current Mac,
 use the Tk-capable Homebrew Python:

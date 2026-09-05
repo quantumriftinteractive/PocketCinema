@@ -1,0 +1,4 @@
+# Windows desktop only; the independently runnable server remains stdlib-only.
+pystray==0.19.5; sys_platform == "win32"
+Pillow==12.3.0; sys_platform == "win32"
+six==1.17.0; sys_platform == "win32"

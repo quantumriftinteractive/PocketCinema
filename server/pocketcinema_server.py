@@ -3022,7 +3022,7 @@ def build_argument_parser():
     return parser
 
 
-def main():
+def main(shutdown_event=None):
     parser = build_argument_parser()
     args = parser.parse_args()
 
@@ -3169,9 +3169,20 @@ def main():
         )
     print(f"Media directory: {media_dir}", flush=True)
     print(f"Data directory: {data_dir}", flush=True)
+    shutdown_thread = None
+    if shutdown_event is not None:
+        def wait_for_desktop_shutdown():
+            shutdown_event.wait()
+            httpd.shutdown()
+
+        shutdown_thread = threading.Thread(target=wait_for_desktop_shutdown, daemon=True)
+        shutdown_thread.start()
     try:
         httpd.serve_forever()
     finally:
+        if shutdown_thread is not None:
+            shutdown_event.set()
+            shutdown_thread.join(timeout=2)
         httpd.server_close()
         if httpd.discovery_responder:
             httpd.discovery_responder.close()

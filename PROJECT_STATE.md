@@ -1,6 +1,6 @@
 # PocketCinema Current Project State
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 Last updated by machine: Windows development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
@@ -260,12 +260,31 @@ confirmed normal Windows desktop use remained responsive after this repair, so
 the focused responsiveness acceptance is **PASS**. It does not change PCServer
 ownership, network-provider behavior, or the API.
 
-Next exact action: the Production PASS audit, focused Windows responsiveness,
-and desktop Remote-route acceptance are complete. Hold M23 packaging and the
-non-blocking Remote IPv4/IPv6 UX and micro-stutter follow-ups for separately
-scoped work. The font-scale change does not alter M22 track switching,
-subtitle-off, playback, or cleanup, so its previously confirmed M22 physical
-evidence is inherited.
+### Development Handoff — Windows system-tray lifecycle
+
+The Windows tray lifecycle is implemented and focused-test verified, but **not
+yet physically confirmed**. The normal Windows desktop path now hides its
+existing window on X, restores it from Open PCServer, synchronizes tray and GUI
+Start/Stop/Restart, and uses explicit Quit to stop its exact owned child through
+a private graceful-shutdown pipe before joining tray/background workers and
+exiting. A duplicate launch restores the existing per-user controller. The
+canonical server PNG is reused; Windows-only pystray/Pillow/six dependencies
+and future bundle obligations are recorded in the desktop distribution plan.
+No Windows Service or Start with Windows behavior was added.
+
+Validation: 20 focused desktop/tray/lifecycle tests, Python compilation, native
+tray startup/menu refresh/worker shutdown, and diff checks passed. A real owned
+child exited with code 0 through normal cleanup without terminate/kill. Existing
+Local/Remote, Windows responsiveness, and M21/M22 evidence is inherited; the new
+tray lifecycle requires its own focused Windows observation.
+
+Next exact action: perform the single nine-step Windows tray smoke in
+`docs/desktop-distribution-plan.md` (start, X/hide, reachability, tray-only,
+restore, restart, stop/start, hide, Quit/child stopped), then record the result.
+Final Windows packaging is blocked until this lifecycle is physically accepted.
+After acceptance, separately scope packaged distribution and reproducible
+renderer-asset/licensing/fresh-deployment work. Remote IPv4/IPv6 UX and
+micro-stutter follow-ups remain non-blocking and deferred.
 
 ## Latest Verified Checkpoint
 
@@ -378,6 +397,9 @@ Completed:
   re-rendered, and normal desktop use remained responsive.
 
 Pending:
+
+- One focused Windows tray lifecycle physical smoke; final Windows packaging
+  is blocked until it passes. Implementation/testing alone is not acceptance.
 
 - M23 packaging and the required Windows clean-machine bundle/distribution
   phases remain separately scoped release work.

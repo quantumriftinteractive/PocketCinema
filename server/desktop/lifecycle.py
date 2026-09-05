@@ -40,6 +40,7 @@ class PCServerLifecycle:
         self.command_factory = command_factory
         self.tool_detector = tool_detector
         self._process = None
+        self._reader = None
         self._logs = deque(maxlen=LOG_LIMIT)
         self._lock = threading.Lock()
         self._status = LifecycleStatus("Stopped", "PCServer is stopped.", None, "")
@@ -115,6 +116,11 @@ class PCServerLifecycle:
             sock.close()
 
     def _release_process(self, process):
+        if process.stdin is not None:
+            process.stdin.close()
+        if self._reader is not None:
+            self._reader.join(timeout=2)
+            self._reader = None
         if process.stdout is not None:
             process.stdout.close()
         with self._lock:
@@ -133,6 +139,10 @@ class PCServerLifecycle:
         settings = validate_settings(settings)
         if self.status().state in {"Starting", "Running"}:
             raise RuntimeError("PCServer is already owned by this desktop application")
+        if self._process is not None:
+            if self._process.poll() is None:
+                raise RuntimeError("PCServer is still owned by this desktop application")
+            self._release_process(self._process)
         if not address_is_assigned(settings.listen_address):
             self._set_status("Error", "Selected listen address is no longer assigned to this machine.")
             return self.status()
@@ -144,15 +154,17 @@ class PCServerLifecycle:
         try:
             process = subprocess.Popen(
                 self._command(settings, device_hosts), cwd=str(Path(__file__).resolve().parents[2]),
-                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", start_new_session=True,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         except OSError as exc:
             self._set_status("Error", f"Could not start PCServer: {exc}", endpoint=endpoint)
             return self.status()
         with self._lock:
             self._process = process
-        threading.Thread(target=self._read_output, args=(process,), daemon=True).start()
+        self._reader = threading.Thread(target=self._read_output, args=(process,), daemon=True)
+        self._reader.start()
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if process.poll() is not None:
@@ -176,12 +188,20 @@ class PCServerLifecycle:
             self._set_status("Stopped", "PCServer is stopped.", pid=None)
             return self.status()
         self._set_status("Stopping", "Stopping owned PCServer process…")
-        process.terminate()
+        try:
+            process.stdin.write("stop\n")
+            process.stdin.flush()
+        except (OSError, ValueError):
+            pass
         try:
             process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=2)
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
         self._release_process(process)
         self._set_status("Stopped", "PCServer is stopped.", pid=None)
         return self.status()
