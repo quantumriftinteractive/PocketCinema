@@ -27,6 +27,7 @@ class LifecycleStatus:
     message: str
     pid: int | None
     endpoint: str
+    listen_mode: str = ""
 
 
 def sanitize_log_line(value):
@@ -57,11 +58,11 @@ class PCServerLifecycle:
             self._set_status("Error", "PCServer exited unexpectedly.")
         return self._status
 
-    def _set_status(self, state, message, pid=None, endpoint=""):
+    def _set_status(self, state, message, pid=None, endpoint="", listen_mode=""):
         with self._lock:
             if pid is None and self._process is not None:
                 pid = self._process.pid
-            self._status = LifecycleStatus(state, message, pid, endpoint)
+            self._status = LifecycleStatus(state, message, pid, endpoint, listen_mode)
 
     def _append_log(self, line):
         line = sanitize_log_line(line.strip())
@@ -172,7 +173,8 @@ class PCServerLifecycle:
                 self._release_process(process)
                 return self.status()
             if self._health(endpoint):
-                self._set_status("Running", "PCServer is running.", endpoint=endpoint)
+                self._set_status("Running", "PCServer is running.", endpoint=endpoint,
+                                 listen_mode=settings.listen_mode)
                 return self.status()
             time.sleep(0.1)
         self.stop()

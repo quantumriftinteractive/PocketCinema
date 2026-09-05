@@ -13,8 +13,9 @@ def menu_state(state, busy=False, closing=False):
             enabled and state == "Running")
 
 
-def tray_title(state):
-    return "PocketCinema Server - " + ("Started" if state == "Running" else "Stopped")
+def tray_title(state, mode_label=""):
+    title = "PocketCinema Server - " + ("Started" if state == "Running" else "Stopped")
+    return title + " - " + mode_label if state == "Running" and mode_label else title
 
 
 class WindowsTray:
@@ -75,6 +76,20 @@ class WindowsTray:
                 self._signature = signature
             except Exception:
                 self.error = True
+
+    def notify_hidden(self):
+        """Notify on the existing native icon without changing lifecycle state."""
+        if not self.available or not self.icon.HAS_NOTIFICATION:
+            return False
+        try:
+            self.icon.notify(
+                "PocketCinema Server is still running in the system tray.",
+                "PocketCinema Server",
+            )
+            return True
+        except Exception:
+            # A notification failure must never break hide/restore or Quit.
+            return False
 
     def stop(self):
         self._stopping.set()

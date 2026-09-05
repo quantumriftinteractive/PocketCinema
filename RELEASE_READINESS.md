@@ -35,15 +35,15 @@ actual packaged artifact, the Python/PowerShell workflow
 below remains a developer/source path, not the intended end-user v1.0
 installation.
 
-Windows system-tray lifecycle is functionally physically confirmed PASS:
-close-to-tray, same-window restore, Start/Stop/Restart, and clean explicit Quit
-work. Final tray UX acceptance remains pending for three implemented/tested
-refinements: prefer corresponding Remote IPv4 in the normal list while retaining
-IPv6-only support, suppress Windows helper console flashes, and show actual
-Started/Stopped state in the existing tray hover title. Final Windows packaging
-must not begin until the focused physical acceptance passes. See
-`docs/desktop-distribution-plan.md` for root causes, impact, tests and the exact
-checklist. Functional tray, Local/Remote, responsiveness and M21/M22 evidence
+Windows tray lifecycle and the focused route/console/hover UX acceptance are
+physically confirmed PASS: IPv4-preferred Remote presentation, silent server
+actions, actual-state hover, X/background operation, same-window restore and
+clean Quit. This evidence remains inherited. Two additional UX enhancements
+are implemented/tested but require only their small focused physical check:
+one native notification on X and the active listen-mode label in Running hover
+text. Beginning Windows packaging remains blocked only on that confirmation;
+packaging is not started in this task. See `docs/desktop-distribution-plan.md`
+for impact, tests and the exact nine-step check. M21/M22 and transport evidence
 remain inherited. Packaging, renderer-asset/licensing and fresh-deployment
 acceptance remain subsequent M23 release work.
 

@@ -114,7 +114,7 @@ shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
 PowerShell.
 
-## Windows system-tray lifecycle (functional physical PASS; UX acceptance pending)
+## Windows system-tray lifecycle (physical PASS; notification/mode additions pending)
 
 This is an M23 lifecycle requirement before Windows packaging. Windows X hides
 the existing Tk window and leaves its owned PCServer running. Open PCServer
@@ -184,9 +184,10 @@ X hides the GUI while PCServer runs; Open restores the same window; Start,
 Stop, Restart, and explicit clean Quit work. This functional PASS is accepted
 production behavior. That exact smoke exposed console flashes and duplicate
 Remote address-family presentation, and added the hover-status requirement.
-Final tray UX acceptance remains pending; the functional smoke is not reopened.
+The follow-up route/console/hover acceptance also physically passed, as recorded
+below; neither accepted smoke is reopened.
 
-### Focused production UX refinements (implemented/tested, not physically confirmed)
+### Focused production UX refinements (Physically Confirmed PASS)
 
 Baseline: `9d3f124`, with the functional physical observation above. No current
 requirement mandates simultaneous presentation of both Remote address families.
@@ -229,7 +230,11 @@ inspection retained underlying Remote IPv6, Local IPv4 and Remote IPv4, while
 the displayed list contained Local IPv4 and Remote IPv4 only. This is automated
 inspection, not confirmation that console flashes or hover UX are resolved.
 
-Only this focused physical Windows acceptance remains:
+The user physically confirmed the following focused Windows acceptance on
+`5fb2628`: correct Local/Remote IPv4 presentation and duplicate IPv6 suppression,
+no console flashes, correct Started/Stopped hover, X/background, same-window
+restore and clean Quit/icon removal. This checklist is **PASS**, not a retest
+request:
 
 1. Launch PocketCinema Server.
 2. Confirm the normal list shows the correct Local route and Tailscale / Remote
@@ -249,10 +254,58 @@ Only this focused physical Windows acceptance remains:
 15. Close to tray again and choose Quit.
 16. Confirm clean application exit and disappearance of the tray icon.
 
-Beginning final Windows packaging is blocked only on this focused physical UX
-acceptance. Packaging itself, renderer-asset/licensing and clean-machine/fresh-
-deployment validation remain subsequent M23 work; M23 is not complete.
-No Local/Remote playback, M21/M22, subtitle, or account retest is required.
+### X notification and active-mode hover (implemented/tested; physical check pending)
+
+Baseline: `88587bd` and the accepted physical observation above. These additions
+reuse the normal tray path and introduce no dependency. On a successful X hide,
+`WindowsTray.notify_hidden` calls existing pystray `Icon.notify` once, with title
+`PocketCinema Server` and message `PocketCinema Server is still running in the
+system tray.` The installed Win32 backend uses `Shell_NotifyIcon` on the existing
+canonical tray icon; its public notification API does not expose a separate
+notification-artwork parameter. Startup/programmatic hide, restore, server
+actions and Quit never request this notification. Unsupported/failed notification
+delivery cannot change lifecycle state or break hide/restore/Quit.
+
+`LifecycleStatus` captures `listen_mode` only when its owned child successfully
+becomes Running. The GUI supplies its existing human-readable mode label to the
+tray formatter (Custom is shortened from Custom address). The title becomes:
+
+- `PocketCinema Server - Started - Automatic / Local network`
+- `PocketCinema Server - Started - All interfaces`
+- `PocketCinema Server - Started - Custom`
+
+Stopped/non-running remains `PocketCinema Server - Stopped`. Draft setting
+changes cannot relabel a running child; successful Restart captures its new
+mode, and failed Start/Restart cannot retain stale Running text. The tray owns
+no networking decisions, and the title contains no address or port.
+
+| Changed area | Required verification | Inherited evidence and reason |
+| --- | --- | --- |
+| X notification call | One request on X; none on other actions; failure leaves lifecycle intact; one physical notification check | Accepted X/background/restore/unique-icon behavior remains unchanged |
+| Successful-start mode metadata and title formatting | All three labels, stopped/draft/Restart/failure cases; Automatic hover observation | Ownership, action sequencing, quiet processes and routing are unchanged |
+| Other M23 and M21/M22 paths | No repeated physical matrix | Accepted route, lifecycle, playback, subtitle and account evidence remains valid |
+
+Validation: 28 focused notification/mode/tray/lifecycle tests pass, including
+real owned-child start/stop and captured mode; changed Python files compile;
+`git diff --check` passes. The new additions are not yet physically confirmed.
+
+Only this small physical confirmation is requested:
+
+1. Start PocketCinema Server in Automatic / Local network mode.
+2. Hover: `PocketCinema Server - Started - Automatic / Local network`.
+3. Close the main window with X.
+4. Confirm one small notification states that PocketCinema Server is still
+   running in the system tray.
+5. Confirm the server remains running.
+6. Restore the GUI with Open PCServer.
+7. Stop the server.
+8. Hover: `PocketCinema Server - Stopped`.
+9. Quit cleanly.
+
+Beginning Windows packaging remains blocked only on this tiny physical UX
+confirmation. Packaging itself, renderer-asset/licensing and clean-machine/fresh-
+deployment validation remain subsequent M23 work. No playback or transport
+retest is required, and packaging is not started in this task.
 
 ## Initial macOS development shell (source implementation)
 

@@ -100,7 +100,7 @@ class PocketCinemaDesktop:
                 self.tray = WindowsTray(
                     lambda action: self.workers.post(lambda: self.tray_action(action)),
                     self.tray_state,
-                    lambda: tray_title(self.lifecycle.status().state),
+                    self.tray_title,
                 )
             except Exception:
                 self._tray_failed = True
@@ -510,6 +510,13 @@ class PocketCinemaDesktop:
     def tray_state(self):
         return menu_state(self.lifecycle.status().state, self._busy, self._closing)
 
+    def tray_title(self):
+        status = self.lifecycle.status()
+        label = ""
+        if status.state == "Running" and status.listen_mode:
+            label = "Custom" if status.listen_mode == "custom" else self._listen_label(status.listen_mode)
+        return tray_title(status.state, label)
+
     def tray_action(self, action):
         if self._closing:
             return
@@ -587,6 +594,7 @@ class PocketCinemaDesktop:
         if sys.platform == "win32":
             if self.tray and self.tray.available:
                 self.root.withdraw()
+                self.tray.notify_hidden()
             else:
                 messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
         else:

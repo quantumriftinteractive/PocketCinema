@@ -444,8 +444,10 @@ class LifecycleTests(unittest.TestCase):
             started = manager.start(settings)
             self.assertEqual(started.state, "Running", manager.logs)
             self.assertIsNotNone(started.pid)
+            self.assertEqual(started.listen_mode, settings.listen_mode)
             stopped = manager.stop()
             self.assertEqual(stopped.state, "Stopped")
+            self.assertEqual(stopped.listen_mode, "")
 
     def test_child_receives_all_approved_device_hosts(self):
         with tempfile.TemporaryDirectory() as temporary:

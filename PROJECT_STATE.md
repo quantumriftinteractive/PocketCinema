@@ -264,8 +264,9 @@ ownership, network-provider behavior, or the API.
 
 The Windows tray lifecycle is **functionally Physically Confirmed PASS**: X
 hides while PCServer keeps running, Open restores the same window, Start/Stop/
-Restart work, and Quit exits cleanly. Final tray UX acceptance remains pending
-for the three focused refinements below. The normal Windows desktop path hides its
+Restart work, and Quit exits cleanly. The focused route/console/hover UX
+acceptance is also **Physically Confirmed PASS**. Only the notification and
+active-mode hover additions below remain pending. The normal Windows desktop path hides its
 existing window on X, restores it from Open PCServer, synchronizes tray and GUI
 Start/Stop/Restart, and uses explicit Quit to stop its exact owned child through
 a private graceful-shutdown pipe before joining tray/background workers and
@@ -276,25 +277,35 @@ No Windows Service or Start with Windows behavior was added.
 
 The same smoke exposed duplicate Remote IPv6 presentation and Windows console
 flashes, and added dynamic hover status as a production requirement. Refinements
-are implemented/tested, not yet physically confirmed: the GUI prefers usable
+are **Physically Confirmed PASS**: the GUI prefers usable
 Remote IPv4 over IPv6 on the same interface while preserving underlying routes
 and IPv6-only fallback; PowerShell interface enumeration and the startup FFmpeg
 capability probe now use no-console flags; the existing tray icon reports
 `PocketCinema Server - Started` / `PocketCinema Server - Stopped` from actual
 owned-child state, including busy restart polling. No dependency was added.
 
-Validation: 31 focused desktop/refinement/tray/lifecycle tests, Python
-compilation and diff checks passed. Live Windows inspection confirmed that the
-display prefers Remote IPv4 while the underlying Remote IPv6 route remains.
-Functional tray, Local/Remote, responsiveness and M21/M22 evidence is inherited;
-only these presentation/process-window/title boundaries need observation.
+The user physically confirmed correct Local/Remote IPv4 presentation, duplicate
+Remote IPv6 suppression, no Start/Stop/Restart console flashes, correct hover
+state, X/background operation, same-window restore and clean Quit/icon removal
+on `5fb2628`. This accepted evidence remains inherited.
 
-Next exact action: perform only the focused 16-step Windows UX acceptance in
-`docs/desktop-distribution-plan.md`: route list; silent Start/Stop/Start/Restart;
-Started/Stopped/Started hover; X/background; same-window restore; Quit/icon gone.
-Final Windows packaging must not begin until that focused physical result is
-reported. After acceptance, packaging, reproducible renderer-asset/licensing and
-fresh-deployment work remain. The micro-stutter follow-up remains deferred.
+Two final additions are implemented/tested, not yet physically confirmed: X
+requests one native notification through the existing pystray icon, and Running
+hover text appends the owned child's successfully started listen mode using GUI
+labels (Custom address is shortened to Custom). Stopped remains simply
+`PocketCinema Server - Stopped`. Draft settings cannot relabel a running child;
+a successful Restart captures the new mode. No dependency was added.
+
+Validation: 28 focused notification/mode/tray/lifecycle tests, Python compilation
+and diff checks passed. Existing tray, silent subprocess, route presentation,
+Local/Remote and M21/M22 evidence remains inherited.
+
+Next exact action: perform only the nine-step notification/Automatic-mode hover
+check in `docs/desktop-distribution-plan.md`: start Automatic, inspect mode hover,
+X/one notification/still running, restore, Stop/stopped hover, Quit. Beginning
+Windows packaging is blocked only on this small physical confirmation; do not
+start packaging in this task. Packaging, renderer-asset/licensing and fresh-
+deployment work remain subsequent M23 work. Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
@@ -408,16 +419,16 @@ Completed:
 
 Pending:
 
-- Focused Windows route-presentation, silent-process and hover-status physical
-  acceptance; final Windows packaging is blocked until it passes. The existing
-  tray lifecycle is functionally physically confirmed PASS.
+- One focused X-notification/Automatic-mode hover confirmation; beginning
+  Windows packaging is blocked until it passes. The existing tray lifecycle,
+  route-presentation, silent-process and hover-status acceptance is physical PASS.
 
 - M23 packaging and the required Windows clean-machine bundle/distribution
   phases remain separately scoped release work.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
-  implemented as the focused pre-packaging UX requirement above.
+  physically confirmed under the accepted focused tray UX evidence.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
