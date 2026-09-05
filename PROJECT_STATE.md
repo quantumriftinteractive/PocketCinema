@@ -262,11 +262,11 @@ ownership, network-provider behavior, or the API.
 
 ### Development Handoff — Windows system-tray lifecycle
 
-The Windows tray lifecycle is **functionally Physically Confirmed PASS**: X
-hides while PCServer keeps running, Open restores the same window, Start/Stop/
-Restart work, and Quit exits cleanly. The focused route/console/hover UX
-acceptance is also **Physically Confirmed PASS**. Only the notification and
-active-mode hover additions below remain pending. The normal Windows desktop path hides its
+The Windows tray lifecycle and its focused UX refinements are **Physically
+Confirmed PASS**: X hides while PCServer keeps running, one native notification
+reports that it remains in the tray, Open restores the same window, Start/Stop/
+Restart work with the active listen mode in the running tooltip, and Quit exits
+cleanly. The normal Windows desktop path hides its
 existing window on X, restores it from Open PCServer, synchronizes tray and GUI
 Start/Stop/Restart, and uses explicit Quit to stop its exact owned child through
 a private graceful-shutdown pipe before joining tray/background workers and
@@ -289,23 +289,21 @@ Remote IPv6 suppression, no Start/Stop/Restart console flashes, correct hover
 state, X/background operation, same-window restore and clean Quit/icon removal
 on `5fb2628`. This accepted evidence remains inherited.
 
-Two final additions are implemented/tested, not yet physically confirmed: X
-requests one native notification through the existing pystray icon, and Running
-hover text appends the owned child's successfully started listen mode using GUI
-labels (Custom address is shortened to Custom). Stopped remains simply
-`PocketCinema Server - Stopped`. Draft settings cannot relabel a running child;
-a successful Restart captures the new mode. No dependency was added.
+The user physically confirmed the final additions: exactly one X-triggered native
+notification, continued PCServer operation while hidden, Automatic / Local
+network in the running tooltip, and `PocketCinema Server - Stopped` after Stop.
+Draft settings cannot relabel a running child; a successful Restart captures the
+new mode. No dependency was added.
 
 Validation: 28 focused notification/mode/tray/lifecycle tests, Python compilation
 and diff checks passed. Existing tray, silent subprocess, route presentation,
 Local/Remote and M21/M22 evidence remains inherited.
 
-Next exact action: perform only the nine-step notification/Automatic-mode hover
-check in `docs/desktop-distribution-plan.md`: start Automatic, inspect mode hover,
-X/one notification/still running, restore, Stop/stopped hover, Quit. Beginning
-Windows packaging is blocked only on this small physical confirmation; do not
-start packaging in this task. Packaging, renderer-asset/licensing and fresh-
-deployment work remain subsequent M23 work. Micro-stutter work remains deferred.
+Next exact action: begin the M23 Windows packaging and fresh-deployment work.
+The focused tray UX gate is complete; no additional physical tray, playback,
+transport, subtitle, account, M21, or M22 testing is required. Packaging,
+renderer-asset/licensing and clean-machine validation remain subsequent M23 work.
+Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
@@ -419,9 +417,8 @@ Completed:
 
 Pending:
 
-- One focused X-notification/Automatic-mode hover confirmation; beginning
-  Windows packaging is blocked until it passes. The existing tray lifecycle,
-  route-presentation, silent-process and hover-status acceptance is physical PASS.
+- The focused X-notification/Automatic-mode hover confirmation is physically
+  PASS. Windows packaging is unblocked and is the next M23 work item.
 
 - M23 packaging and the required Windows clean-machine bundle/distribution
   phases remain separately scoped release work.

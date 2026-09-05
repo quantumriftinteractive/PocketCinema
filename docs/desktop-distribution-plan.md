@@ -114,7 +114,7 @@ shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
 PowerShell.
 
-## Windows system-tray lifecycle (physical PASS; notification/mode additions pending)
+## Windows system-tray lifecycle (physical PASS; UX gate complete)
 
 This is an M23 lifecycle requirement before Windows packaging. Windows X hides
 the existing Tk window and leaves its owned PCServer running. Open PCServer
@@ -254,7 +254,7 @@ request:
 15. Close to tray again and choose Quit.
 16. Confirm clean application exit and disappearance of the tray icon.
 
-### X notification and active-mode hover (implemented/tested; physical check pending)
+### X notification and active-mode hover (Physically Confirmed PASS)
 
 Baseline: `88587bd` and the accepted physical observation above. These additions
 reuse the normal tray path and introduce no dependency. On a successful X hide,
@@ -285,27 +285,22 @@ no networking decisions, and the title contains no address or port.
 | Successful-start mode metadata and title formatting | All three labels, stopped/draft/Restart/failure cases; Automatic hover observation | Ownership, action sequencing, quiet processes and routing are unchanged |
 | Other M23 and M21/M22 paths | No repeated physical matrix | Accepted route, lifecycle, playback, subtitle and account evidence remains valid |
 
-Validation: 28 focused notification/mode/tray/lifecycle tests pass, including
+Validation: 28 focused notification/mode/tray/lifecycle tests passed, including
 real owned-child start/stop and captured mode; changed Python files compile;
-`git diff --check` passes. The new additions are not yet physically confirmed.
+`git diff --check` passes. The user then physically confirmed:
 
-Only this small physical confirmation is requested:
+1. Automatic / Local network running hover showed `PocketCinema Server -
+   Started - Automatic / Local network`.
+2. X produced exactly one native notification stating that PocketCinema Server
+   remains running in the system tray, while PCServer stayed running.
+3. Open PCServer restored the same GUI instance.
+4. Stop changed hover to `PocketCinema Server - Stopped`.
+5. Quit exited cleanly and removed the tray icon.
 
-1. Start PocketCinema Server in Automatic / Local network mode.
-2. Hover: `PocketCinema Server - Started - Automatic / Local network`.
-3. Close the main window with X.
-4. Confirm one small notification states that PocketCinema Server is still
-   running in the system tray.
-5. Confirm the server remains running.
-6. Restore the GUI with Open PCServer.
-7. Stop the server.
-8. Hover: `PocketCinema Server - Stopped`.
-9. Quit cleanly.
-
-Beginning Windows packaging remains blocked only on this tiny physical UX
-confirmation. Packaging itself, renderer-asset/licensing and clean-machine/fresh-
-deployment validation remain subsequent M23 work. No playback or transport
-retest is required, and packaging is not started in this task.
+This focused physical gate is PASS and complete. Windows packaging is unblocked
+and is the next M23 work item. No playback, transport, subtitle, account, M21,
+or M22 retest is required. Renderer-asset/licensing and clean-machine/fresh-
+deployment validation remain subsequent M23 packaging gates.
 
 ## Initial macOS development shell (source implementation)
 
