@@ -54,16 +54,16 @@ signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
 acceptance remain release gates; M23 is incomplete. The packaged smoke confirmed
 existing settings, no-console launch, canonical identity, Local/Remote route
 presentation, active-mode hover, one X notification, tray restore, Start/Stop/
-Restart, and exact-owned-child Quit cleanup. Library / Next Episode is the next
-intended product work after this UX gate.
+Restart, and exact-owned-child Quit cleanup. Subtitle font-size settings is the
+next intended small client feature after this UX gate; its planned presets are
+1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x, with the production/default scale
+remaining 1.5x.
 
-Two focused production UX fixes are implemented and await only targeted physical
-checks: stream/source-resolution helper processes are silent on Windows with
-their output and failure handling preserved, and Miyoo Search rows identify
-Movies and Series from existing metadata with bounded visible labels. The
-candidate was rebuilt and the focused frozen-child check passed; targeted
-Windows/Miyoo observation remains. Live TV is not removed in this task and
-remains a future v1 cleanup item.
+The focused production UX fixes are physically confirmed PASS: stream/source-
+resolution helper processes are silent on Windows with their output and failure
+handling preserved, and Miyoo Search results render readable bounded Movie and
+Series labels with normal Movie and Series navigation. Live TV is not removed
+in this task and remains a future v1 cleanup item.
 
 ## Verified Connection and Onboarding Resolution
 

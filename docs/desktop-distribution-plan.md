@@ -306,14 +306,14 @@ recorded in [Windows packaging evidence](windows-packaging.md). The
 running-settings lock packaged physical gate is also PASS: stopped controls are
 editable, Running presents the explicit message and disables runtime
 configuration, and Stop restores editing. Clean-machine acceptance remains
-separate. Library / Next Episode is the next intended product work.
+separate. Subtitle font-size settings is the next intended small client feature.
 
 The subsequent focused Windows UX fix covers the remaining stream/source
 resolution subprocess paths: FFprobe probing, subtitle conversion and the
 resource monitor now use the same no-console semantics while preserving output
-capture. The candidate was rebuilt and its focused frozen-child check passed;
-the targeted packaged physical observation remains pending. No larger feature
-work is opened by this refinement.
+capture. The candidate was rebuilt and its focused frozen-child check passed.
+The user then physically confirmed zero terminal/PowerShell/cmd windows during
+stream/search activity. No larger feature work is opened by this refinement.
 No playback, transport, subtitle, account, M21 or M22 retest is required.
 Renderer-asset/licensing and clean-machine/fresh-deployment validation remain
 subsequent M23 packaging gates.

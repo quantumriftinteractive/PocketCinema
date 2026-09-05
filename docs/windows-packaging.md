@@ -168,10 +168,11 @@ GUI/tray/settings-lock PASS evidence remains inherited.
 
 ## Next physical gate and remaining release work
 
-The packaged developer-machine smoke and running-settings-lock confirmation are
-complete PASS gates and must not be repeated unless later work materially affects
-those paths. Clean-Windows acceptance remains pending. Library / Next Episode is
-the next intended product work; do not reopen playback, subtitle, account,
+The packaged developer-machine smoke, running-settings-lock confirmation, and
+focused stream-search no-console physical check are complete PASS gates and must
+not be repeated unless later work materially affects those paths. Clean-Windows
+acceptance remains pending. Subtitle font-size settings is the next intended
+small client feature; do not reopen playback, subtitle, account,
 Remote streaming or M21/M22 matrices for this documentation update.
 
 Later, a clean supported Windows installation must verify no Python/repository/

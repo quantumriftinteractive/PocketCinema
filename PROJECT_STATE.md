@@ -315,9 +315,10 @@ remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: perform only the focused physical check for the rebuilt
-stream-search console behavior and Miyoo Movie/Series labels. The source tray
-UX and packaged Windows smoke gates are physical PASS. Production PASS and Impact-First Regression Testing preserve
+Next exact action: record the completed focused Windows stream-search and Miyoo
+Movie/Series physical acceptance, then continue with the planned subtitle
+font-size settings feature. The source tray UX and packaged Windows smoke gates
+are physical PASS. Production PASS and Impact-First Regression Testing preserve
 M21/M22 and accepted transport/playback/subtitle/account evidence without broad
 retests. Clean-Windows acceptance, public distribution/signing/runtime review,
 later macOS distribution and renderer-asset/licensing/fresh-deployment gates
@@ -464,10 +465,13 @@ Pending:
   macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
   release work. Build/artifact instructions: `docs/windows-packaging.md`.
 
-- Next intended product work after this UX gate: **Library / Next Episode**.
+- Next intended small client feature after this UX gate: **Subtitle font-size
+  settings**. Planned presets are 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x;
+  the production/default scale remains 1.5x and the existing `font_scale`
+  renderer path will be reused.
 
-- Two focused production UX refinements are implemented and awaiting their
-  smallest physical checks: missed Windows background subprocess paths in
+- Two focused production UX refinements are implemented and physically
+  confirmed: missed Windows background subprocess paths in
   stream/source resolution now use hidden/no-console creation flags while
   retaining captured output, errors, return codes and timeouts; Miyoo Search
   rows now visibly append bounded `[MOVIE]` or `[SERIES]` labels from existing
@@ -479,8 +483,11 @@ Pending:
   keyword. Renaming it to `$type_label` restores result generation while
   preserving the bounded labels. The corrected tracked client was redeployed
   through the independently managed Tailscale route to `100.97.46.26`; live
-  config and networking-provider state were preserved. Physical label/search
-  acceptance remains pending.
+  config and networking-provider state were preserved. The user then physically
+  confirmed the results list, readable Movie/Series labels, and normal Movie
+  and Series navigation. The rebuilt packaged Windows candidate also produced
+  zero terminal/PowerShell/cmd windows during stream/search activity. These
+  focused gates are PASS.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
