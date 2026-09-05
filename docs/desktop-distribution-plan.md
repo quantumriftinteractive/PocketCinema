@@ -114,7 +114,7 @@ shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
 PowerShell.
 
-## Windows system-tray lifecycle (implemented/tested; physical acceptance pending)
+## Windows system-tray lifecycle (functional physical PASS; UX acceptance pending)
 
 This is an M23 lifecycle requirement before Windows packaging. Windows X hides
 the existing Tk window and leaves its owned PCServer running. Open PCServer
@@ -179,19 +179,79 @@ compile; `git diff --check` passes. A live native Windows pystray instance becam
 available, refreshed its menu, and stopped with its worker joined. These are
 automated observations, not physical acceptance.
 
-One physical Windows smoke remains:
+The user physically confirmed the functional tray lifecycle from `b0e52dd`:
+X hides the GUI while PCServer runs; Open restores the same window; Start,
+Stop, Restart, and explicit clean Quit work. This functional PASS is accepted
+production behavior. That exact smoke exposed console flashes and duplicate
+Remote address-family presentation, and added the hover-status requirement.
+Final tray UX acceptance remains pending; the functional smoke is not reopened.
 
-1. Start PocketCinema Server and start its server.
-2. Close the main window with X.
-3. Confirm its PocketCinema `/api/status` remains reachable/running.
-4. Confirm only its tray icon remains, without a main/taskbar or child-console window.
-5. Select Open PCServer and confirm the same window/state returns.
-6. Use tray Restart server and wait for Running.
-7. Use tray Stop server, then Start server, checking menu/GUI state agreement.
-8. Close to tray again.
-9. Choose tray Quit and confirm the icon/application exits and PCServer stops.
+### Focused production UX refinements (implemented/tested, not physically confirmed)
 
-Windows packaging remains blocked until this lifecycle is physically accepted.
+Baseline: `9d3f124`, with the functional physical observation above. No current
+requirement mandates simultaneous presentation of both Remote address families.
+
+- **Remote presentation:** classification and bind-mode selection previously
+  returned both usable families and the GUI displayed them verbatim. The normal
+  GUI now prefers IPv4 when a usable IPv4 peer has the same Remote interface
+  identity. IPv6-only Remote routes, different interfaces, Local IPv6, and
+  explicit Custom/manual routes remain available. Suppression is presentation
+  only: the child still receives all approved routes, and discovery keeps its
+  existing Local advertised address. No observed host address is hard-coded.
+- **Console flashes:** route refresh after Start/Stop/Restart invokes
+  `_read_windows_interface_addresses`, whose PowerShell `subprocess.run` lacked
+  `CREATE_NO_WINDOW`. Startup's FFmpeg `-filters` capability probe also lacked
+  it. Both now use Windows no-console creation flags. The retained PCServer
+  `Popen` already used that flag. Tool/Stremio-runtime discovery uses filesystem
+  and PATH checks; service status uses HTTP; stop/quit uses the owned stdin pipe
+  and process handle; workers launch no independent lifecycle helper. Existing
+  output capture, errors/results, logging, timeout and ownership semantics are
+  preserved. Media-request-only subprocess paths were inspected but not changed.
+- **Hover status:** existing pystray `Icon.title` now reads actual lifecycle
+  status: `PocketCinema Server - Started` for Running and
+  `PocketCinema Server - Stopped` otherwise. The existing polling loop refreshes
+  the same icon even during busy restart transitions, for both GUI and tray
+  actions, child failure, and hide/restore. No dependency or branding change.
+
+Implementation references: [Python no-console process creation](https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NO_WINDOW)
+and [pystray title/menu API](https://pystray.readthedocs.io/en/stable/reference.html).
+
+| Changed area | Affected workflow | Required verification | Inherited evidence and reason |
+| --- | --- | --- | --- |
+| Display-only same-interface Remote family preference | Normal connection list | Dual-stack, IPv6-only, distinct-interface, manual, Local and virtual-filter tests; focused Windows observation | Bind, approved child routes, UDP discovery and Local/Remote transport are unchanged |
+| PowerShell enumeration and startup FFmpeg capability probe creation flags | Quiet GUI/tray Start/Stop/Restart and route refresh | Windows flags/capture checks, real owned-child lifecycle tests; no-console physical observation | Tool detection and filter-result parsing unchanged; no media/codec/subtitle processing edit |
+| Existing icon title and busy-poll refresh | Hover status after either action source, restart failure, hide/show | Actual-state/title/one-icon tests and physical hover check | Functional close/restore, ownership, Quit and responsiveness PASS inherited |
+| Playback, subtitles, accounts, M21/M22 | Accepted device paths | No repeated matrix | These code paths and semantics are unchanged |
+
+Validation: 31 focused desktop/refinement/tray/lifecycle tests passed, changed
+Python files compiled, and `git diff --check` passed. Live Windows interface
+inspection retained underlying Remote IPv6, Local IPv4 and Remote IPv4, while
+the displayed list contained Local IPv4 and Remote IPv4 only. This is automated
+inspection, not confirmation that console flashes or hover UX are resolved.
+
+Only this focused physical Windows acceptance remains:
+
+1. Launch PocketCinema Server.
+2. Confirm the normal list shows the correct Local route and Tailscale / Remote
+   IPv4, without duplicate Remote IPv6 when the corresponding IPv4 is available.
+3. Start the server.
+4. Confirm no terminal/PowerShell/console window appears.
+5. Hover: `PocketCinema Server - Started`.
+6. Stop the server.
+7. Confirm no terminal/PowerShell/console window appears.
+8. Hover: `PocketCinema Server - Stopped`.
+9. Start again, then Restart.
+10. Confirm no terminal/PowerShell/console window appears during either action.
+11. After successful Restart, hover: `PocketCinema Server - Started`.
+12. Close the GUI with X.
+13. Confirm PCServer keeps running with only the tray/background application.
+14. Open PCServer from the tray; the same GUI returns.
+15. Close to tray again and choose Quit.
+16. Confirm clean application exit and disappearance of the tray icon.
+
+Beginning final Windows packaging is blocked only on this focused physical UX
+acceptance. Packaging itself, renderer-asset/licensing and clean-machine/fresh-
+deployment validation remain subsequent M23 work; M23 is not complete.
 No Local/Remote playback, M21/M22, subtitle, or account retest is required.
 
 ## Initial macOS development shell (source implementation)

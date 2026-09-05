@@ -2,6 +2,7 @@ import shutil
 import re
 import secrets
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -32,6 +33,7 @@ def supports_subtitle_burn_in(ffmpeg_path):
             stderr=subprocess.PIPE,
             timeout=10,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except (OSError, subprocess.SubprocessError):
         return False

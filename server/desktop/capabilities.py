@@ -150,6 +150,7 @@ def _read_windows_interface_addresses():
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         ).stdout
     except OSError:
         return ""

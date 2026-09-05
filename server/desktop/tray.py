@@ -13,12 +13,17 @@ def menu_state(state, busy=False, closing=False):
             enabled and state == "Running")
 
 
+def tray_title(state):
+    return "PocketCinema Server - " + ("Started" if state == "Running" else "Stopped")
+
+
 class WindowsTray:
-    def __init__(self, dispatch, status):
+    def __init__(self, dispatch, status, title=lambda: tray_title("Stopped")):
         import pystray
         from PIL import Image
 
         self._status = status
+        self._title = title
         self._ready = threading.Event()
         self._stopping = threading.Event()
         self._signature = None
@@ -26,7 +31,7 @@ class WindowsTray:
         with Image.open(SERVER_ICON) as source:
             artwork = source.convert("RGBA")
         self.icon = pystray.Icon(
-            "PocketCinemaServer", artwork, "PocketCinema Server",
+            "PocketCinemaServer", artwork, self._title(),
             pystray.Menu(
                 pystray.MenuItem("Open PCServer", lambda: dispatch("open"), default=True),
                 pystray.MenuItem("Restart server", lambda: dispatch("restart"),
@@ -61,10 +66,12 @@ class WindowsTray:
         return self._ready.is_set() and self.thread.is_alive() and not self.error
 
     def update(self):
-        signature = self._status()
+        title = self._title()
+        signature = (self._status(), title)
         if self.available and signature != self._signature:
             try:
                 self.icon.update_menu()
+                self.icon.title = title
                 self._signature = signature
             except Exception:
                 self.error = True

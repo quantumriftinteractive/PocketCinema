@@ -14,13 +14,14 @@ from .config import (
     derive_device_endpoints,
     load_settings,
     pocketcinema_url,
+    presented_device_endpoints,
     resolve_network_settings,
     save_settings,
     user_data_root,
     validate_settings,
 )
 from .lifecycle import PCServerLifecycle, sanitize_log_line
-from .tray import SERVER_ICON, WindowsTray, menu_state
+from .tray import SERVER_ICON, WindowsTray, menu_state, tray_title
 from .workers import DesktopWorkers
 
 
@@ -99,6 +100,7 @@ class PocketCinemaDesktop:
                 self.tray = WindowsTray(
                     lambda action: self.workers.post(lambda: self.tray_action(action)),
                     self.tray_state,
+                    lambda: tray_title(self.lifecycle.status().state),
                 )
             except Exception:
                 self._tray_failed = True
@@ -293,7 +295,7 @@ class PocketCinemaDesktop:
                 endpoints = derive_device_endpoints(settings, routes)
                 urls = [
                     (endpoint.label, pocketcinema_url(endpoint.address, settings.listen_port))
-                    for endpoint in endpoints
+                    for endpoint in presented_device_endpoints(endpoints)
                 ]
                 if settings.listen_mode == "automatic":
                     detail = "Automatically serves detected Local network connections only."
@@ -537,6 +539,8 @@ class PocketCinemaDesktop:
             self.show()
         if not self._busy:
             self.show_lifecycle(self.lifecycle.status(), refresh_routes=False)
+        elif self.tray:
+            self.tray.update()
         logs = tuple(self.lifecycle.logs)
         if logs != self._last_logs:
             self.log.configure(state="normal")

@@ -35,15 +35,17 @@ actual packaged artifact, the Python/PowerShell workflow
 below remains a developer/source path, not the intended end-user v1.0
 installation.
 
-Windows system-tray lifecycle is now an additional M23 pre-packaging gate.
-Close-to-tray, same-window restore, synchronized owned-server actions, duplicate
-launch restoration, and explicit Quit cleanup are implemented and focused-test
-verified, but the single Windows tray lifecycle smoke is still physically
-pending. Final Windows packaging must not begin until that acceptance passes.
-See `docs/desktop-distribution-plan.md` for the dependency rationale, impact
-matrix, and exact smoke. Existing Local/Remote and Windows responsiveness
-confirmations remain inherited; packaged distribution, renderer-asset/licensing,
-and fresh-deployment acceptance remain subsequent release blockers.
+Windows system-tray lifecycle is functionally physically confirmed PASS:
+close-to-tray, same-window restore, Start/Stop/Restart, and clean explicit Quit
+work. Final tray UX acceptance remains pending for three implemented/tested
+refinements: prefer corresponding Remote IPv4 in the normal list while retaining
+IPv6-only support, suppress Windows helper console flashes, and show actual
+Started/Stopped state in the existing tray hover title. Final Windows packaging
+must not begin until the focused physical acceptance passes. See
+`docs/desktop-distribution-plan.md` for root causes, impact, tests and the exact
+checklist. Functional tray, Local/Remote, responsiveness and M21/M22 evidence
+remain inherited. Packaging, renderer-asset/licensing and fresh-deployment
+acceptance remain subsequent M23 release work.
 
 ## Verified Connection and Onboarding Resolution
 

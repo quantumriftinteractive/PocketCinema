@@ -307,6 +307,31 @@ def derive_device_endpoints(settings, endpoints):
     return (DeviceEndpoint("Custom", custom_address, "manual"),)
 
 
+def presented_device_endpoints(endpoints):
+    """Prefer IPv4 for a dual-stack Remote interface in the normal UI only.
+
+    Call after bind-mode/usable-route selection. Keep the full underlying route
+    set for child Host approval, explicit overrides, and transport behavior.
+    Without interface identity we cannot establish that two routes are peers.
+    """
+    endpoints = tuple(endpoints)
+    remote_ipv4_interfaces = {
+        endpoint.interface.casefold()
+        for endpoint in endpoints
+        if endpoint.kind == "remote" and endpoint.interface
+        and _usable_detected_route(endpoint.address)
+        and ipaddress.ip_address(endpoint.address).version == 4
+    }
+    return tuple(
+        endpoint for endpoint in endpoints
+        if not (
+            endpoint.kind == "remote"
+            and endpoint.interface.casefold() in remote_ipv4_interfaces
+            and ipaddress.ip_address(endpoint.address).version == 6
+        )
+    )
+
+
 def _usable_detected_route(address):
     """Filter placeholder and non-device addresses from derived automatic routes."""
     try:

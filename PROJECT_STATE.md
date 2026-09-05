@@ -262,8 +262,10 @@ ownership, network-provider behavior, or the API.
 
 ### Development Handoff — Windows system-tray lifecycle
 
-The Windows tray lifecycle is implemented and focused-test verified, but **not
-yet physically confirmed**. The normal Windows desktop path now hides its
+The Windows tray lifecycle is **functionally Physically Confirmed PASS**: X
+hides while PCServer keeps running, Open restores the same window, Start/Stop/
+Restart work, and Quit exits cleanly. Final tray UX acceptance remains pending
+for the three focused refinements below. The normal Windows desktop path hides its
 existing window on X, restores it from Open PCServer, synchronizes tray and GUI
 Start/Stop/Restart, and uses explicit Quit to stop its exact owned child through
 a private graceful-shutdown pipe before joining tray/background workers and
@@ -272,19 +274,27 @@ canonical server PNG is reused; Windows-only pystray/Pillow/six dependencies
 and future bundle obligations are recorded in the desktop distribution plan.
 No Windows Service or Start with Windows behavior was added.
 
-Validation: 20 focused desktop/tray/lifecycle tests, Python compilation, native
-tray startup/menu refresh/worker shutdown, and diff checks passed. A real owned
-child exited with code 0 through normal cleanup without terminate/kill. Existing
-Local/Remote, Windows responsiveness, and M21/M22 evidence is inherited; the new
-tray lifecycle requires its own focused Windows observation.
+The same smoke exposed duplicate Remote IPv6 presentation and Windows console
+flashes, and added dynamic hover status as a production requirement. Refinements
+are implemented/tested, not yet physically confirmed: the GUI prefers usable
+Remote IPv4 over IPv6 on the same interface while preserving underlying routes
+and IPv6-only fallback; PowerShell interface enumeration and the startup FFmpeg
+capability probe now use no-console flags; the existing tray icon reports
+`PocketCinema Server - Started` / `PocketCinema Server - Stopped` from actual
+owned-child state, including busy restart polling. No dependency was added.
 
-Next exact action: perform the single nine-step Windows tray smoke in
-`docs/desktop-distribution-plan.md` (start, X/hide, reachability, tray-only,
-restore, restart, stop/start, hide, Quit/child stopped), then record the result.
-Final Windows packaging is blocked until this lifecycle is physically accepted.
-After acceptance, separately scope packaged distribution and reproducible
-renderer-asset/licensing/fresh-deployment work. Remote IPv4/IPv6 UX and
-micro-stutter follow-ups remain non-blocking and deferred.
+Validation: 31 focused desktop/refinement/tray/lifecycle tests, Python
+compilation and diff checks passed. Live Windows inspection confirmed that the
+display prefers Remote IPv4 while the underlying Remote IPv6 route remains.
+Functional tray, Local/Remote, responsiveness and M21/M22 evidence is inherited;
+only these presentation/process-window/title boundaries need observation.
+
+Next exact action: perform only the focused 16-step Windows UX acceptance in
+`docs/desktop-distribution-plan.md`: route list; silent Start/Stop/Start/Restart;
+Started/Stopped/Started hover; X/background; same-window restore; Quit/icon gone.
+Final Windows packaging must not begin until that focused physical result is
+reported. After acceptance, packaging, reproducible renderer-asset/licensing and
+fresh-deployment work remain. The micro-stutter follow-up remains deferred.
 
 ## Latest Verified Checkpoint
 
@@ -398,15 +408,16 @@ Completed:
 
 Pending:
 
-- One focused Windows tray lifecycle physical smoke; final Windows packaging
-  is blocked until it passes. Implementation/testing alone is not acceptance.
+- Focused Windows route-presentation, silent-process and hover-status physical
+  acceptance; final Windows packaging is blocked until it passes. The existing
+  tray lifecycle is functionally physically confirmed PASS.
 
 - M23 packaging and the required Windows clean-machine bundle/distribution
   phases remain separately scoped release work.
 
-- Non-blocking M23 Remote follow-up: decide whether the desktop should prefer
-  IPv4, clearly label IPv4/IPv6 Remote routes, or retain both; reproduce the
-  brief usable micro-stutters only if they remain observable.
+- Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
+  only if they remain observable. Remote IPv4 presentation preference is now
+  implemented as the focused pre-packaging UX requirement above.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
