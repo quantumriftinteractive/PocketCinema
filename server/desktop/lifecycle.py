@@ -15,6 +15,7 @@ import urllib.request
 
 from .capabilities import detect_tool
 from .config import DesktopSettings, address_is_assigned, validate_settings
+from .runtime import child_command, frozen, resource_root
 
 
 LOG_LIMIT = 160
@@ -79,8 +80,7 @@ class PCServerLifecycle:
         addon_port = self._available_loopback_port()
         ffmpeg = self.tool_detector("ffmpeg", settings.ffmpeg_path)
         ffprobe = self.tool_detector("ffprobe", settings.ffprobe_path)
-        command = [
-            self.python_executable, "-m", "server.desktop.server_child",
+        command = child_command(self.python_executable) + [
             "--host", settings.listen_address,
             "--port", str(settings.listen_port),
             "--public-host", settings.advertised_address,
@@ -98,6 +98,9 @@ class PCServerLifecycle:
             # child at that startup parity without changing the core default.
             "--enable-matroska-subtitles",
         ]
+        if frozen():
+            command.extend(("--media-dir", str(self.data_root / "media"),
+                            "--fixture-dir", str(self.data_root / "fixtures")))
         seen = {settings.advertised_address}
         for host in device_hosts:
             host = str(host).strip()
@@ -154,7 +157,7 @@ class PCServerLifecycle:
         self._set_status("Starting", "Starting owned PCServer process…", endpoint=endpoint)
         try:
             process = subprocess.Popen(
-                self._command(settings, device_hosts), cwd=str(Path(__file__).resolve().parents[2]),
+                self._command(settings, device_hosts), cwd=str(resource_root()),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace", start_new_session=True,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,

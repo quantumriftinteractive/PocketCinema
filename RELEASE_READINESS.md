@@ -29,7 +29,7 @@ requirement, but its implementation is gated on Milestone 21 completion.
 The source-development desktop shell is implemented and automatically tested.
 The Local desktop path, Remote-route smoke, and Windows desktop responsiveness
 are physically confirmed, as recorded in `PROJECT_STATE.md` and the Production
-PASS audit. Milestone 23 remains incomplete: packaged distribution and
+PASS audit. Milestone 23 remains incomplete: packaged-distribution acceptance and
 fresh-deployment work are still pending. Until Milestone 23 is accepted from an
 actual packaged artifact, the Python/PowerShell workflow
 below remains a developer/source path, not the intended end-user v1.0
@@ -40,9 +40,15 @@ PASS: IPv4-preferred Remote presentation, silent server actions, active listen
 mode in the running hover, one native X notification, X/background operation,
 same-window restore and clean Quit. M21/M22 and accepted transport/playback/
 subtitle/account evidence remains inherited under the Production PASS invariant;
-no broad retest is required. Windows packaging is unblocked and is the next M23
-work item. Renderer-asset/licensing and fresh-deployment acceptance remain
-subsequent release gates.
+no broad retest is required. The first unsigned Windows x64 one-directory
+candidate is now implemented and automated-tested; see
+[`docs/windows-packaging.md`](docs/windows-packaging.md) for build/artifact,
+dependency notices, audit and the focused packaged physical smoke, which is the
+next action and remains pending. This does not mark packaged physical or
+clean-machine acceptance PASS. The pinned Python 3.11.0/Tcl-Tk 8.6.12 candidate
+requires runtime updating/review before public release. Windows clean-machine,
+signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
+acceptance remain release gates; M23 is incomplete.
 
 ## Verified Connection and Onboarding Resolution
 
@@ -403,8 +409,9 @@ development working tree:
 
 ### End-user release installation
 
-This checklist becomes actionable only after Milestone 23 produces a packaged
-artifact:
+An unsigned internal Windows candidate now exists (see the packaging evidence
+above). The following public-release checklist remains open; development-machine
+automation or a physical smoke does not establish clean-PC acceptance:
 
 - [ ] Download and verify the PocketCinema Server release artifact.
 - [ ] Install or extract it and launch the desktop application.

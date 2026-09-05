@@ -3,7 +3,9 @@
 This document records the desktop distribution architecture and acceptance plan.
 Milestone 21 is confirmed and Milestone 23 is Next. The initial macOS
 development shell is implemented and automatically tested; it is not a packaged
-artifact or a release claim.
+artifact or a release claim. The first Windows standalone one-directory candidate
+is now implemented and automated-tested; packaged physical and clean-machine
+acceptance remain pending. See [Windows packaging evidence](windows-packaging.md).
 
 ## Milestone gate and sequencing
 
@@ -101,7 +103,7 @@ Tk runtime. Its availability and appearance must still be verified inside every
 packaged build; this is a packaging decision, not permission to couple lifecycle
 logic to widget code.
 
-PyInstaller one-directory mode is the provisional first bundler. PyInstaller's
+PyInstaller one-directory mode is the selected first Windows bundler. PyInstaller's
 default one-folder output includes the Python interpreter and collected runtime
 dependencies, while its documentation recommends validating one-folder behavior
 before attempting one-file packaging. A one-directory layout also makes bundled
@@ -112,7 +114,8 @@ and [Python Tkinter documentation](https://docs.python.org/3/library/tkinter.htm
 The server must remain independently runnable from source. The PowerShell and
 shell lifecycle managers remain developer/admin tools and should use the same
 validation rules where practical, but the end-user app must not invoke
-PowerShell.
+PowerShell to launch or manage the app. Existing silent PowerShell interface
+enumeration remains an internal Windows helper.
 
 ## Windows system-tray lifecycle (physical PASS; UX gate complete)
 
@@ -297,10 +300,13 @@ real owned-child start/stop and captured mode; changed Python files compile;
 4. Stop changed hover to `PocketCinema Server - Stopped`.
 5. Quit exited cleanly and removed the tray icon.
 
-This focused physical gate is PASS and complete. Windows packaging is unblocked
-and is the next M23 work item. No playback, transport, subtitle, account, M21,
-or M22 retest is required. Renderer-asset/licensing and clean-machine/fresh-
-deployment validation remain subsequent M23 packaging gates.
+This source-runtime physical gate is PASS and complete. It unblocked Windows
+packaging; the first candidate is now implemented and automated-tested as
+recorded in [Windows packaging evidence](windows-packaging.md). Only its focused
+packaged desktop smoke is next because the frozen runtime materially changed.
+No playback, transport, subtitle, account, M21 or M22 retest is required.
+Renderer-asset/licensing and clean-machine/fresh-deployment validation remain
+subsequent M23 packaging gates.
 
 ## Initial macOS development shell (source implementation)
 
@@ -570,7 +576,8 @@ discovery ports, and an occupied bind target. Startup errors should be mapped to
 concise categories while the sanitized log retains enough context to diagnose a
 failure.
 
-Tray behavior, login startup, automatic updates, playback telemetry, resource
+Tray lifecycle is now an accepted production requirement as recorded above.
+Login startup, automatic updates, playback telemetry, resource
 graphs, connected-device lists, automatic remote discovery, and remote
 configuration remain deferred.
 
@@ -595,6 +602,16 @@ No media pipeline rewrite is needed. The implementation slice should instead:
 ## Packaging sequence
 
 ### Windows first
+
+The tracked implementation is `scripts/build-windows.py` with
+`packaging/windows/PocketCinema.spec` and pinned build requirements. It produces
+an unsigned windowed x64 folder/ZIP with explicit GUI/child roles, derived ICO,
+canonical version metadata, per-user writable paths, third-party notices and
+content hashes/audit. Focused automated validation is recorded in
+[Windows packaging evidence](windows-packaging.md); packaged development-machine
+physical smoke and clean-Windows acceptance are still pending. The measured
+Python 3.11.0/Tcl-Tk 8.6.12 build baseline needs updating/review before public
+release. Remaining gates below are not marked complete by a successful build.
 
 1. Pin Python, PyInstaller, Tcl/Tk, and build-tool versions.
 2. Produce a one-directory, windowed build from a clean Windows environment.

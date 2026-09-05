@@ -1065,6 +1065,12 @@ does not satisfy that gate.
 
 Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop-distribution-plan.md)
 
+Windows packaging checkpoint: an unsigned standalone x64 one-directory candidate
+is implemented and focused-automated-tested. The packaged development-machine
+physical smoke is next; clean-Windows acceptance and the other M23 release gates
+remain open. See [Windows packaging evidence](windows-packaging.md). M23 remains
+**Next**, with M21/M22 and accepted source desktop/tray evidence inherited.
+
 Acceptance criterion: a clean supported Windows PC can install or extract the
 actual PocketCinema Server release artifact, configure and persist the PCServer
 name, listen interface/address, port, advertised Miyoo address, and Stremio

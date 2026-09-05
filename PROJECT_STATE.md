@@ -299,11 +299,29 @@ Validation: 28 focused notification/mode/tray/lifecycle tests, Python compilatio
 and diff checks passed. Existing tray, silent subprocess, route presentation,
 Local/Remote and M21/M22 evidence remains inherited.
 
-Next exact action: begin the M23 Windows packaging and fresh-deployment work.
-The focused tray UX gate is complete; no additional physical tray, playback,
-transport, subtitle, account, M21, or M22 testing is required. Packaging,
-renderer-asset/licensing and clean-machine validation remain subsequent M23 work.
-Micro-stutter work remains deferred.
+Windows standalone packaging is implemented as an unsigned PyInstaller
+one-directory x64 candidate. One windowed EXE dispatches the GUI or explicit
+`--server-child` role before GUI initialization; inherited private pipes retain
+sanitized logs and clean exact-owned-child shutdown. Frozen resources are bundled
+and writable paths remain under the existing per-user PocketCinema root.
+FFmpeg/FFprobe remain externally detected; Stremio and Tailscale are not bundled
+or managed. See `docs/windows-packaging.md` for the reproducible build, dependency
+notices, artifact audit, regression-impact matrix and acceptance procedure.
+
+Validation: 65 focused desktop/runtime tests passed. The real frozen child and
+native GUI/tray lifecycle are automated-tested with isolated settings; this is
+not physical or clean-machine acceptance. The older Python 3.11.0/Tcl-Tk 8.6.12
+candidate runtime is pinned to measured build inputs and needs updating/review
+before public release.
+
+Next exact action: perform only the focused packaged-Windows development-machine
+smoke in `docs/windows-packaging.md`. The source tray UX gate remains physical
+PASS; frozen Tk/tray/runtime paths materially changed and require their own
+focused observation. Production PASS and Impact-First Regression Testing preserve
+M21/M22 and accepted transport/playback/subtitle/account evidence without broad
+retests. Clean-Windows acceptance, public distribution/signing/runtime review,
+later macOS distribution and renderer-asset/licensing/fresh-deployment gates
+remain pending; M23 remains incomplete. Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
@@ -415,13 +433,22 @@ Completed:
   block the Tk thread, operations are serialized, unchanged logs are not
   re-rendered, and normal desktop use remained responsive.
 
+- First Windows standalone candidate implemented with pinned reproducible build,
+  derived canonical ICO and version metadata, explicit frozen GUI/child roles,
+  private shutdown/log pipes, per-user writable paths, licenses and artifact
+  audit. Focused desktop/runtime and native frozen lifecycle checks passed;
+  physical packaged and clean-machine acceptance remain pending.
+
 Pending:
 
-- The focused X-notification/Automatic-mode hover confirmation is physically
-  PASS. Windows packaging is unblocked and is the next M23 work item.
+- Windows one-directory candidate implementation/build/audit and focused
+  automated validation are complete. Packaged development-machine physical
+  smoke is next; no packaged physical PASS or clean-machine claim is recorded.
+  Source X-notification/Automatic-mode hover and prior tray acceptance remain PASS.
 
-- M23 packaging and the required Windows clean-machine bundle/distribution
-  phases remain separately scoped release work.
+- Windows clean-machine acceptance, public distribution/signing/runtime review,
+  macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
+  release work. Build/artifact instructions: `docs/windows-packaging.md`.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
