@@ -244,9 +244,10 @@ that captions are noticeably larger and acceptable at the 1.5x production
 default.
 
 Configurable subtitle size is implemented through the normal PocketCinema UI
-and awaits focused physical acceptance. It persists the bounded 1.0x, 1.25x,
-1.5x, 2.0x, 2.5x, and 3.0x choices and feeds the existing app-local
-`font_scale` renderer path; missing or invalid values fall back to 1.5x.
+and physically confirmed PASS. It persists the bounded 1.0x, 1.25x, 1.5x,
+2.0x, 2.5x, and 3.0x choices and feeds the existing app-local `font_scale`
+renderer path; missing or invalid values fall back to 1.5x. Physical acceptance
+confirmed 1.0x is smaller, 3.0x clearly larger, and 1.5x restores and persists.
 Subtitle position controls remain future UX work, and the normal default remains
 1.5x.
 
@@ -315,10 +316,10 @@ remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: record the completed focused Windows stream-search and Miyoo
-Movie/Series physical acceptance, then continue with the planned subtitle
-font-size settings feature. The source tray UX and packaged Windows smoke gates
-are physical PASS. Production PASS and Impact-First Regression Testing preserve
+Next exact action: continue only with a separately authorized feature. The
+focused Windows stream-search, Miyoo Movie/Series, and subtitle font-size gates
+are physical PASS. The source tray UX and packaged Windows smoke gates are
+physical PASS. Production PASS and Impact-First Regression Testing preserve
 M21/M22 and accepted transport/playback/subtitle/account evidence without broad
 retests. Clean-Windows acceptance, public distribution/signing/runtime review,
 later macOS distribution and renderer-asset/licensing/fresh-deployment gates

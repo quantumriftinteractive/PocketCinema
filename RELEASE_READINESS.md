@@ -16,8 +16,8 @@ regressions, app-local player packaging and licensing, privacy review, and
 reproducible release artifacts. Selectable Matroska is promoted to the normal
 product default, with an explicit opt-out retaining the bounded burn-in path.
 Its app-local renderer's 1.5x subtitle-font default is physically confirmed as
-readable. UI-configurable subtitle size is now implemented and awaits focused
-physical acceptance; subtitle position remains future UX work.
+readable. UI-configurable subtitle size is implemented and physically confirmed
+PASS at 1.0x, 3.0x, and restored 1.5x; subtitle position remains future UX work.
 The Production PASS audit confirms that accepted M21/M22 behavior remains on
 the current normal paths. It also confirms the existing release blocker: a
 fresh Miyoo deployment still depends on ignored rebuilt-player, font, and
@@ -54,8 +54,8 @@ signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
 acceptance remain release gates; M23 is incomplete. The packaged smoke confirmed
 existing settings, no-console launch, canonical identity, Local/Remote route
 presentation, active-mode hover, one X notification, tray restore, Start/Stop/
-Restart, and exact-owned-child Quit cleanup. Subtitle font-size settings is the
-next intended small client feature after this UX gate; its planned presets are
+Restart, and exact-owned-child Quit cleanup. Subtitle font-size settings is now
+physically accepted; its planned presets are
 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x, with the production/default scale
 remaining 1.5x.
 
