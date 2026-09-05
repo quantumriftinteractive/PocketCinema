@@ -475,7 +475,9 @@ Pending:
   behavior was changed. Live TV removal remains a future v1 cleanup item.
   The candidate was rebuilt after these changes and the focused frozen-child
   check passed; the new behavior still needs its targeted Windows/Miyoo
-  observation.
+  observation. The tracked Miyoo client was deployed through the independently
+  managed Tailscale route to `100.97.46.26`; live config and networking-provider
+  state were preserved. Physical label/search acceptance remains pending.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
