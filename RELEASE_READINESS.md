@@ -15,9 +15,9 @@ exit/cleanup. Remaining blockers are fresh-SD and final movie/episode/converted
 regressions, app-local player packaging and licensing, privacy review, and
 reproducible release artifacts. Selectable Matroska is promoted to the normal
 product default, with an explicit opt-out retaining the bounded burn-in path.
-Its app-local renderer's 1.5x subtitle-font default is now physically confirmed
-as readable; UI-configurable subtitle size and position are future UX work, not
-a current release repair.
+Its app-local renderer's 1.5x subtitle-font default is physically confirmed as
+readable. UI-configurable subtitle size is now implemented and awaits focused
+physical acceptance; subtitle position remains future UX work.
 The Production PASS audit confirms that accepted M21/M22 behavior remains on
 the current normal paths. It also confirms the existing release blocker: a
 fresh Miyoo deployment still depends on ignored rebuilt-player, font, and

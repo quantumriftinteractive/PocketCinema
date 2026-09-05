@@ -27,6 +27,9 @@ AUDIO_LANGUAGE_ENV_OVERRIDE=0
 [ -n "${POCKETCINEMA_AUDIO_FALLBACK:-}" ] && AUDIO_LANGUAGE_ENV_OVERRIDE=1
 SUBTITLE_LANGUAGES="${POCKETCINEMA_SUBTITLE_LANGUAGES:-}"
 SUBTITLE_FALLBACK="${POCKETCINEMA_SUBTITLE_FALLBACK:-}"
+SUBTITLE_FONT_SCALE="${POCKETCINEMA_SUBTITLE_FONT_SCALE:-}"
+SUBTITLE_FONT_SCALE_ENV_OVERRIDE=0
+[ -n "${POCKETCINEMA_SUBTITLE_FONT_SCALE:-}" ] && SUBTITLE_FONT_SCALE_ENV_OVERRIDE=1
 MAX_SUBTITLES_PER_LANGUAGE="${POCKETCINEMA_MAX_SUBTITLES_PER_LANGUAGE:-}"
 MAX_SUBTITLES_ENV_OVERRIDE=0
 [ -n "${POCKETCINEMA_MAX_SUBTITLES_PER_LANGUAGE:-}" ] && MAX_SUBTITLES_ENV_OVERRIDE=1
@@ -134,6 +137,9 @@ load_config() {
       SUBTITLE_FALLBACK)
         [ -n "$SUBTITLE_FALLBACK" ] || SUBTITLE_FALLBACK="$config_value"
         ;;
+      SUBTITLE_FONT_SCALE)
+        [ -n "$SUBTITLE_FONT_SCALE" ] || SUBTITLE_FONT_SCALE="$config_value"
+        ;;
       MAX_SUBTITLES_PER_LANGUAGE)
         [ -n "$MAX_SUBTITLES_PER_LANGUAGE" ] || MAX_SUBTITLES_PER_LANGUAGE="$config_value"
         ;;
@@ -166,6 +172,7 @@ DEFAULT_QUERY="${DEFAULT_QUERY:-big buck bunny}"
 AUDIO_GAIN="${AUDIO_GAIN:-2.0}"
 AUDIO_FALLBACK="${AUDIO_FALLBACK:-ask}"
 SUBTITLE_FALLBACK="${SUBTITLE_FALLBACK:-ask}"
+SUBTITLE_FONT_SCALE="${SUBTITLE_FONT_SCALE:-1.5}"
 MAX_SUBTITLES_PER_LANGUAGE="${MAX_SUBTITLES_PER_LANGUAGE:-3}"
 # Selectable Matroska subtitles are the accepted normal production path.  An
 # explicit environment or persisted configuration value of 0 remains the opt-out.
@@ -226,6 +233,10 @@ fi
 case "$SUBTITLE_FALLBACK" in
   ask|none) ;;
   *) CONFIG_ERROR="SUBTITLE_FALLBACK must be ask or none" ;;
+esac
+case "$SUBTITLE_FONT_SCALE" in
+  1.0|1.25|1.5|2.0|2.5|3.0) ;;
+  *) CONFIG_ERROR="SUBTITLE_FONT_SCALE must be 1.0, 1.25, 1.5, 2.0, 2.5, or 3.0" ;;
 esac
 case "$MAX_SUBTITLES_PER_LANGUAGE" in
   1|2|3) ;;
@@ -608,6 +619,7 @@ run_ffplay() (
     export FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
     export POCKETCINEMA_FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
     export POCKETCINEMA_DEFAULT_FONT="$FIELD_TEST_DIR/fonts/PocketCinema.ttf"
+    export POCKETCINEMA_SUBTITLE_FONT_SCALE="$SUBTITLE_FONT_SCALE"
     export POCKETCINEMA_ASPECT_MODE="$aspect_mode"
     # The normal deployment migration can retain the physically accepted
     # pre-rename FFplay binary. It is compiled to read the legacy identifiers,
@@ -616,6 +628,7 @@ run_ffplay() (
     # not user-facing test activation.
     export POCKETSTREMIO_FONTCONFIG_FILE="$FIELD_TEST_DIR/fonts.conf"
     export POCKETSTREMIO_DEFAULT_FONT="$FIELD_TEST_DIR/fonts/PocketCinema.ttf"
+    export POCKETSTREMIO_SUBTITLE_FONT_SCALE="$SUBTITLE_FONT_SCALE"
     export POCKETSTREMIO_ASPECT_MODE="$aspect_mode"
     if [ -n "$FIELD_TEST_SUBTITLE_FILE" ]; then
       export POCKETCINEMA_SUBTITLE_FILE="$FIELD_TEST_SUBTITLE_FILE"
@@ -1242,6 +1255,60 @@ save_max_subtitles_per_language() {
   }
   mv "$config_temp" "$CONFIG_FILE" || return 1
   chmod 644 "$CONFIG_FILE"
+}
+
+save_subtitle_font_scale() {
+  new_subtitle_font_scale="$1"
+  config_temp="$CONFIG_FILE.tmp"
+  mkdir -p "$BASE_DIR/config"
+  if [ -f "$CONFIG_FILE" ]; then
+    cp "$CONFIG_FILE" "$CONFIG_FILE.bak" || return 1
+  fi
+  awk -v subtitle_font_scale="$new_subtitle_font_scale" '
+    BEGIN { replaced = 0 }
+    /^SUBTITLE_FONT_SCALE=/ {
+      if (!replaced) {
+        print "SUBTITLE_FONT_SCALE=" subtitle_font_scale
+        replaced = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (!replaced) print "SUBTITLE_FONT_SCALE=" subtitle_font_scale
+    }
+  ' "$CONFIG_FILE" 2>/dev/null >"$config_temp" || {
+    printf 'SUBTITLE_FONT_SCALE=%s\n' "$new_subtitle_font_scale" >"$config_temp" || return 1
+  }
+  mv "$config_temp" "$CONFIG_FILE" || return 1
+  chmod 644 "$CONFIG_FILE"
+}
+
+subtitle_font_scale_flow() {
+  printf '1.0x\t1.0\n1.25x\t1.25\n1.5x (default)\t1.5\n2.0x\t2.0\n2.5x\t2.5\n3.0x\t3.0\nBack\tback\n' \
+    >/tmp/pocketcinema-subtitle-font-scale.tsv
+  selected_scale=$(select_from_file "Subtitle size (current ${SUBTITLE_FONT_SCALE}x)" \
+    /tmp/pocketcinema-subtitle-font-scale.tsv)
+  [ -n "$selected_scale" ] || return 0
+  tab=$(printf '\t')
+  scale_line=$(grep -F "$selected_scale$tab" /tmp/pocketcinema-subtitle-font-scale.tsv | head -n 1)
+  new_subtitle_font_scale=$(printf '%s' "$scale_line" | cut -f2)
+  [ "$new_subtitle_font_scale" = "back" ] && return 0
+  case "$new_subtitle_font_scale" in
+    1.0|1.25|1.5|2.0|2.5|3.0) ;;
+    *) return 1 ;;
+  esac
+  if ! save_subtitle_font_scale "$new_subtitle_font_scale"; then
+    message "PocketCinema Settings" "Could not save subtitle size"
+    return 1
+  fi
+  if [ "$SUBTITLE_FONT_SCALE_ENV_OVERRIDE" -eq 1 ]; then
+    message "PocketCinema Settings" "Saved. Environment override remains active."
+    return 0
+  fi
+  SUBTITLE_FONT_SCALE="$new_subtitle_font_scale"
+  log "saved subtitle font scale=$SUBTITLE_FONT_SCALE"
+  message "PocketCinema Settings" "Subtitle size set to ${SUBTITLE_FONT_SCALE}x"
 }
 
 max_subtitles_per_language_flow() {
@@ -2010,7 +2077,7 @@ connection_profile_flow() {
 
 settings_flow() {
   while :; do
-    printf 'Connection setup\nConnection profile\nHTTP proxy\nAudio gain\nAudio languages\nSubtitle languages\nMatroska subtitle limit\nBack\n' \
+    printf 'Connection setup\nConnection profile\nHTTP proxy\nAudio gain\nAudio languages\nSubtitle languages\nSubtitle size (%sx)\nMatroska subtitle limit\nBack\n' "$SUBTITLE_FONT_SCALE" \
       >/tmp/pocketcinema-settings.tsv
     settings_action=$(select_from_file "Settings" /tmp/pocketcinema-settings.tsv)
     case "$settings_action" in
@@ -2020,6 +2087,7 @@ settings_flow() {
       "Audio gain") audio_gain_flow ;;
       "Audio languages") audio_language_flow ;;
       "Subtitle languages") subtitle_language_flow ;;
+      "Subtitle size ("*) subtitle_font_scale_flow ;;
       "Matroska subtitle limit") max_subtitles_per_language_flow ;;
       *) return 0 ;;
     esac

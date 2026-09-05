@@ -16,6 +16,7 @@ index d9b0dd4..ab8c50d 100644
  static AVInputFormat *file_iformat;
  static const char *input_filename;
  static const char *subtitle_filter_file;
++static const char *subtitle_font_scale;
 +static const char *subtitle_notice_font;
  static const char *window_title;
  static int fs_screen_width;
@@ -56,8 +57,8 @@ index d9b0dd4..ab8c50d 100644
 -            snprintf(filtergraph_buf, sizeof(filtergraph_buf), "subtitles=%s,%s",
 -                     subtitle_args, vfilters);
 +        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
-+                    "subtitles=%s:font_scale=1.5",
-+                    subtitle_args);
++                    "subtitles=%s:font_scale=%s", subtitle_args,
++                    subtitle_font_scale ? subtitle_font_scale : "1.5");
 +    }
 +    if (subtitle_filter_file && subtitle_notice_font &&
 +        is->subtitle_notice_active) {
@@ -146,6 +147,7 @@ index d9b0dd4..ab8c50d 100644
          filename = "pipe:";
      input_filename = filename;
      subtitle_filter_file = getenv("POCKETCINEMA_SUBTITLE_FILE");
++    subtitle_font_scale = getenv("POCKETCINEMA_SUBTITLE_FONT_SCALE");
 +    subtitle_notice_font = getenv("POCKETCINEMA_DEFAULT_FONT");
  }
 

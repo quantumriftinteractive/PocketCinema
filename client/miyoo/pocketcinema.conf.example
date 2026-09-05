@@ -24,6 +24,9 @@ AUDIO_LANGUAGES=
 AUDIO_FALLBACK=ask
 SUBTITLE_LANGUAGES=
 SUBTITLE_FALLBACK=ask
+# App-local selectable-subtitle font scale. Supported values: 1.0, 1.25,
+# 1.5, 2.0, 2.5, 3.0. The default is 1.5.
+SUBTITLE_FONT_SCALE=1.5
 # Selectable app-local Matroska subtitle tracks. PCServer selects up to this many
 # tracks per preferred language (bounded to 3); use
 # R1 during playback to cycle them and off. Setup failure returns to the normal

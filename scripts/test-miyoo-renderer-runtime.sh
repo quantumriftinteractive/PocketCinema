@@ -23,8 +23,12 @@ for name in POCKETCINEMA POCKETSTREMIO; do
   assert_contains "$UI_SCRIPT" "export ${name}_DEFAULT_FONT=\"\$FIELD_TEST_DIR/fonts/PocketCinema.ttf\""
   assert_contains "$UI_SCRIPT" "export ${name}_SUBTITLE_FILE=\"\$FIELD_TEST_SUBTITLE_FILE\""
 done
+assert_contains "$UI_SCRIPT" 'export POCKETCINEMA_SUBTITLE_FONT_SCALE="$SUBTITLE_FONT_SCALE"'
+assert_contains "$UI_SCRIPT" 'export POCKETSTREMIO_SUBTITLE_FONT_SCALE="$SUBTITLE_FONT_SCALE"'
 assert_contains "$FONTCONFIG" '/mnt/SDCARD/App/PocketCinema/experiments/ffplay/fonts'
-assert_contains "$SUBTITLE_PATCH" 'subtitles=%s:font_scale=1.5'
+assert_contains "$SUBTITLE_PATCH" 'subtitles=%s:font_scale=%s'
+assert_contains "$SUBTITLE_PATCH" 'subtitle_font_scale ? subtitle_font_scale : "1.5"'
+assert_contains "$SUBTITLE_PATCH" 'getenv("POCKETCINEMA_SUBTITLE_FONT_SCALE")'
 assert_contains "$SUBTITLE_PATCH" 'ass_set_font_scale(ass->renderer, ass->font_scale);'
 assert_contains "$DEPLOY_SCRIPT" 's|/mnt/SDCARD/App/PocketStremio|/mnt/SDCARD/App/PocketCinema|g'
 assert_contains "$DEPLOY_SCRIPT" 's|pocketstremio-fontconfig-cache|pocketcinema-fontconfig-cache|g'

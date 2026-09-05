@@ -243,12 +243,12 @@ binary and contains the new filter string. Apps-context observation now confirms
 that captions are noticeably larger and acceptable at the 1.5x production
 default.
 
-Configurable subtitle size and position are future PocketCinema UX work, not a
-repair or release gate. They must be exposed through the normal PocketCinema UI
-rather than markers or manual configuration, with a bounded size choice (for
-example 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, and 3.0x) and Normal, Bottom-clamped, and
-Top-clamped position behavior. Until that future work is designed and measured,
-the normal default remains 1.5x.
+Configurable subtitle size is implemented through the normal PocketCinema UI
+and awaits focused physical acceptance. It persists the bounded 1.0x, 1.25x,
+1.5x, 2.0x, 2.5x, and 3.0x choices and feeds the existing app-local
+`font_scale` renderer path; missing or invalid values fall back to 1.5x.
+Subtitle position controls remain future UX work, and the normal default remains
+1.5x.
 
 Focused Windows M23 observation found a separate desktop UI freeze boundary:
 the 700 ms Tk poll synchronously refreshed routes, which on Windows spawned
@@ -465,10 +465,10 @@ Pending:
   macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
   release work. Build/artifact instructions: `docs/windows-packaging.md`.
 
-- Next intended small client feature after this UX gate: **Subtitle font-size
-  settings**. Planned presets are 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x;
-  the production/default scale remains 1.5x and the existing `font_scale`
-  renderer path will be reused.
+- Subtitle font-size settings are implemented and deployed through the standard
+  Miyoo path, awaiting the focused Apps-context acceptance below. Planned
+  presets are 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x; the production/default
+  scale remains 1.5x and the existing `font_scale` renderer path is reused.
 
 - Two focused production UX refinements are implemented and physically
   confirmed: missed Windows background subprocess paths in

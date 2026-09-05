@@ -306,7 +306,8 @@ recorded in [Windows packaging evidence](windows-packaging.md). The
 running-settings lock packaged physical gate is also PASS: stopped controls are
 editable, Running presents the explicit message and disables runtime
 configuration, and Stop restores editing. Clean-machine acceptance remains
-separate. Subtitle font-size settings is the next intended small client feature.
+separate. Subtitle font-size settings is implemented in the Miyoo client and
+awaits its focused physical acceptance; subtitle position remains future UX.
 
 The subsequent focused Windows UX fix covers the remaining stream/source
 resolution subprocess paths: FFprobe probing, subtitle conversion and the
