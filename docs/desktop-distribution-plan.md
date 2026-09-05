@@ -4,8 +4,8 @@ This document records the desktop distribution architecture and acceptance plan.
 Milestone 21 is confirmed and Milestone 23 is Next. The initial macOS
 development shell is implemented and automatically tested; it is not a packaged
 artifact or a release claim. The first Windows standalone one-directory candidate
-is now implemented and automated-tested; packaged physical and clean-machine
-acceptance remain pending. See [Windows packaging evidence](windows-packaging.md).
+is now implemented, automated-tested, and physically PASS on the development
+machine; clean-machine acceptance remains pending. See [Windows packaging evidence](windows-packaging.md).
 
 ## Milestone gate and sequencing
 
@@ -301,9 +301,9 @@ real owned-child start/stop and captured mode; changed Python files compile;
 5. Quit exited cleanly and removed the tray icon.
 
 This source-runtime physical gate is PASS and complete. It unblocked Windows
-packaging; the first candidate is now implemented and automated-tested as
-recorded in [Windows packaging evidence](windows-packaging.md). Only its focused
-packaged desktop smoke is next because the frozen runtime materially changed.
+packaging; the packaged developer-machine smoke is also physically PASS as
+recorded in [Windows packaging evidence](windows-packaging.md). The next focused
+gate is the running-settings lock refinement; clean-machine acceptance remains separate.
 No playback, transport, subtitle, account, M21 or M22 retest is required.
 Renderer-asset/licensing and clean-machine/fresh-deployment validation remain
 subsequent M23 packaging gates.
@@ -607,9 +607,10 @@ The tracked implementation is `scripts/build-windows.py` with
 `packaging/windows/PocketCinema.spec` and pinned build requirements. It produces
 an unsigned windowed x64 folder/ZIP with explicit GUI/child roles, derived ICO,
 canonical version metadata, per-user writable paths, third-party notices and
-content hashes/audit. Focused automated validation is recorded in
-[Windows packaging evidence](windows-packaging.md); packaged development-machine
-physical smoke and clean-Windows acceptance are still pending. The measured
+content hashes/audit. Focused automated validation and the packaged
+development-machine physical smoke are PASS as recorded in
+[Windows packaging evidence](windows-packaging.md); clean-Windows acceptance is
+still pending. The measured
 Python 3.11.0/Tcl-Tk 8.6.12 build baseline needs updating/review before public
 release. Remaining gates below are not marked complete by a successful build.
 

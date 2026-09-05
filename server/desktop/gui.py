@@ -82,6 +82,8 @@ class PocketCinemaDesktop:
         self.tool_ffmpeg = tk.StringVar(value="Checking…")
         self.tool_ffprobe = tk.StringVar(value="Checking…")
         self._effective_settings = None
+        self._pre_running_values = None
+        self._pre_running_listen_choice = None
         self._operation_lock = threading.Lock()
         self._last_logs = ()
         self._closing = False
@@ -90,6 +92,7 @@ class PocketCinemaDesktop:
         self.tray = None
         self._tray_failed = False
         self._quit_error = None
+        self._advanced_dialog = None
         self._build()
         for name in ("listen_port", "listen_address", "advertised_address"):
             self.values[name].trace_add("write", self._on_route_setting_changed)
@@ -216,6 +219,14 @@ class PocketCinemaDesktop:
         ttk.Button(actions, text="Quit", command=self.quit).grid(row=0, column=4, padx=8)
         row += 1
 
+        self.running_notice = ttk.Label(
+            outer, text="Server is running. Stop the server to change its settings.",
+            foreground="#6b4f00",
+        )
+        self.running_notice.grid(row=row, column=0, columnspan=3, sticky="w", pady=(0, 2))
+        self.running_notice.grid_remove()
+        row += 1
+
         ttk.Label(outer, text="Status", font=("TkDefaultFont", 13, "bold")).grid(
             row=row, column=0, columnspan=3, sticky="w", pady=(12, 2)
         )
@@ -251,7 +262,9 @@ class PocketCinemaDesktop:
 
     def _field(self, parent, row, label, name, button=None):
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", padx=(0, 12), pady=3)
-        ttk.Entry(parent, textvariable=self.values[name]).grid(row=row, column=1, sticky="ew", pady=3)
+        entry = ttk.Entry(parent, textvariable=self.values[name])
+        entry.grid(row=row, column=1, sticky="ew", pady=3)
+        setattr(self, name + "_entry", entry)
         if button:
             text, command = button
             ttk.Button(parent, text=text, command=command).grid(row=row, column=2, padx=(8, 0), pady=3)
@@ -362,7 +375,10 @@ class PocketCinemaDesktop:
         return "Available" if status.source == "manual" else f"Available ({status.source})"
 
     def open_advanced(self):
+        if self.lifecycle.status().state != "Stopped":
+            return
         dialog = tk.Toplevel(self.root)
+        self._advanced_dialog = dialog
         dialog.title("Advanced settings")
         dialog.transient(self.root)
         dialog.columnconfigure(1, weight=1)
@@ -379,16 +395,29 @@ class PocketCinemaDesktop:
         self._advanced_field(frame, 4, "FFprobe path", "ffprobe_path", choose=True)
 
         def apply_advanced():
+            if self.lifecycle.status().state != "Stopped":
+                self._close_advanced(dialog)
+                return
             self.values["advertised_mode"].set("manual" if manual.get() else "automatic")
             self.refresh_capabilities()
             self.refresh_network_summary()
             dialog.destroy()
 
+        dialog.protocol("WM_DELETE_WINDOW", lambda: self._close_advanced(dialog))
         ttk.Button(frame, text="Done", command=apply_advanced).grid(row=5, column=0, columnspan=3, sticky="e", pady=(12, 0))
+
+    def _close_advanced(self, dialog=None):
+        dialog = dialog or getattr(self, "_advanced_dialog", None)
+        if dialog is not None and dialog.winfo_exists():
+            dialog.destroy()
+        if dialog is getattr(self, "_advanced_dialog", None):
+            self._advanced_dialog = None
 
     def _advanced_field(self, parent, row, label, name, choose=False):
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", padx=(0, 10), pady=3)
-        ttk.Entry(parent, textvariable=self.values[name], width=48).grid(row=row, column=1, sticky="ew", pady=3)
+        entry = ttk.Entry(parent, textvariable=self.values[name], width=48)
+        entry.grid(row=row, column=1, sticky="ew", pady=3)
+        setattr(self, "advanced_" + name + "_entry", entry)
         if choose:
             ttk.Button(parent, text="Choose…", command=lambda: self.choose_tool(name)).grid(row=row, column=2, padx=(8, 0))
 
@@ -446,6 +475,13 @@ class PocketCinemaDesktop:
                 self.show()
                 messagebox.showerror("Server cannot start", str(exc))
                 return
+        if action in {"start", "restart"} and getattr(self, "_pre_running_values", None) is None:
+            values = getattr(self, "values", None)
+            self._pre_running_values = (
+                {key: value.get() for key, value in values.items()} if values is not None else {}
+            )
+            choice = getattr(self, "listen_choice", None)
+            self._pre_running_listen_choice = choice.get() if choice is not None else None
         self._busy = True
         self.server_state.set("Stopping" if action == "stop" else "Starting")
         self.update_actions(self.server_state.get())
@@ -501,8 +537,13 @@ class PocketCinemaDesktop:
             self.server_detail.set("")
         if result.state == "Stopped":
             self._effective_settings = None
+            self._restore_editable_settings()
         elif effective_settings is not None and result.state == "Running":
             self._effective_settings = effective_settings
+            self._show_active_settings(effective_settings)
+        elif result.state == "Error":
+            self._effective_settings = None
+            self._restore_editable_settings()
         if refresh_routes:
             self.refresh_network_summary()
         self.update_actions(result.state)
@@ -536,8 +577,49 @@ class PocketCinemaDesktop:
         self.start_button.configure(state="normal" if enabled and state != "Running" else "disabled")
         self.stop_button.configure(state="normal" if enabled and state == "Running" else "disabled")
         self.restart_button.configure(state="normal" if restart else "disabled")
+        locked = state != "Stopped"
+        if locked:
+            self._close_advanced()
+        for name in (
+            "server_name_entry", "custom_listen_entry", "listen_port_entry",
+            "stremio_service_url_entry", "listen_selector", "advanced_button",
+            "save_button",
+        ):
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.configure(state="disabled" if locked else "normal")
+        if getattr(self, "listen_selector", None) is not None and not locked:
+            self.listen_selector.configure(state="readonly")
+        notice = getattr(self, "running_notice", None)
+        if notice is not None:
+            if state == "Running":
+                notice.grid()
+            else:
+                notice.grid_remove()
         if self.tray:
             self.tray.update()
+
+    def _show_active_settings(self, settings):
+        """Make the locked controls describe the configuration used to start."""
+        for key, value in asdict(settings).items():
+            if key in self.values:
+                self.values[key].set(str(value))
+        self.listen_choice.set(self._listen_label(settings.listen_mode))
+        self.on_listen_mode_changed()
+
+    def _restore_editable_settings(self):
+        if getattr(self, "_pre_running_values", None) is None:
+            return
+        values = getattr(self, "values", {})
+        for key, value in self._pre_running_values.items():
+            if key in values:
+                self.values[key].set(value)
+        if self._pre_running_listen_choice is not None and hasattr(self, "listen_choice"):
+            self.listen_choice.set(self._pre_running_listen_choice)
+        self._pre_running_values = None
+        self._pre_running_listen_choice = None
+        if hasattr(self, "listen_choice"):
+            self.on_listen_mode_changed()
 
     def poll(self):
         if self._closing:

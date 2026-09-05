@@ -308,16 +308,16 @@ FFmpeg/FFprobe remain externally detected; Stremio and Tailscale are not bundled
 or managed. See `docs/windows-packaging.md` for the reproducible build, dependency
 notices, artifact audit, regression-impact matrix and acceptance procedure.
 
-Validation: 65 focused desktop/runtime tests passed. The real frozen child and
-native GUI/tray lifecycle are automated-tested with isolated settings; this is
-not physical or clean-machine acceptance. The older Python 3.11.0/Tcl-Tk 8.6.12
+Validation: 68 focused desktop/runtime tests passed. The real frozen child and
+native GUI/tray lifecycle are automated-tested with isolated settings; the
+packaged developer-machine physical smoke is PASS, while clean-machine acceptance
+remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: perform only the focused packaged-Windows development-machine
-smoke in `docs/windows-packaging.md`. The source tray UX gate remains physical
-PASS; frozen Tk/tray/runtime paths materially changed and require their own
-focused observation. Production PASS and Impact-First Regression Testing preserve
+Next exact action: perform only the focused running-settings lock physical
+confirmation in `docs/windows-packaging.md`. The source tray UX and packaged
+Windows smoke gates are physical PASS. Production PASS and Impact-First Regression Testing preserve
 M21/M22 and accepted transport/playback/subtitle/account evidence without broad
 retests. Clean-Windows acceptance, public distribution/signing/runtime review,
 later macOS distribution and renderer-asset/licensing/fresh-deployment gates
@@ -439,12 +439,27 @@ Completed:
   audit. Focused desktop/runtime and native frozen lifecycle checks passed;
   physical packaged and clean-machine acceptance remain pending.
 
+- Packaged Windows developer-machine physical smoke is **PASS**: the extracted
+  one-directory EXE loaded existing settings, showed the canonical identity,
+  launched without a console, preserved Local/Remote IPv4-preferred routing and
+  active-mode tooltip, hid to tray with exactly one native notification, restored
+  the same GUI, completed Start/Stop/Restart, and Quit stopped the exact owned
+  child with no observed orphan. Clean-Windows distribution remains pending.
+
+- Running desktop settings UX is implemented and focused-tested: while the owned
+  child is Starting/Running/Stopping, startup configuration controls are locked
+  and the non-modal message `Server is running. Stop the server to change its
+  settings.` appears only in Running. The active successful settings are shown;
+  Stop/failed start/restart/unexpected exit restores editing. Tray actions use
+  the same synchronization. Physical confirmation of this refinement is next.
+
 Pending:
 
-- Windows one-directory candidate implementation/build/audit and focused
-  automated validation are complete. Packaged development-machine physical
-  smoke is next; no packaged physical PASS or clean-machine claim is recorded.
-  Source X-notification/Automatic-mode hover and prior tray acceptance remain PASS.
+- The packaged Windows developer-machine physical smoke is PASS and must not be
+  repeated unless a later change materially affects those frozen paths. The
+  focused running-settings lock smoke is next; no clean-machine or full M23
+  release claim is recorded. Source X-notification/Automatic-mode hover and
+  prior tray acceptance remain PASS.
 
 - Windows clean-machine acceptance, public distribution/signing/runtime review,
   macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23

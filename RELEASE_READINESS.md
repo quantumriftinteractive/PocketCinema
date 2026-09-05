@@ -41,14 +41,18 @@ mode in the running hover, one native X notification, X/background operation,
 same-window restore and clean Quit. M21/M22 and accepted transport/playback/
 subtitle/account evidence remains inherited under the Production PASS invariant;
 no broad retest is required. The first unsigned Windows x64 one-directory
-candidate is now implemented and automated-tested; see
+candidate is now implemented, automated-tested, and physically PASS on the
+development Windows machine; see
 [`docs/windows-packaging.md`](docs/windows-packaging.md) for build/artifact,
-dependency notices, audit and the focused packaged physical smoke, which is the
-next action and remains pending. This does not mark packaged physical or
-clean-machine acceptance PASS. The pinned Python 3.11.0/Tcl-Tk 8.6.12 candidate
+dependency notices and audit. The next action is the focused runtime-settings
+lock confirmation. This does not mark clean-machine acceptance or Windows
+distribution fully release-complete. The pinned Python 3.11.0/Tcl-Tk 8.6.12 candidate
 requires runtime updating/review before public release. Windows clean-machine,
 signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
-acceptance remain release gates; M23 is incomplete.
+acceptance remain release gates; M23 is incomplete. The packaged smoke confirmed
+existing settings, no-console launch, canonical identity, Local/Remote route
+presentation, active-mode hover, one X notification, tray restore, Start/Stop/
+Restart, and exact-owned-child Quit cleanup.
 
 ## Verified Connection and Onboarding Resolution
 

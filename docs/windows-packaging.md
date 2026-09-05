@@ -1,6 +1,6 @@
 # Windows standalone candidate (M23)
 
-Status: **Implemented and automated-tested; packaged physical acceptance pending**.
+Status: **Implemented, automated-tested, and packaged developer-machine smoke PASS; clean-machine acceptance pending**.
 This is an unsigned Windows x64 one-directory candidate, not a public release
 or completion of M23. The accepted source desktop/tray PASS remains inherited.
 
@@ -124,11 +124,13 @@ backends; the actual Windows PNG/ICO, GUI/tray and server paths are smoke-tested
 
 ## Focused validation and evidence inheritance
 
-Recorded automated result: **PASS** — 65 focused desktop/runtime unit tests,
+Recorded automated result: **PASS** — 68 focused desktop/runtime unit tests,
 Python/spec compilation, diff checks, artifact audit, identical clean rebuilds
 and the extracted-ZIP native smoke (missing/manual/normal Stremio-runtime tools).
-The packaged development-machine physical gate and clean-machine gate remain
-**PENDING**.
+The packaged development-machine physical gate is **PASS**. It confirmed settings
+load, canonical identity, no-console launch, Local/Remote route presentation,
+active-mode tooltip, one X notification, tray restore, Start/Stop/Restart and
+exact-owned-child Quit cleanup. The clean-machine gate remains **PENDING**.
 
 ```powershell
 & ./.tmp/windows-build-venv/Scripts/python.exe -m unittest server.test_desktop_runtime server.test_desktop server.test_desktop_tray server.test_desktop_refinements server.test_desktop_notifications -q
@@ -149,7 +151,7 @@ It does not claim that the development machine is a clean Windows installation.
 | Changed area | Verification | Inherited evidence and reason |
 | --- | --- | --- |
 | Frozen entry/child pipes and paths | Unit tests + real frozen child lifecycle | Core API/media behavior unchanged |
-| Packaged Tk/tray/dependencies | Native automated smoke; focused physical package smoke pending | Source tray UX PASS retained; frozen runtime needs its own observation |
+| Packaged Tk/tray/dependencies | Native automated smoke; packaged developer-machine physical smoke PASS | Source tray UX PASS retained; clean-machine validation remains |
 | Per-user settings and external-tool loading | Isolated profile, missing/manual tools, restart and content checks | Schema, route selection, validation and privacy semantics unchanged |
 | Media, M21/M22, transport, subtitles, accounts, Miyoo | No broad regression matrix | No code, assets, configuration semantics or deployed runtime changes in those paths |
 
@@ -158,15 +160,15 @@ native clicks are not a physical acceptance claim.
 
 ## Next physical gate and remaining release work
 
-On the development Windows machine, fully Quit the source app, then launch the
-generated packaged EXE normally. It uses **your existing profile**, not the test
-profile. Confirm GUI/icon/no console and saved settings; Start and check Started,
-Local/applicable Remote IPv4 presentation and running active-mode hover; X and
-check exactly one native notification plus continued server/tray operation;
-Open PCServer; Stop and check `PocketCinema Server - Stopped`; Start then Restart
-once with no console or duplicates; X then tray Quit and confirm no remaining
-owned child, GUI or tray icon. This is the only requested physical smoke now.
-Do not repeat playback, subtitle, account, Remote streaming or M21/M22 matrices.
+The packaged developer-machine smoke above is complete and must not be repeated
+unless a later change materially affects those paths. The next focused physical
+confirmation is the runtime-settings lock: with the packaged app stopped, verify
+Server name, Listen on, Port, Stremio endpoint and Advanced settings are editable;
+Start and verify the exact message `Server is running. Stop the server to change
+its settings.` plus disabled runtime configuration; verify Stop/Restart, Copy,
+status and logs remain available; Stop and verify the message disappears and
+editing returns. Do not repeat playback, subtitle, account, Remote streaming or
+M21/M22 matrices.
 
 Later, a clean supported Windows installation must verify no Python/repository/
 build-tool/launch-script requirement, normal launch/icon/no console, GUI/tray
