@@ -157,8 +157,18 @@ The Mac's configured Remote Stremio Service endpoint remained unreachable, as
 expected because the gaming PC deliberately keeps that service localhost-only.
 This does not invalidate the Local PCServer/account acceptance or inherited
 account/playback evidence, and no Stremio listener, firewall, or network-provider
-setting was changed. The desktop-managed Tailscale / Remote PocketCinema route
-was displayed but has not yet had a physical Miyoo smoke test.
+setting was changed.
+
+Focused M23 desktop Remote-route acceptance is **PASS**. The desktop advertised
+a detected Tailscale / Remote IPv6 connection, while the Miyoo smoke manually
+used the known Tailscale IPv4 PCServer address through its independently
+configured userspace HTTP proxy. A real direct stream played remotely and
+selectable subtitles worked normally. Brief recurring millisecond-scale
+micro-stutters were usable and did not fail playback, so they are a non-blocking
+performance observation for later reproduction. The IPv6 advertisement versus
+successful IPv4 use is likewise a non-blocking route-UX follow-up: later work
+may prefer IPv4, label address families clearly, or deliberately retain both.
+No exact transient address is committed.
 
 The server now emits a sanitized Stremio Service status diagnostic only for the
 first failure, a changed failure reason, recovery, or a later failure after
@@ -176,8 +186,9 @@ link-local, multicast, unspecified, and wildcard addresses from automatic
 routes, refreshes the stopped desktop display for mode, port, and custom-address
 changes, and keeps Status concise with an available-route count. It does not
 inspect or manage Tailscale state/lifecycle, change the Stremio Service model,
-or alter PCServer API/discovery behavior. The existing Local physical acceptance
-is inherited; the new presentation and Remote route remain physically pending.
+or alter PCServer API/discovery behavior. The Local and supported Remote
+transport smokes are physically confirmed. The observed IPv6 advertisement and
+brief micro-stutters remain non-blocking future UX/performance follow-ups.
 
 Focused Windows M23 desktop-shell diagnosis found and repaired two independent
 desktop regressions. Windows previously fell back to hostname-only address
@@ -249,11 +260,12 @@ confirmed normal Windows desktop use remained responsive after this repair, so
 the focused responsiveness acceptance is **PASS**. It does not change PCServer
 ownership, network-provider behavior, or the API.
 
-Next exact action: the Production PASS audit and focused Windows responsiveness
-acceptance are complete. Hold M23 packaging and the desktop Remote-route smoke
-for separately scoped work. The font-scale change does not alter M22 track
-switching, subtitle-off, playback, or cleanup, so its previously confirmed M22
-physical evidence is inherited.
+Next exact action: the Production PASS audit, focused Windows responsiveness,
+and desktop Remote-route acceptance are complete. Hold M23 packaging and the
+non-blocking Remote IPv4/IPv6 UX and micro-stutter follow-ups for separately
+scoped work. The font-scale change does not alter M22 track switching,
+subtitle-off, playback, or cleanup, so its previously confirmed M22 physical
+evidence is inherited.
 
 ## Latest Verified Checkpoint
 
@@ -338,8 +350,10 @@ Completed:
   interfaces lists usable Local and detected Remote routes; Custom lists its
   explicit route. The stopped UI refreshes these rows for mode, port, and custom
   address changes, filters non-device addresses, and reports only a concise
-  available-route count in Status. Existing Local physical acceptance is
-  inherited; the new presentation and Remote smoke are pending.
+  available-route count in Status. Local and Remote transport acceptance are
+  physically confirmed. The Remote smoke used the known Tailscale IPv4 address
+  through the independent proxy while the desktop advertised a Remote IPv6
+  route; address-family presentation is deferred UX work.
 
 - M22 production-promotion correction implemented and locally verified: the
   Miyoo runtime and shipped configuration enable selectable Matroska subtitles
@@ -365,9 +379,12 @@ Completed:
 
 Pending:
 
-- M23 focused dynamic-list presentation and desktop-managed Tailscale / Remote
-  route acceptance, if applicable to this Mac topology, then later macOS
-  packaging and the required Windows clean-machine bundle/distribution phases.
+- M23 packaging and the required Windows clean-machine bundle/distribution
+  phases remain separately scoped release work.
+
+- Non-blocking M23 Remote follow-up: decide whether the desktop should prefer
+  IPv4, clearly label IPv4/IPv6 Remote routes, or retain both; reproduce the
+  brief usable micro-stutters only if they remain observable.
 
 - ARM selector reproducibility rebuild: unavailable on this checkout because the
   ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is

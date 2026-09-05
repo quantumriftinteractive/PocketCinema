@@ -46,10 +46,10 @@ is outside this audit and was not read, modified, staged, or deployed.
 | 21 | Selectable Matroska tracks, R1, Off, and cleanup | M22 | default-enabled server/client Matroska path and app-local player | A | default/opt-out, packaging tests, inherited M22 physical evidence | Production-promoted and intact | No | Explicit `0`/CLI disable is a supported opt-out, not a hidden gate. |
 | 22 | App-local FFplay, libass/fontconfig/font, identity bridge, 1.5x default | M22 plus renderer repair evidence | app-local player runtime, dual legacy/current bindings, `font_scale=1.5` | A | renderer runtime test, deployed-hash evidence, physical readability result | Production default is readable | No | Size/position preferences are deferred normal-UI work. |
 | 23 | Local LAN direct HTTP and editable proxy configuration | M4, M11, M21 | connection profile and proxy helper | A | connection/proxy shell tests | Implemented normally | No | Empty proxy means direct transport. |
-| 24 | Remote supported-v1 proxy route without forced Tailscale auth | M2, M11, M14, M21 | Remote profile through generic HTTP proxy | A | connection profile tests, transport evidence | Implemented normally | No | PocketCinema does not authenticate or start Tailscale. |
+| 24 | Remote supported-v1 proxy route without forced Tailscale auth | M2, M11, M14, M21; M23 Remote PASS | Remote profile through generic HTTP proxy | A | connection profile tests, transport evidence, and Miyoo Remote smoke | Implemented normally | No | A real direct stream and selectable subtitles worked through the independent proxy/Tailscale path; PocketCinema does not authenticate or start Tailscale. |
 | 25 | Independent Tailscale companion and state preservation | M11, M14; rename smoke | `onion-tailscale/` only | A | deployment/migration code and evidence | Implemented normally | No | PocketCinema does not inspect companion state. |
 | 26 | Local-only UDP discovery | M3, M11 | discovery responder/client | A | responder tests and current code | Implemented normally | No | Legacy wire marker is intentionally retained. |
-| 27 | Local/Remote route preservation, wildcard bind, Automatic/All/Custom, no wildcard advertisement | M11, M21, M23 Local PASS | client profile + desktop route derivation | A | connection tests and desktop tests | Implemented normally | No | M23 Remote desktop physical acceptance is pending work, not a lost historic PASS. |
+| 27 | Local/Remote route preservation, wildcard bind, Automatic/All/Custom, no wildcard advertisement | M11, M21, M23 Local/Remote PASS | client profile + desktop route derivation | A | connection tests, desktop tests, and Miyoo Remote smoke | Implemented normally | No | The smoke used a known Remote IPv4 address through the proxy; the desktop-advertised Remote IPv6 route remains a non-blocking UX follow-up. |
 | 28 | No accidental public Stremio Service exposure | M15 and security invariants | loopback default, desktop PCServer-only endpoint validation | A | server/desktop config and readiness review | Implemented normally | No | Firewall verification remains a release gate. |
 | 29 | PocketStremio -> PocketCinema profile/proxy/playback-state migration | rename PASS | one-time deploy migration | A | deploy script and migration evidence | Implemented normally | No | Local/Remote settings and last-play state preserve atomically. |
 | 30 | Tailscale untouched, legacy renderer bridge, stale fontconfig rewrite, required legacy identifiers | rename/M22 repair evidence | deploy migration and client runtime exports | A | deploy and renderer runtime tests | Implemented normally | No | Historical names remain only for wire/helper/runtime compatibility. |
@@ -61,7 +61,7 @@ is outside this audit and was not read, modified, staged, or deployed.
 | 36 | Optional deterministic compatibility fixtures | M7-M9, M18 | allowlisted optional fixture routes | F | server tests and roadmap decisions | Intentionally not required for normal playback | No | Explicitly retained as regression infrastructure, never a production activation requirement. |
 | 37 | Current-state/plan checkpoint and renderer narrative | M22/M23 handoffs | `PROJECT_STATE.md`, desktop plan | E | audit comparison with `b83eff2` and physical repair evidence | **Fix required: state drift** | No | Stale pending/readability language and old remote-verification text must be reconciled. |
 | 38 | Windows desktop test portability | M23 Windows repair verification | `server/test_desktop.py` | E | Windows audit run | **Fixed in this audit** | No | Expected path now uses host `Path` semantics rather than POSIX separators. |
-| 39 | M23 accepted Local desktop management and Windows responsiveness | M23 Local PASS; focused Windows responsiveness PASS | desktop lifecycle, route list, owned child | A | desktop suite, recorded Local smoke, and user physical Windows observation | Accepted paths retained | No | The desktop Remote-route check remains separately pending M23 work, not a historical PASS regression. |
+| 39 | M23 desktop Local/Remote management and Windows responsiveness | M23 Local/Remote PASS; focused Windows responsiveness PASS | desktop lifecycle, route list, owned child | A | desktop suite, Local smoke, Windows observation, and Miyoo Remote smoke | Accepted paths retained | No | Remote transport, real direct playback, and selectable subtitles are confirmed. IPv4/IPv6 presentation and brief usable micro-stutters are non-blocking follow-ups. |
 
 ## Findings and disposition
 
@@ -81,6 +81,13 @@ is outside this audit and was not read, modified, staged, or deployed.
    test expected slash separators for a Windows `Path`, failing only on Windows.
    The test now compares platform-native `Path` output; desktop behavior was not
    altered.
+4. **Non-blocking M23 Remote observation.** The desktop advertised a Tailscale
+   IPv6 route while the successful Miyoo smoke manually used the known Tailscale
+   IPv4 PCServer address through the independent userspace proxy. Brief
+   recurring millisecond-scale micro-stutters were usable and did not fail the
+   remote transport smoke. Later work may choose IPv4 preference, explicit
+   address-family labels, or both route families, and investigate stutter only
+   if reproducible.
 
 No **B** configuration gap or **C** regression was found. The audit does not
 reopen M21/M22 physical matrices: their client, resolver, conversion, subtitle,
@@ -105,7 +112,8 @@ boundary.
 
 ## Remaining physical work
 
-The focused Windows desktop responsiveness observation is now physically
-confirmed PASS. The separately pending M23 desktop Remote-route observation is
-outside this audit and must remain separately scoped. Neither observation
-justifies replaying M21/M22 playback acceptance.
+The focused Windows desktop responsiveness and M23 Remote-route observations
+are physically confirmed PASS. No further physical audit check is required.
+The IPv4/IPv6 route-presentation and brief micro-stutter observations are
+non-blocking follow-up work. Neither observation justifies replaying M21/M22
+playback acceptance.
