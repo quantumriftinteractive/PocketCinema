@@ -29,6 +29,13 @@ Normal server operations use `server/manage-server.ps1` on Windows or
 `scripts/deploy-miyoo.ps1`; the deployment preserves the app's real config,
 logs, networking-provider state, and OnionOS core files.
 
+## Public documentation
+
+Canonical end-user documentation is in `docs/user/`. The allowlisted export is
+defined by `docs/user/public-docs.json`; run `python3 scripts/export-public-docs.py`
+to refresh `public-docs/pocketcinema/`, or add `--check` to verify it without
+writing. Website integration is a separate step.
+
 For the pre-Milestone-23 development-device rename and its intentionally
 limited configuration migration, see
 [PocketCinema Rename Migration](docs/pocketcinema-rename-migration.md).

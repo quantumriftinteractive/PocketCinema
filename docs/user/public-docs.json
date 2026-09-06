@@ -1,0 +1,4 @@
+{
+  "product": "PocketCinema",
+  "files": ["index.md", "requirements.md", "installation.md", "pcserver-setup.md", "local-connection.md", "remote-connection.md", "stremio-account.md", "browsing-and-playback.md", "subtitles.md", "live-tv.md", "troubleshooting.md", "privacy-and-security.md", "limitations.md"]
+}
