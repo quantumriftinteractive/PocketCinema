@@ -327,13 +327,18 @@ remain pending; M23 remains incomplete. Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `28d3b4a`
-Remote verified: YES — `28d3b4a` is reachable from fetched `origin/main`
+Checkpoint commit: `b8177df867f48bea8355c52ae019988457ef06e5`
+Remote verified: YES — `b8177df867f48bea8355c52ae019988457ef06e5` is reachable from fetched `origin/main`
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
 
 Completed:
+
+- PocketCinema public user documentation was created under canonical
+  `docs/user/` and exported deterministically from its allowlist to
+  `public-docs/pocketcinema/`. Runtime behavior is unchanged. The separate
+  selector-cap task remains blocked on the missing ARM compiler/sysroot.
 
 - Controlled PocketCinema/PocketCinema Server/PCServer rename with no API-path
   redesign and no Tailscale lifecycle change; focused Apps-context deployment,
