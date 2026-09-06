@@ -496,7 +496,9 @@ Pending:
   focused gates are PASS.
 
 - Generic account-backed Stremio TV playback is implemented through the existing
-  Live TV path and now has a bounded HLS conversion-source fix. Investigation of
+  Live TV path and now has a bounded HLS conversion-source fix. Conversion-only
+  fMP4 HLS with a validated `EXT-X-MAP` is now normalized as a server-side input
+  to the existing converter; direct-device HLS remains MPEG-TS-only. Investigation of
   the real StremTV US channel showed no addon request headers were required; its
   H.264/AAC 854x480 rendition exceeded the device-output HLS bound, causing the
   conversion input bridge to return 502 before FFmpeg produced media. The bridge

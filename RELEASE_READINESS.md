@@ -76,7 +76,9 @@ preserved. The generic account-backed TV path is implemented and focused-tested:
 StremTV's H.264/AAC 854x480 rendition was rejected by the device-output HLS
 bound before conversion, so the generic HLS bridge now admits only bounded
 1920x1080/8 Mbps H.264 conversion inputs while retaining the strict direct-device
-bound. One focused Miyoo StremTV playback check remains required; the separate
+bound. Conversion-only fragmented-MP4 HLS now passes its validated initialization
+segment and media fragments to the existing converter; direct-device HLS remains
+MPEG-TS-only. One focused Miyoo StremTV playback check remains required; the separate
 64-item selector capacity limitation is documented and not yet corrected.
 
 ## Verified Connection and Onboarding Resolution

@@ -2537,6 +2537,32 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                 time.sleep(attempt + 1)
         raise last_error
 
+    def open_hls_fragment_with_retry(self, url, attempts=3):
+        headers = {
+            "User-Agent": "PocketCinema/0.13",
+            "Accept-Encoding": "identity",
+        }
+        last_error = None
+        for attempt in range(attempts):
+            try:
+                return open_media_url(
+                    url,
+                    headers,
+                    MEDIA_TIMEOUT,
+                    validate_public=True,
+                )
+            except urllib.error.HTTPError as exc:
+                retryable = exc.code in {408, 429} or 500 <= exc.code < 600
+                exc.close()
+                if not retryable:
+                    raise
+                last_error = exc
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                last_error = exc
+            if attempt + 1 < attempts:
+                time.sleep(attempt + 1)
+        raise last_error
+
     def stream_hls_transport(self, session):
         playlist_url = session["url"]
         response_started = False
@@ -2561,6 +2587,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                 raise hls_relay.HlsRelayError("The HLS playlist is nested too deeply")
 
             last_sequence = -1
+            init_map_url = ""
             expires_at = session["created_at"] + self.server.play_sessions.ttl_seconds
             while time.time() < expires_at:
                 if media_playlist:
@@ -2574,25 +2601,50 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                     payload,
                     final_url,
                     stremio_account.validate_direct_stream_url,
+                    allow_fragmented_mp4=session.get("hls_conversion_source", False),
                 )
                 pending = [
                     item
                     for item in media["segments"]
                     if item["sequence"] > last_sequence
                 ]
-                for segment in pending:
-                    response, prefix = self.open_hls_segment_with_retry(
-                        segment["url"]
-                    )
+                if media["init_map"] and media["init_map"] != init_map_url:
+                    response = self.open_hls_fragment_with_retry(media["init_map"])
                     with response:
                         if not response_started:
                             self.send_response(200)
-                            self.send_header("Content-Type", "video/mp2t")
+                            self.send_header("Content-Type", "video/mp4")
                             self.send_header("Cache-Control", "no-store")
                             self.send_header("Connection", "close")
                             self.end_headers()
                             response_started = True
-                        self.wfile.write(prefix)
+                        while True:
+                            chunk = response.read(1024 * 256)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                    init_map_url = media["init_map"]
+                for segment in pending:
+                    if media["init_map"]:
+                        response = self.open_hls_fragment_with_retry(segment["url"])
+                        prefix = b""
+                    else:
+                        response, prefix = self.open_hls_segment_with_retry(
+                            segment["url"]
+                        )
+                    with response:
+                        if not response_started:
+                            self.send_response(200)
+                            self.send_header(
+                                "Content-Type",
+                                "video/mp4" if media["init_map"] else "video/mp2t",
+                            )
+                            self.send_header("Cache-Control", "no-store")
+                            self.send_header("Connection", "close")
+                            self.end_headers()
+                            response_started = True
+                        if prefix:
+                            self.wfile.write(prefix)
                         while True:
                             chunk = response.read(1024 * 256)
                             if not chunk:

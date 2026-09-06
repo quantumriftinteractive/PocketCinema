@@ -2106,6 +2106,34 @@ segments.ts
                     lambda value: value.startswith("https://media.example/"),
                 )
 
+        fragmented = b"""#EXTM3U
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:6,
+segment.m4s
+"""
+        parsed = hls_relay.parse_media_playlist(
+            fragmented,
+            "https://media.example/path/index.m3u8",
+            lambda value: value.startswith("https://media.example/"),
+            allow_fragmented_mp4=True,
+        )
+        self.assertEqual(
+            parsed["init_map"], "https://media.example/path/init.mp4"
+        )
+        self.assertEqual(
+            parsed["segments"],
+            [{"sequence": 0, "url": "https://media.example/path/segment.m4s"}],
+        )
+
+        unsafe_map = fragmented.replace(b'URI="init.mp4"', b'URI="http://127.0.0.1/init.mp4"')
+        with self.assertRaisesRegex(hls_relay.HlsRelayError, "blocked media URI"):
+            hls_relay.parse_media_playlist(
+                unsafe_map,
+                "https://media.example/path/index.m3u8",
+                stremio_account.validate_direct_stream_url,
+                allow_fragmented_mp4=True,
+            )
+
     def test_hls_bridge_refreshes_and_deduplicates_overlapping_segments(self):
         RefreshingHlsHandler.reset()
         upstream = ThreadingHTTPServer(("127.0.0.1", 0), RefreshingHlsHandler)

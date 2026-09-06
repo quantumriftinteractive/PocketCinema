@@ -136,7 +136,9 @@ def select_variant_url(
     return _resolved_uri(base_url, selected_uri, validate_url)
 
 
-def parse_media_playlist(payload, base_url, validate_url):
+def parse_media_playlist(
+    payload, base_url, validate_url, allow_fragmented_mp4=False
+):
     if len(payload) > MAX_PLAYLIST_BYTES:
         raise HlsRelayError("The HLS playlist is too large")
     try:
@@ -149,8 +151,22 @@ def parse_media_playlist(payload, base_url, validate_url):
         raise HlsRelayError("The upstream response is not an HLS playlist")
     if any(line.strip().startswith("#EXT-X-STREAM-INF:") for line in lines):
         raise HlsRelayError("The HLS rendition is not a media playlist")
-    if any(line.strip().startswith("#EXT-X-MAP:") for line in lines):
+    map_uri = ""
+    map_lines = [line.strip() for line in lines if line.strip().startswith("#EXT-X-MAP:")]
+    if map_lines and not allow_fragmented_mp4:
         raise HlsRelayError("Fragmented MP4 HLS is unsupported")
+    if map_lines:
+        map_uris = []
+        for map_line in map_lines:
+            attributes = _attributes(map_line.partition(":")[2])
+            if attributes.get("BYTERANGE"):
+                raise HlsRelayError("Byte-range HLS initialization is unsupported")
+            map_uris.append(
+                _resolved_uri(base_url, attributes.get("URI"), validate_url)
+            )
+        if len(set(map_uris)) != 1:
+            raise HlsRelayError("Multiple HLS initialization segments are unsupported")
+        map_uri = map_uris[0]
     if any(line.strip().startswith("#EXT-X-BYTERANGE:") for line in lines):
         raise HlsRelayError("Byte-range HLS segments are unsupported")
     for line in lines:
@@ -195,4 +211,5 @@ def parse_media_playlist(payload, base_url, validate_url):
         "segments": segments,
         "target_duration": target_duration,
         "endlist": any(line.strip() == "#EXT-X-ENDLIST" for line in lines),
+        "init_map": map_uri,
     }
