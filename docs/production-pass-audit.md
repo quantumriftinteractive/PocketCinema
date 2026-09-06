@@ -1,7 +1,8 @@
 # Production PASS Audit
 
-Last audited: 2026-09-04
-Scope: current `main` at repair checkpoint `030b2e9`, sealed by `b83eff2`.
+Last audited: 2026-09-06
+Scope: documentation-only reconciliation of the current `main` release/readiness
+state; no runtime behavior or physical acceptance was reopened.
 
 ## Method
 
@@ -44,7 +45,7 @@ is outside this audit and was not read, modified, staged, or deployed.
 | 19 | Subtitle-download and conversion-start failure behavior | M20-M21 | sanitized play-error route and client messages | A | controlled-failure tests, UI mapping | Implemented normally | No | Controlled failure flags are default-off test infrastructure. |
 | 20 | Burn-in/downscale fallback | M20, M22 | bounded MPEG-TS conversion fallback | A | transcode and M22 fallback evidence | Implemented normally where libass-capable FFmpeg exists | No | Selectable Matroska setup failure returns here. |
 | 21 | Selectable Matroska tracks, R1, Off, and cleanup | M22 | default-enabled server/client Matroska path and app-local player | A | default/opt-out, packaging tests, inherited M22 physical evidence | Production-promoted and intact | No | Explicit `0`/CLI disable is a supported opt-out, not a hidden gate. |
-| 22 | App-local FFplay, libass/fontconfig/font, identity bridge, 1.5x default | M22 plus renderer repair evidence | app-local player runtime, dual legacy/current bindings, `font_scale=1.5` | A | renderer runtime test, deployed-hash evidence, physical readability result | Production default is readable | No | Size/position preferences are deferred normal-UI work. |
+| 22 | App-local FFplay, libass/fontconfig/font, identity bridge, 1.5x default | M22 plus renderer repair evidence | app-local player runtime, dual legacy/current bindings, `font_scale=1.5` | A | renderer runtime test, deployed-hash evidence, physical readability result | Production default is readable | No | Subtitle-size presets are physically accepted through the normal UI; subtitle position remains deferred normal-UI work. |
 | 23 | Local LAN direct HTTP and editable proxy configuration | M4, M11, M21 | connection profile and proxy helper | A | connection/proxy shell tests | Implemented normally | No | Empty proxy means direct transport. |
 | 24 | Remote supported-v1 proxy route without forced Tailscale auth | M2, M11, M14, M21; M23 Remote PASS | Remote profile through generic HTTP proxy | A | connection profile tests, transport evidence, and Miyoo Remote smoke | Implemented normally | No | A real direct stream and selectable subtitles worked through the independent proxy/Tailscale path; PocketCinema does not authenticate or start Tailscale. |
 | 25 | Independent Tailscale companion and state preservation | M11, M14; rename smoke | `onion-tailscale/` only | A | deployment/migration code and evidence | Implemented normally | No | PocketCinema does not inspect companion state. |
@@ -59,7 +60,7 @@ is outside this audit and was not read, modified, staged, or deployed.
 | 34 | Supported server launch paths: desktop, managers, direct source | M15-M16, M23 Local PASS | desktop child; Windows/macOS managers; documented direct CLI | A | lifecycle/manager/parser/docs review | Parity preserved where supported | No | Direct source is documented as an explicit developer/admin invocation; it is not an end-user package. |
 | 35 | Test-only/hidden-gate containment | PASS invariant | markers and `FIELD_TEST`, `AUTO_FIRST`, headless, dry-run, display-surface, forced-failure flags | A | repository-wide tracked-source scan | Defaults are production-safe | No | Test flags default off; accepted player/Matroska defaults are on. |
 | 36 | Optional deterministic compatibility fixtures | M7-M9, M18 | allowlisted optional fixture routes | F | server tests and roadmap decisions | Intentionally not required for normal playback | No | Explicitly retained as regression infrastructure, never a production activation requirement. |
-| 37 | Current-state/plan checkpoint and renderer narrative | M22/M23 handoffs | `PROJECT_STATE.md`, desktop plan | E | audit comparison with `b83eff2` and physical repair evidence | **Fix required: state drift** | No | Stale pending/readability language and old remote-verification text must be reconciled. |
+| 37 | Current-state/plan checkpoint and renderer narrative | M22/M23 handoffs | `PROJECT_STATE.md`, desktop plan | E | audit comparison with `b83eff2` and physical repair evidence | **Fixed by documentation reconciliation** | No | Current-state and readiness text now records the accepted subtitle-size PASS and current M23 release gates without reopening physical evidence. |
 | 38 | Windows desktop test portability | M23 Windows repair verification | `server/test_desktop.py` | E | Windows audit run | **Fixed in this audit** | No | Expected path now uses host `Path` semantics rather than POSIX separators. |
 | 39 | M23 desktop Local/Remote management and Windows responsiveness | M23 Local/Remote PASS; focused Windows responsiveness PASS | desktop lifecycle, route list, owned child | A | desktop suite, Local smoke, Windows observation, and Miyoo Remote smoke | Accepted paths retained | No | Remote transport, real direct playback, and selectable subtitles are confirmed. IPv4/IPv6 presentation and brief usable micro-stutters are non-blocking follow-ups. |
 

@@ -1066,8 +1066,8 @@ does not satisfy that gate.
 Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop-distribution-plan.md)
 
 Windows packaging checkpoint: an unsigned standalone x64 one-directory candidate
-is implemented and focused-automated-tested. The packaged development-machine
-physical smoke is next; clean-Windows acceptance and the other M23 release gates
+is implemented, focused-automated-tested, and physically smoke-tested on the
+development machine. Clean-Windows acceptance and the other M23 release gates
 remain open. See [Windows packaging evidence](windows-packaging.md). M23 remains
 **Next**, with M21/M22 and accepted source desktop/tray evidence inherited.
 
@@ -1146,9 +1146,9 @@ behavior are stable:
 - Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites and watch history (the unified UI refresh is Milestone 25);
-- normal-UI subtitle presentation preferences: bounded size presets (for
-  example 1.0x, 1.25x, 1.5x, 2.0x, 2.5x, and 3.0x) plus Normal, Bottom-clamped,
-  and Top-clamped position behavior;
+- normal-UI subtitle position behavior: Normal, Bottom-clamped, and Top-clamped
+  placement; bounded subtitle size presets are implemented and physically
+  confirmed through the normal UI;
 - torrent ingestion and addon results that do not provide direct HTTP media.
 
 Each deferred feature should become a separate milestone with its own device

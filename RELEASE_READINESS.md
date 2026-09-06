@@ -17,7 +17,13 @@ reproducible release artifacts. Selectable Matroska is promoted to the normal
 product default, with an explicit opt-out retaining the bounded burn-in path.
 Its app-local renderer's 1.5x subtitle-font default is physically confirmed as
 readable. UI-configurable subtitle size is implemented and physically confirmed
-PASS at 1.0x, 3.0x, and restored 1.5x; subtitle position remains future UX work.
+PASS at 1.0x, 3.0x, and restored 1.5x. The supported presets are 1.0x, 1.25x,
+1.5x, 2.0x, 2.5x, and 3.0x; `SUBTITLE_FONT_SCALE` persists the selection, and
+missing or invalid values fall back to 1.5x. The setting uses the existing
+app-local FFplay `font_scale` renderer path, with no second renderer. Targeted
+automated/static validation and standard Miyoo deployment passed while live
+configuration, playback state, runtime assets, and independent Tailscale state
+were preserved. Subtitle position remains future UX work.
 The Production PASS audit confirms that accepted M21/M22 behavior remains on
 the current normal paths. It also confirms the existing release blocker: a
 fresh Miyoo deployment still depends on ignored rebuilt-player, font, and
@@ -62,8 +68,11 @@ remaining 1.5x.
 The focused production UX fixes are physically confirmed PASS: stream/source-
 resolution helper processes are silent on Windows with their output and failure
 handling preserved, and Miyoo Search results render readable bounded Movie and
-Series labels with normal Movie and Series navigation. Live TV is not removed
-in this task and remains a future v1 cleanup item.
+Series labels with normal Movie and Series navigation. Live TV is an **ACTIVE
+RECONSIDERATION / VIABLE V1 CANDIDATE**, not a completed generic feature:
+StremTV US is the first known-good real-world test addon after successful
+ordinary Stremio playback. The existing ERT News live-HLS evidence remains
+preserved.
 
 ## Verified Connection and Onboarding Resolution
 
@@ -242,12 +251,26 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
 - Installation, rollback, support, known limitations, and license notices are
   included with the GitHub release.
 
+## Remaining v1 product candidates
+
+These are candidates for the remaining v1 product scope. None is implemented by
+this documentation update:
+
+1. **Library / My Library** — save/remove movies and series with persistent
+   library state.
+2. **Next Episode / series continuation** — determine the next episode, handle
+   season boundaries, and integrate with Continue Watching.
+3. **Generic Stremio TV-addon support** — investigate the generic `type=tv`
+   catalog/channel/stream path using StremTV US as the first known-good test
+   addon, then reuse the existing PCServer safety and HLS/remux/downscale path
+   where compatible. Do not hard-code StremTV-specific support.
+4. **Client UI/settings polish** — pursue after core functionality settles.
+
 ## What can be deferred
 
-These are explicitly outside a minimal v1.0 unless the release scope is
-expanded:
+These remain deferred from the current implementation and are not accepted
+release features unless the scope is explicitly expanded:
 
-- account library/catalog browsing;
 - favorites, richer history, posters, image caching, and a full UI;
 - persistent audio-language preferences beyond the now-confirmed per-play
   converted-track selection;
@@ -262,6 +285,63 @@ expanded:
 
 Deferred work must remain outside the active milestone and receive its own
 acceptance criteria before implementation.
+
+## Development Priority by Available Codex Budget
+
+Percentage buckets are planning heuristics only; they are not a guaranteed
+mapping between five-hour and weekly consumption.
+
+### Low weekly budget (~10% or less)
+
+Suitable:
+
+- documentation and state updates;
+- static code investigation;
+- very small isolated fixes;
+- narrow configuration/UI changes; and
+- addon-path inspection without broad implementation.
+
+Avoid macOS packaging, Library plus Next Episode, generic TV-addon
+implementation, cross-platform architecture, and broad release validation.
+
+### Medium healthy budget (~25–50%)
+
+Suitable:
+
+- focused generic Stremio TV-addon investigation and a small implementation if
+  the architecture proves simple;
+- Library plus Next Episode with carefully bounded scope; and
+- moderate client UI work.
+
+Prefer Astra Medium for architecture work.
+
+### Fresh / large weekly budget
+
+Suitable:
+
+- macOS distribution and frozen `.app` packaging;
+- menu-bar/background lifecycle and signing/notarization preparation;
+- larger Library plus Next Episode work;
+- generic TV-addon implementation if investigation reveals broader changes; and
+- fresh-machine release validation.
+
+## Recommended Work Order
+
+1. Preserve the physically accepted subtitle-size PASS; do not repeat it unless
+   later work materially intersects its validated path.
+2. While the weekly budget is very low, perform only documentation, static
+   inspection, or tiny isolated fixes.
+3. When the weekly budget is healthy, investigate generic Stremio TV-addon
+   support using StremTV US as the known-good test case.
+4. Implement either generic TV-addon support or Library plus Next Episode,
+   depending on investigation complexity and product priority.
+5. Continue macOS distribution with a fresh or larger budget.
+6. Rebuild the final Windows candidate after remaining v1 features settle.
+7. Complete clean-machine acceptance.
+8. Complete signing, notarization, runtime, and licensing review.
+9. Complete the Miyoo fresh-SD and runtime-packaging release gate.
+
+This order does not invalidate or reopen completed M23 work.
 
 ## Installation paths
 
@@ -542,9 +622,10 @@ separately reviewed authentication and transport design.
   packaging is automated-tested but still needs a six-track Apps-context run.
   The normal deployment now packages the app-local player, runtime libraries,
   font configuration, and font asset; its 1.5x font-scale default is physically
-  confirmed as readable. User-selectable size presets and Normal, Bottom-clamped,
-  or Top-clamped position belong to a later normal-UI UX feature. Fresh-SD
-  validation and licensing review remain release gates.
+  confirmed as readable. User-selectable size presets are physically confirmed
+  through the normal UI and persist through `SUBTITLE_FONT_SCALE`; Normal,
+  Bottom-clamped, or Top-clamped subtitle position remains a later UX feature.
+  Fresh-SD validation and licensing review remain release gates.
 - The converted MPEG-TS path is nonseekable; D-pad seeking remains restricted.
 - Resume positions are approximate and exclude startup/A-button pause time but
   do not model every buffering or seek interval.
@@ -559,6 +640,10 @@ separately reviewed authentication and transport design.
   requirements. Per-play verified audio-track selection for converted streams
   is implemented and physically confirmed, but remains a limited preference
   rather than a full language-preference system.
+- Generic Stremio TV-addon support is not implemented. StremTV US is the first
+  known-good real-world test addon for the investigation; the existing ERT News
+  live-HLS path remains historically confirmed and does not establish generic
+  TV-addon coverage.
 - Tailscale clean-account onboarding and disconnected-boot behavior require
   separate physical testing; the working authenticated identity must not be
   reset during ordinary development.

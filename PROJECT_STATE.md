@@ -1,7 +1,7 @@
 # PocketCinema Current Project State
 
-Last updated: 2026-09-05
-Last updated by machine: Windows development checkout
+Last updated: 2026-09-06
+Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
@@ -248,8 +248,8 @@ and physically confirmed PASS. It persists the bounded 1.0x, 1.25x, 1.5x,
 2.0x, 2.5x, and 3.0x choices and feeds the existing app-local `font_scale`
 renderer path; missing or invalid values fall back to 1.5x. Physical acceptance
 confirmed 1.0x is smaller, 3.0x clearly larger, and 1.5x restores and persists.
-Subtitle position controls remain future UX work, and the normal default remains
-1.5x.
+Subtitle position controls remain future UX work; the size presets are
+physically accepted through the normal UI, and the normal default remains 1.5x.
 
 Focused Windows M23 observation found a separate desktop UI freeze boundary:
 the 700 ms Tk poll synchronously refreshed routes, which on Windows spawned
@@ -466,10 +466,12 @@ Pending:
   macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
   release work. Build/artifact instructions: `docs/windows-packaging.md`.
 
-- Subtitle font-size settings are implemented and deployed through the standard
-  Miyoo path, awaiting the focused Apps-context acceptance below. Planned
-  presets are 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x; the production/default
-  scale remains 1.5x and the existing `font_scale` renderer path is reused.
+- Subtitle font-size settings are implemented, deployed through the standard
+  Miyoo path, and physically confirmed PASS. The supported presets are 1.0x,
+  1.25x, 1.5x, 2.0x, 2.5x and 3.0x; `SUBTITLE_FONT_SCALE` persists the value,
+  invalid or missing values fall back to 1.5x, and the existing app-local
+  `font_scale` renderer path is reused. No additional Apps retest is required
+  unless later work materially intersects this path.
 
 - Two focused production UX refinements are implemented and physically
   confirmed: missed Windows background subprocess paths in
@@ -477,7 +479,10 @@ Pending:
   retaining captured output, errors, return codes and timeouts; Miyoo Search
   rows now visibly append bounded `[MOVIE]` or `[SERIES]` labels from existing
   result metadata. No provider, ordering, selection, playback or Live TV
-  behavior was changed. Live TV removal remains a future v1 cleanup item.
+  behavior was changed. Live TV is now an **ACTIVE RECONSIDERATION / VIABLE V1
+  CANDIDATE** based on the successful real-world StremTV US test; generic
+  TV-addon support is not implemented and StremTV-specific support must not be
+  hard-coded. The existing ERT News live-HLS evidence remains preserved.
   The candidate was rebuilt after these changes and the focused frozen-child
   check passed. A focused Miyoo regression then showed the result list was
   empty: jq 1.6 treats the temporary `$label` name as its reserved `label`
