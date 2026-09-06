@@ -1282,6 +1282,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
             "duration_seconds": duration_seconds,
             "compatibility": compatibility,
             "hls": compatibility.get("container") == "hls",
+            "hls_conversion_source": transcode,
             "audio_stream_index": audio_stream_index,
         }
         if transcode:
@@ -2549,6 +2550,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                     payload,
                     final_url,
                     stremio_account.validate_direct_stream_url,
+                    allow_conversion_source=session.get("hls_conversion_source", False),
                 )
                 if not variant_url:
                     playlist_url = final_url

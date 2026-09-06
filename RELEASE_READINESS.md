@@ -72,7 +72,12 @@ Series labels with normal Movie and Series navigation. Live TV is an **ACTIVE
 RECONSIDERATION / VIABLE V1 CANDIDATE**, not a completed generic feature:
 StremTV US is the first known-good real-world test addon after successful
 ordinary Stremio playback. The existing ERT News live-HLS evidence remains
-preserved.
+preserved. The generic account-backed TV path is implemented and focused-tested:
+StremTV's H.264/AAC 854x480 rendition was rejected by the device-output HLS
+bound before conversion, so the generic HLS bridge now admits only bounded
+1920x1080/8 Mbps H.264 conversion inputs while retaining the strict direct-device
+bound. One focused Miyoo StremTV playback check remains required; the separate
+64-item selector capacity limitation is documented and not yet corrected.
 
 ## Verified Connection and Onboarding Resolution
 
@@ -260,10 +265,10 @@ this documentation update:
    library state.
 2. **Next Episode / series continuation** — determine the next episode, handle
    season boundaries, and integrate with Continue Watching.
-3. **Generic Stremio TV-addon support** — investigate the generic `type=tv`
-   catalog/channel/stream path using StremTV US as the first known-good test
-   addon, then reuse the existing PCServer safety and HLS/remux/downscale path
-   where compatible. Do not hard-code StremTV-specific support.
+3. **Generic Stremio TV-addon support** — complete the focused Miyoo playback
+   confirmation for the implemented generic `type=tv` catalog/channel/stream
+   path and decide whether to raise the separate selector capacity limit. Do not
+   hard-code StremTV-specific support.
 4. **Client UI/settings polish** — pursue after core functionality settles.
 
 ## What can be deferred
@@ -640,10 +645,11 @@ separately reviewed authentication and transport design.
   requirements. Per-play verified audio-track selection for converted streams
   is implemented and physically confirmed, but remains a limited preference
   rather than a full language-preference system.
-- Generic Stremio TV-addon support is not implemented. StremTV US is the first
-  known-good real-world test addon for the investigation; the existing ERT News
-  live-HLS path remains historically confirmed and does not establish generic
-  TV-addon coverage.
+- Generic account-backed Stremio TV-addon support is implemented through the
+  existing Live TV and bounded conversion path, with focused automated coverage
+  for the StremTV HLS rendition boundary. One focused Miyoo playback confirmation
+  remains open. StremTV-specific support is not hard-coded. The existing ERT News
+  live-HLS path remains historically confirmed.
 - Tailscale clean-account onboarding and disconnected-boot behavior require
   separate physical testing; the working authenticated identity must not be
   reset during ordinary development.

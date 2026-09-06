@@ -8,6 +8,9 @@ MAX_VIDEO_WIDTH = 640
 MAX_VIDEO_HEIGHT = 360
 MAX_FRAME_RATE = 30.0
 MAX_BANDWIDTH = 1_600_000
+MAX_CONVERSION_VIDEO_WIDTH = 1920
+MAX_CONVERSION_VIDEO_HEIGHT = 1080
+MAX_CONVERSION_BANDWIDTH = 8_000_000
 
 class HlsRelayError(RuntimeError):
     pass
@@ -47,7 +50,7 @@ def _resolution(value):
         return 0, 0
 
 
-def _supported_variant(stream_inf):
+def _supported_variant(stream_inf, allow_conversion_source=False):
     attributes = _attributes(stream_inf.partition(":")[2])
     width, height = _resolution(attributes.get("RESOLUTION"))
     frame_rate = _positive_number(attributes.get("FRAME-RATE"))
@@ -58,10 +61,26 @@ def _supported_variant(stream_inf):
     has_h264 = "avc1" in codecs or "avc3" in codecs
     return (
         has_h264
-        and 0 < width <= MAX_VIDEO_WIDTH
-        and 0 < height <= MAX_VIDEO_HEIGHT
+        and 0 < width <= (
+            MAX_CONVERSION_VIDEO_WIDTH
+            if allow_conversion_source
+            else MAX_VIDEO_WIDTH
+        )
+        and 0 < height <= (
+            MAX_CONVERSION_VIDEO_HEIGHT
+            if allow_conversion_source
+            else MAX_VIDEO_HEIGHT
+        )
         and (not frame_rate or frame_rate <= MAX_FRAME_RATE)
-        and (not bandwidth or bandwidth <= MAX_BANDWIDTH)
+        and (
+            not bandwidth
+            or bandwidth
+            <= (
+                MAX_CONVERSION_BANDWIDTH
+                if allow_conversion_source
+                else MAX_BANDWIDTH
+            )
+        )
     )
 
 
@@ -83,7 +102,9 @@ def _resolved_uri(base_url, value, validate_url):
     return resolved
 
 
-def select_variant_url(payload, base_url, validate_url):
+def select_variant_url(
+    payload, base_url, validate_url, allow_conversion_source=False
+):
     if len(payload) > MAX_PLAYLIST_BYTES:
         raise HlsRelayError("The HLS playlist is too large")
     try:
@@ -102,7 +123,7 @@ def select_variant_url(payload, base_url, validate_url):
             uri = uri_line.strip()
             if not uri or uri.startswith("#"):
                 continue
-            if _supported_variant(line):
+            if _supported_variant(line, allow_conversion_source):
                 variants.append((_variant_score(line), uri))
             break
     if not any(

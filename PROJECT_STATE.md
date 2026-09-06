@@ -495,6 +495,17 @@ Pending:
   zero terminal/PowerShell/cmd windows during stream/search activity. These
   focused gates are PASS.
 
+- Generic account-backed Stremio TV playback is implemented through the existing
+  Live TV path and now has a bounded HLS conversion-source fix. Investigation of
+  the real StremTV US channel showed no addon request headers were required; its
+  H.264/AAC 854x480 rendition exceeded the device-output HLS bound, causing the
+  conversion input bridge to return 502 before FFmpeg produced media. The bridge
+  now permits only bounded 1920x1080/8 Mbps H.264 conversion inputs while
+  retaining the existing 640x360/1.6 Mbps direct-device bound. Focused automated
+  coverage passes. Miyoo physical revalidation of one StremTV channel remains
+  pending. The separate selector capacity issue remains: its 64-item limit can
+  display only the first 64 of the server's 128 live-TV results.
+
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now
   physically confirmed under the accepted focused tray UX evidence.

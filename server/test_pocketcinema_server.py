@@ -2056,6 +2056,28 @@ class PocketCinemaServerTest(unittest.TestCase):
             upstream.server_close()
             upstream_thread.join(timeout=5)
 
+    def test_hls_bridge_allows_bounded_oversize_source_for_conversion(self):
+        payload = b'''#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=2751289,AVERAGE-BANDWIDTH=1790760,RESOLUTION=854x480,FRAME-RATE=29.970,CODECS="avc1.4D401F,mp4a.40.2"
+/video480.m3u8
+'''
+        validate = lambda value: value.startswith("https://media.example/")
+
+        with self.assertRaisesRegex(
+            hls_relay.HlsRelayError, "No Miyoo-compatible HLS rendition"
+        ):
+            hls_relay.select_variant_url(
+                payload, "https://media.example/master.m3u8", validate
+            )
+
+        selected = hls_relay.select_variant_url(
+            payload,
+            "https://media.example/master.m3u8",
+            validate,
+            allow_conversion_source=True,
+        )
+        self.assertEqual(selected, "https://media.example/video480.m3u8")
+
     def test_hls_bridge_rejects_encrypted_and_fragmented_playlists(self):
         encrypted = b"""#EXTM3U
 #EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\"
