@@ -1,0 +1,109 @@
+name: Sync PocketCinema documentation to QRI website
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/user/**
+      - scripts/export-public-docs.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pocketcinema-website-documentation-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out PocketCinema
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITEA_TOKEN }}
+          fetch-depth: 0
+
+      - name: Export public PocketCinema documentation
+        run: python3 scripts/export-public-docs.py
+
+      - name: Check public PocketCinema documentation export
+        run: python3 scripts/export-public-docs.py --check
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure the QRI website deploy key
+        env:
+          QRI_WEBSITE_DEPLOY_KEY: ${{ secrets.QRI_WEBSITE_DEPLOY_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$QRI_WEBSITE_DEPLOY_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$QRI_WEBSITE_DEPLOY_KEY" > "$HOME/.ssh/qri_website_deploy_key"
+          chmod 600 "$HOME/.ssh/qri_website_deploy_key"
+          ssh-keyscan -H server >> "$HOME/.ssh/known_hosts"
+
+      - name: Check out the QRI website
+        shell: bash
+        run: |
+          set -euo pipefail
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/qri_website_deploy_key -o IdentitiesOnly=yes" \
+            git clone --branch main --single-branch \
+            gitea@server:QuantumRiftInteractive/quantum-rift-interactive-site.git website
+
+      - name: Import and validate website documentation
+        working-directory: website
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run docs:pocketcinema:sync -- "$GITHUB_WORKSPACE/public-docs/pocketcinema"
+          npm run docs:pocketcinema:check -- "$GITHUB_WORKSPACE/public-docs/pocketcinema"
+          npm run build
+
+      - name: Reject unexpected website changes
+        working-directory: website
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected=$(git status --porcelain=v1 | awk '{path=$0; sub(/^... /, "", path); if (path !~ /^src\/content\/docs\/docs\/pocketcinema\//) print $0}')
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected website changes detected:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit website snapshot when changed
+        working-directory: website
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src/content/docs/docs/pocketcinema
+          if git diff --cached --quiet; then
+            echo "PocketCinema website snapshot is already current."
+            exit 0
+          fi
+          git config user.name "QRI Documentation Sync"
+          git config user.email "qri-docs-sync@local.invalid"
+          git commit -m "docs: sync PocketCinema documentation"
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/qri_website_deploy_key -o IdentitiesOnly=yes" git push origin HEAD:main
+
+      - name: Commit public PocketCinema export when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add public-docs/pocketcinema
+          if git diff --cached --quiet; then
+            echo "Public PocketCinema export is already current."
+            exit 0
+          fi
+          git config user.name "QRI Documentation Sync"
+          git config user.email "qri-docs-sync@local.invalid"
+          git commit -m "docs: refresh PocketCinema public export"
+          git push origin HEAD:main
