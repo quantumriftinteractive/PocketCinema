@@ -279,6 +279,16 @@ advertisement made the same stream play successfully. This was not a Library
 code failure. Release-year fallback (`????`) and the roughly 60-second
 Matroska subtitle-package fallback remain separate follow-ups.
 
+The focused Next Episode / Continue Series extension is now **Physically
+Confirmed PASS**. For the linked 3% series, the series-level continuation action
+resolved to `NEXT EPISODE - S4E5`, entered the existing Play/source-selection
+pipeline, and started with picture and audio. Ordinary selection of watched S4E4
+continued to show the unchanged `Play / Back` episode action menu; watched state
+does not add a second episode-level action. The resolver remains read-only,
+uses canonical normalized episode order, handles season boundaries, omits
+unreliable or completed targets, and reserves one of the shipped selector's 64
+rows for the continuation action.
+
 ### Current Release Follow-ups
 
 - Library metadata presentation: Search supplied Thunderbolts (2025), while
@@ -296,8 +306,8 @@ Matroska subtitle-package fallback remain separate follow-ups.
   required. Before release, verify route persistence and resolution, confirm a
   normal restart cannot reintroduce the stale route, and make the desktop
   advertised-address configuration clear.
-- Remaining release/distribution work includes the focused Next Episode /
-  Continue Series feature, a macOS `.app` plus macOS launch/runtime smoke,
+- Remaining release/distribution work includes a macOS `.app` plus macOS
+  launch/runtime smoke,
   Windows clean-machine packaged-artifact smoke, fresh/distribution-SD
   validation, renderer and subtitle-asset licensing/package completeness,
   advertised-route persistence/configuration verification, and unsigned/signing
@@ -360,19 +370,20 @@ remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: continue only with a separately authorized feature. The
-focused Windows stream-search, Miyoo Movie/Series, and subtitle font-size gates
-are physical PASS. The source tray UX and packaged Windows smoke gates are
-physical PASS. Production PASS and Impact-First Regression Testing preserve
-M21/M22 and accepted transport/playback/subtitle/account evidence without broad
-retests. Clean-Windows acceptance, public distribution/signing/runtime review,
-later macOS distribution and renderer-asset/licensing/fresh-deployment gates
-remain pending; M23 remains incomplete. Micro-stutter work remains deferred.
+Next exact action: continue M23 release/distribution gates. The focused Windows
+stream-search, Miyoo Movie/Series, subtitle font-size, My Library, and Next
+Episode / Continue Series gates are physical PASS. The source tray UX and
+packaged Windows smoke gates are physical PASS. Production PASS and Impact-First
+Regression Testing preserve M21/M22 and accepted transport/playback/subtitle/
+account evidence without broad retests. Clean-Windows acceptance, public
+distribution/signing/runtime review, later macOS distribution and
+renderer-asset/licensing/fresh-deployment gates remain pending; M23 remains
+incomplete. Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `2d8882fe8867e5111a7f413f136772c1cd6fff9f`
-Remote verified: YES — `2d8882fe8867e5111a7f413f136772c1cd6fff9f` is reachable from fetched `origin/main`
+Checkpoint commit: `6f64dcf`
+Remote verified: YES — `6f64dcf` is reachable from fetched `origin/main`
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution

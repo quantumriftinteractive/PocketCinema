@@ -242,6 +242,86 @@ class StremioAccountBackendTest(unittest.TestCase):
         self.assertEqual(mismatch["current_id"], "")
         self.assertFalse(any(item["watched"] for item in mismatch["episodes"].values()))
 
+    def test_continuation_uses_current_unwatched_episode(self):
+        episodes = [
+            {"id": "series:1:1", "title": "Pilot", "season": 1, "episode": 1},
+            {"id": "series:1:2", "title": "Second", "season": 1, "episode": 2},
+        ]
+        target = stremio_account.resolve_episode_continuation(
+            {"video_id": "series:1:2"}, episodes
+        )
+        self.assertEqual(target["kind"], "continue")
+        self.assertEqual(target["id"], "series:1:2")
+
+    def test_continuation_advances_watched_current_episode(self):
+        episodes = [
+            {"id": "series:1:1", "title": "Pilot", "season": 1, "episode": 1},
+            {"id": "series:1:2", "title": "Second", "season": 1, "episode": 2},
+            {"id": "series:1:3", "title": "Third", "season": 1, "episode": 3},
+        ]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000010]))).decode("ascii")
+        target = stremio_account.resolve_episode_continuation(
+            {"video_id": "series:1:2", "_watched": f"series:1:3:3:{encoded}"},
+            episodes,
+        )
+        self.assertEqual(target["kind"], "next")
+        self.assertEqual(target["id"], "series:1:3")
+
+    def test_continuation_uses_latest_watched_history_without_current(self):
+        episodes = [
+            {"id": "series:1:1", "title": "Pilot", "season": 1, "episode": 1},
+            {"id": "series:1:2", "title": "Second", "season": 1, "episode": 2},
+            {"id": "series:2:1", "title": "Return", "season": 2, "episode": 1},
+        ]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000011]))).decode("ascii")
+        target = stremio_account.resolve_episode_continuation(
+            {"_watched": f"series:2:1:3:{encoded}"}, episodes
+        )
+        self.assertEqual(target["id"], "series:2:1")
+        self.assertEqual(target["kind"], "next")
+
+    def test_continuation_omits_target_without_reliable_history(self):
+        episodes = [{"id": "series:1:1", "season": 1, "episode": 1}]
+        self.assertIsNone(stremio_account.resolve_episode_continuation({}, episodes))
+        self.assertIsNone(
+            stremio_account.resolve_episode_continuation(
+                {"_watched": "malformed"}, episodes
+            )
+        )
+
+    def test_continuation_does_not_wrap_after_all_watched(self):
+        episodes = [
+            {"id": "series:1:1", "season": 1, "episode": 1},
+            {"id": "series:1:2", "season": 1, "episode": 2},
+        ]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000011]))).decode("ascii")
+        self.assertIsNone(
+            stremio_account.resolve_episode_continuation(
+                {"_watched": f"series:1:2:2:{encoded}"}, episodes
+            )
+        )
+
+    def test_continuation_crosses_season_boundary(self):
+        episodes = [
+            {"id": "series:1:1", "season": 1, "episode": 1},
+            {"id": "series:1:2", "season": 1, "episode": 2},
+            {"id": "series:2:1", "season": 2, "episode": 1},
+        ]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000010]))).decode("ascii")
+        target = stremio_account.resolve_episode_continuation(
+            {"video_id": "series:1:2", "_watched": f"series:2:1:3:{encoded}"},
+            episodes,
+        )
+        self.assertEqual((target["season"], target["episode"]), (2, 1))
+
+    def test_continuation_rejects_malformed_episode_metadata(self):
+        self.assertIsNone(
+            stremio_account.resolve_episode_continuation(
+                {"video_id": "series:1:1"},
+                [{"id": "series:1:1", "season": "1", "episode": 1}],
+            )
+        )
+
     def test_library_is_cached_and_auth_change_invalidates_cache(self):
         self.backend._post_json = mock.Mock(return_value={"result": []})
         self.backend.library()

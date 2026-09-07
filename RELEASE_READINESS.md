@@ -84,8 +84,9 @@ acceptance failures:
   advertised-address configuration clear. No Library source-code fix was
   required.
 
-Remaining distribution work is the Next Episode / Continue Series feature,
-macOS `.app` and macOS launch/runtime smoke, Windows clean-machine packaged
+The Next Episode / Continue Series feature is now physically accepted and no
+longer an open product candidate. Remaining distribution work is macOS `.app`
+and macOS launch/runtime smoke, Windows clean-machine packaged
 smoke, fresh/distribution-SD validation, renderer/subtitle asset
 licensing/package completeness, advertised-route persistence/configuration
 verification, and unsigned/signing/runtime-warning review. The Windows
@@ -286,15 +287,13 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
 
 ## Remaining v1 product candidates
 
-These are candidates for the remaining v1 product scope. None is implemented by
-this documentation update:
+These are candidates for the remaining v1 product scope. Next Episode /
+Continue Series is physically accepted and is not listed here.
 
-1. **Next Episode / series continuation** — determine the next episode, handle
-   season boundaries, and integrate with Continue Watching.
-2. **Generic Stremio TV-addon support** — the implemented generic `type=tv`
+1. **Generic Stremio TV-addon support** — the implemented generic `type=tv`
    catalog/channel/stream path now uses a bounded 128-item selector. Do not
    hard-code StremTV-specific support.
-3. **Client UI/settings polish** — pursue after core functionality settles.
+2. **Client UI/settings polish** — pursue after core functionality settles.
 
 ## What can be deferred
 
@@ -332,7 +331,7 @@ Suitable:
 - narrow configuration/UI changes; and
 - addon-path inspection without broad implementation.
 
-Avoid macOS packaging, Library plus Next Episode, generic TV-addon
+Avoid macOS packaging, generic TV-addon
 implementation, cross-platform architecture, and broad release validation.
 
 ### Medium healthy budget (~25–50%)
@@ -341,7 +340,6 @@ Suitable:
 
 - focused generic Stremio TV-addon investigation and a small implementation if
   the architecture proves simple;
-- Library plus Next Episode with carefully bounded scope; and
 - moderate client UI work.
 
 Prefer Astra Medium for architecture work.
@@ -352,7 +350,6 @@ Suitable:
 
 - macOS distribution and frozen `.app` packaging;
 - menu-bar/background lifecycle and signing/notarization preparation;
-- larger Library plus Next Episode work;
 - generic TV-addon implementation if investigation reveals broader changes; and
 - fresh-machine release validation.
 
@@ -364,8 +361,8 @@ Suitable:
    inspection, or tiny isolated fixes.
 3. When the weekly budget is healthy, investigate generic Stremio TV-addon
    support using StremTV US as the known-good test case.
-4. Implement either generic TV-addon support or Library plus Next Episode,
-   depending on investigation complexity and product priority.
+4. Keep the accepted Library and Next Episode paths stable while addressing
+   remaining release/distribution gates.
 5. Continue macOS distribution with a fresh or larger budget.
 6. Rebuild the final Windows candidate after remaining v1 features settle.
 7. Complete clean-machine acceptance.

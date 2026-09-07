@@ -1036,12 +1036,30 @@ watched/current semantics, and movie/series playback handoff. A shared playback
 failure observed during acceptance was traced to stale PCServer route
 advertisement rather than Library code; playback succeeded after the runtime
 advertisement was corrected. Release-year fallback and subtitle-package startup
-latency remain separate follow-ups, and Next Episode is the next focused product
-feature. The recorded route observation was Miyoo `100.82.23.65:8755` versus
+latency remain separate follow-ups. The recorded route observation was Miyoo
+`100.82.23.65:8755` versus
 advertised `192.168.20.151:8755`; release work must verify route persistence,
 normal-restart behavior, and desktop advertised-address clarity. The roughly
 60-second subtitle-package delay is a separate startup UX/performance issue;
 historical M22 PASS evidence remains valid.
+
+### Completed v1 feature: Next Episode / Continue Series
+
+**Status: Confirmed**
+
+The read-only continuation resolver consumes the normalized Library
+`video_id`, watched bitfield, and canonical episode metadata. It offers
+`CONTINUE` for a reliable unwatched current episode, `NEXT EPISODE` for the next
+canonical episode after a watched current or latest watched history, crosses
+season boundaries, and omits targets when state or ordering is unreliable or
+the known series is complete. The Miyoo adds one bounded action row before the
+existing season list and routes selection through the existing episode,
+source-selection, and playback flow; it does not write Stremio state.
+
+Focused physical acceptance used the linked 3% series: `NEXT EPISODE - S4E5`
+resolved correctly, source selection opened for that episode, and playback
+started with picture and audio. A watched S4E4 selected through ordinary season
+navigation retained the expected existing `Play / Back` action menu.
 
 ### 23. PocketCinema Server Desktop Distribution
 
@@ -1092,8 +1110,8 @@ development machine. Clean-Windows acceptance and the other M23 release gates
 remain open. See [Windows packaging evidence](windows-packaging.md). M23 remains
 **Next**, with M21/M22 and accepted source desktop/tray evidence inherited.
 
-Current release follow-ups tracked alongside this milestone are: Next Episode /
-Continue Series; macOS `.app` packaging and macOS launch/runtime smoke; Windows
+Current release follow-ups tracked alongside this milestone are: macOS `.app`
+packaging and macOS launch/runtime smoke; Windows
 clean-machine packaged-artifact smoke; fresh/distribution-SD validation;
 renderer/subtitle-asset licensing and package completeness; persistence and
 clarity of the runtime advertised PCServer route; and unsigned/signing/runtime-

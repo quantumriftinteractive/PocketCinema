@@ -135,6 +135,78 @@ def decode_watched_bitfield(value, ordered_video_ids):
     return watched_ids
 
 
+def resolve_episode_continuation(library_item, episodes):
+    """Resolve one safe read-only continuation target from canonical episodes."""
+    canonical = []
+    seen_ids = set()
+    seen_numbers = set()
+    for episode in episodes or []:
+        if not isinstance(episode, dict):
+            return None
+        video_id = episode.get("id")
+        season = episode.get("season")
+        number = episode.get("episode")
+        if (
+            not isinstance(video_id, str)
+            or not video_id
+            or isinstance(season, bool)
+            or not isinstance(season, int)
+            or season < 1
+            or isinstance(number, bool)
+            or not isinstance(number, int)
+            or number < 1
+            or video_id in seen_ids
+            or (season, number) in seen_numbers
+        ):
+            return None
+        seen_ids.add(video_id)
+        seen_numbers.add((season, number))
+        canonical.append(episode)
+
+    if not canonical:
+        return None
+
+    state = library_item if isinstance(library_item, dict) else {}
+    ordered_video_ids = [episode["id"] for episode in canonical]
+    watched_ids = decode_watched_bitfield(state.get("_watched"), ordered_video_ids)
+    if watched_ids is None:
+        return None
+
+    current_id = state.get("video_id")
+    current_index = (
+        ordered_video_ids.index(current_id)
+        if isinstance(current_id, str) and current_id in ordered_video_ids
+        else -1
+    )
+    if current_index >= 0:
+        if current_id not in watched_ids:
+            target = canonical[current_index]
+            kind = "continue"
+        elif current_index + 1 < len(canonical):
+            target = canonical[current_index + 1]
+            kind = "next"
+        else:
+            return None
+    else:
+        watched_indices = [
+            index for index, video_id in enumerate(ordered_video_ids)
+            if video_id in watched_ids
+        ]
+        if not watched_indices or watched_indices[-1] + 1 >= len(canonical):
+            return None
+        target = canonical[watched_indices[-1] + 1]
+        kind = "next"
+
+    return {
+        "kind": kind,
+        "id": target["id"],
+        "title": target.get("title") or "Episode %d" % target["episode"],
+        "year": target.get("year"),
+        "season": target["season"],
+        "episode": target["episode"],
+    }
+
+
 def normalize_episode_state(library_item, episodes):
     """Return safe watched/current flags aligned to normalized episode metadata."""
     normalized_episodes = [
@@ -165,7 +237,7 @@ def normalize_episode_state(library_item, episodes):
             continue
         season_video_ids.setdefault(str(season), []).append(episode["id"])
 
-    return {
+    normalized_state = {
         "current_id": current_id,
         "episodes": episode_state,
         "seasons": {
@@ -176,6 +248,10 @@ def normalize_episode_state(library_item, episodes):
             for season, video_ids in season_video_ids.items()
         },
     }
+    continuation = resolve_episode_continuation(library_item, normalized_episodes)
+    if continuation is not None:
+        normalized_state["continuation"] = continuation
+    return normalized_state
 
 
 def resource_url(transport_url, resource, item_type, item_id, extra=None):

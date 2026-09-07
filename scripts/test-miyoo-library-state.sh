@@ -9,6 +9,8 @@ JQ="${JQ:-$(command -v jq || true)}"
 [ -n "$JQ" ] || { printf '%s\n' "jq is required" >&2; exit 1; }
 grep -F 'episode_state.seasons' "$UI_SCRIPT" >/dev/null
 grep -F 'episode_state.episodes' "$UI_SCRIPT" >/dev/null
+grep -F 'MAX_SELECTOR_ITEMS=64' "$UI_SCRIPT" >/dev/null
+grep -F 'head -n "$series_season_capacity"' "$UI_SCRIPT" >/dev/null
 
 fixture='{
   "seasons": [

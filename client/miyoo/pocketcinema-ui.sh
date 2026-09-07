@@ -96,6 +96,7 @@ ROUTE_FAILURE=""
 PLAYBACK_ERROR="Playback failed"
 FAILED_STREAM_IDS=""
 STREAM_RETRY_SUBTITLE_ID=""
+MAX_SELECTOR_ITEMS=64
 
 mkdir -p "$LOG_DIR"
 [ -r "$PROXY_HELPER" ] || {
@@ -2599,22 +2600,58 @@ series_flow() {
     return 0
   fi
 
+  series_continuation_kind=$(
+    "$JQ" -r '.episode_state.continuation.kind // ""' \
+      /tmp/pocketcinema-series-meta.json
+  )
+  if [ "$series_continuation_kind" = "continue" ] || \
+    [ "$series_continuation_kind" = "next" ]; then
+    "$JQ" -r '
+      .episode_state.continuation as $target |
+      (if $target.kind == "continue" then "CONTINUE" else "NEXT EPISODE" end) as $label |
+      "\($label) - S\($target.season)E\($target.episode) \($target.title)\t__continue__\t\($target.id)\t\($target.title)\t\($target.year // "")\t\($target.season)\t\($target.episode)"
+    ' /tmp/pocketcinema-series-meta.json >/tmp/pocketcinema-continuation.tsv
+    series_season_capacity=$((MAX_SELECTOR_ITEMS - 1))
+    {
+      cat /tmp/pocketcinema-continuation.tsv
+      head -n "$series_season_capacity" /tmp/pocketcinema-seasons.tsv
+    } >/tmp/pocketcinema-series-choices.tsv
+  else
+    cp /tmp/pocketcinema-seasons.tsv /tmp/pocketcinema-series-choices.tsv
+  fi
+
   while :; do
     if [ "$AUTO_FIRST" = "1" ]; then
-      season_line=$(head -n 1 /tmp/pocketcinema-seasons.tsv)
+      season_line=$(head -n 1 /tmp/pocketcinema-series-choices.tsv)
       season_selected=$(printf '%s' "$season_line" | cut -f1)
       log "auto-selected first season selected=$season_selected"
     else
-      season_selected=$(select_from_file "$series_title" /tmp/pocketcinema-seasons.tsv)
+      season_selected=$(select_from_file "$series_title" /tmp/pocketcinema-series-choices.tsv)
       [ -z "$season_selected" ] && return 10
-      season_line=$(grep -F "$season_selected	" /tmp/pocketcinema-seasons.tsv | head -n 1)
+      season_line=$(grep -F "$season_selected	" /tmp/pocketcinema-series-choices.tsv | head -n 1)
       if [ -z "$season_line" ]; then
         log "season selection did not match selected=$season_selected"
         message "PocketCinema" "Selection failed"
         return 1
       fi
     fi
-    season_number=$(printf '%s' "$season_line" | cut -f2)
+    season_action=$(printf '%s' "$season_line" | cut -f2)
+    if [ "$season_action" = "__continue__" ]; then
+      continuation_id=$(printf '%s' "$season_line" | cut -f3)
+      continuation_title=$(printf '%s' "$season_line" | cut -f4)
+      continuation_year=$(printf '%s' "$season_line" | cut -f5)
+      continuation_season=$(printf '%s' "$season_line" | cut -f6)
+      continuation_episode=$(printf '%s' "$season_line" | cut -f7)
+      continuation_saved_title="$series_title - S${continuation_season}E${continuation_episode} $continuation_title"
+      continuation_display_title="S${continuation_season}E${continuation_episode} $continuation_title"
+      log "selected continuation series_id=$series_id id=$continuation_id kind=$series_continuation_kind season=$continuation_season episode=$continuation_episode"
+      media_flow "series" "$continuation_id" "$continuation_saved_title" \
+        "$continuation_year" 0 "$continuation_display_title"
+      flow_rc=$?
+      [ "$flow_rc" -eq 10 ] || return "$flow_rc"
+      continue
+    fi
+    season_number="$season_action"
     log "selected season series_id=$series_id season=$season_number"
 
     episodes_flow "$series_id" "$series_title" "$series_year" "$season_number"
