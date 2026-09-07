@@ -263,15 +263,12 @@ saving, and complete PCServer/Miyoo cleanup. Milestone 22 is therefore physicall
 These are candidates for the remaining v1 product scope. None is implemented by
 this documentation update:
 
-1. **Library / My Library** — save/remove movies and series with persistent
-   library state.
-2. **Next Episode / series continuation** — determine the next episode, handle
+1. **Next Episode / series continuation** — determine the next episode, handle
    season boundaries, and integrate with Continue Watching.
-3. **Generic Stremio TV-addon support** — complete the focused Miyoo playback
-   confirmation for the implemented generic `type=tv` catalog/channel/stream
-   path and decide whether to raise the separate selector capacity limit. Do not
+2. **Generic Stremio TV-addon support** — the implemented generic `type=tv`
+   catalog/channel/stream path now uses a bounded 128-item selector. Do not
    hard-code StremTV-specific support.
-4. **Client UI/settings polish** — pursue after core functionality settles.
+3. **Client UI/settings polish** — pursue after core functionality settles.
 
 ## What can be deferred
 
@@ -279,6 +276,7 @@ These remain deferred from the current implementation and are not accepted
 release features unless the scope is explicitly expanded:
 
 - favorites, richer history, posters, image caching, and a full UI;
+- Library metadata fallback and polish, including release-year enrichment;
 - persistent audio-language preferences beyond the now-confirmed per-play
   converted-track selection;
 - arbitrary seeking in a nonseekable live converted response;

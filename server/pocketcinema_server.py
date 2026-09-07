@@ -45,6 +45,8 @@ MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"
 TEST_SERIES_ID = "pocketcinema-test-series"
 MAX_CONTINUE_ITEMS = 50
+MAX_LIBRARY_PAGE_ITEMS = 60
+MAX_LIBRARY_PAGE = 1000000
 DEFAULT_SESSION_TTL = 6 * 60 * 60
 DEFAULT_MAX_SESSIONS = 128
 DEFAULT_PROBE_CACHE_TTL = 7 * 24 * 60 * 60
@@ -1012,6 +1014,10 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
             self.handle_live_tv()
             return
 
+        if parsed.path == "/api/library":
+            self.handle_library(parsed)
+            return
+
         if parsed.path == "/api/account":
             self.handle_account_status(parsed)
             return
@@ -1413,6 +1419,79 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                 status=502,
             )
 
+    def handle_library(self, parsed):
+        query = urllib.parse.parse_qs(parsed.query)
+        item_type = query.get("type", [""])[0].strip()
+        if item_type not in {"", "movie", "series"}:
+            self.write_json(
+                {"error": "invalid_library_type", "message": "Unsupported library type"},
+                status=400,
+            )
+            return
+
+        page = bounded_positive_int(
+            query.get("page", ["1"])[0], 1, MAX_LIBRARY_PAGE
+        )
+        limit = bounded_positive_int(
+            query.get("limit", [str(MAX_LIBRARY_PAGE_ITEMS)])[0],
+            MAX_LIBRARY_PAGE_ITEMS,
+            MAX_LIBRARY_PAGE_ITEMS,
+        )
+        force = query.get("refresh", [""])[0].lower() in {"1", "true", "yes"}
+        try:
+            all_items = self.server.stremio_account.library(force=force)
+        except stremio_account.StremioAccountError as exc:
+            self.write_json(
+                {"error": "stremio_account_unavailable", "message": str(exc)},
+                status=502,
+            )
+            return
+
+        items = [
+            item for item in all_items if not item_type or item["type"] == item_type
+        ]
+        items.sort(
+            key=lambda item: (
+                item["title"].casefold(),
+                item["type"],
+                item["id"],
+            )
+        )
+        total = len(items)
+        start = (page - 1) * limit
+        page_items = items[start : start + limit]
+        public_items = [
+            {
+                key: item[key]
+                for key in (
+                    "id",
+                    "type",
+                    "title",
+                    "poster",
+                    "watched",
+                    "current",
+                    "last_watched",
+                    "position_seconds",
+                    "duration_seconds",
+                )
+            }
+            for item in page_items
+        ]
+        account_status = self.server.stremio_account.status()
+        self.write_json(
+            {
+                "configured": account_status["configured"],
+                "authenticated": account_status["authenticated"],
+                "count": len(public_items),
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "has_next": start + len(public_items) < total,
+                "items": public_items,
+                "failures": [],
+            }
+        )
+
     def handle_account_link(self):
         try:
             self.write_json(self.server.stremio_link.start(), status=201)
@@ -1547,6 +1626,22 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.write_json({"error": "meta_failed", "message": str(exc)}, status=502)
             return
+        if meta.get("type") == "series":
+            try:
+                library_item = next(
+                    (
+                        item
+                        for item in self.server.stremio_account.library()
+                        if item["type"] == "series" and item["id"] == item_id
+                    ),
+                    None,
+                )
+                if library_item is not None:
+                    meta["episode_state"] = stremio_account.normalize_episode_state(
+                        library_item, meta.get("episodes") or []
+                    )
+            except stremio_account.StremioAccountError:
+                pass
         self.write_json(meta)
 
     def handle_live_tv(self):

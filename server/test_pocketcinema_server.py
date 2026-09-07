@@ -1,4 +1,5 @@
 import collections
+import base64
 import contextlib
 import io
 import json
@@ -11,6 +12,7 @@ import time
 import unittest
 import urllib.error
 import urllib.request
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
@@ -511,6 +513,147 @@ class PocketCinemaServerTest(unittest.TestCase):
         self.assertFalse(addons["configured"])
         self.assertFalse(addons["authenticated"])
         self.assertEqual(addons["count"], 0)
+
+    def test_unconfigured_library_endpoint_is_empty(self):
+        status, library = self.get_json("/api/library")
+        self.assertEqual(status, 200)
+        self.assertFalse(library["configured"])
+        self.assertFalse(library["authenticated"])
+        self.assertEqual(library["count"], 0)
+        self.assertEqual(library["total"], 0)
+
+    def test_library_endpoint_is_sorted_filtered_paged_and_opaque(self):
+        config_path = self.server.stremio_account.config_path
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(json.dumps({"auth_key": "private-auth-key"}), encoding="utf-8")
+        self.server.stremio_account._post_json = mock.Mock(
+            return_value={
+                "result": [
+                    {
+                        "_id": "tt0000002",
+                        "type": "movie",
+                        "name": "Zulu",
+                        "poster": "https://cdn.example/zulu.jpg",
+                        "_mtime": 99,
+                        "state": {"timesWatched": 1, "video_id": "private-video-id"},
+                    },
+                    {
+                        "_id": "tt0000001",
+                        "type": "movie",
+                        "name": "Alpha",
+                        "state": {"timeOffset": 120000, "duration": 300000},
+                    },
+                    {
+                        "_id": "series-1",
+                        "type": "series",
+                        "name": "Series One",
+                        "state": {"timesWatched": 1, "video_id": "series-1:1:1"},
+                    },
+                    {"_id": "removed", "type": "movie", "name": "Removed", "removed": True},
+                    {"_id": "temporary", "type": "movie", "name": "Temporary", "temp": True},
+                    {"_id": "tv-1", "type": "tv", "name": "Unsupported"},
+                ]
+            }
+        )
+
+        status, library = self.get_json("/api/library?type=movie&limit=1")
+        self.assertEqual(status, 200)
+        self.assertTrue(library["configured"])
+        self.assertTrue(library["authenticated"])
+        self.assertEqual(library["total"], 2)
+        self.assertEqual(library["count"], 1)
+        self.assertTrue(library["has_next"])
+        self.assertEqual(library["items"][0]["title"], "Alpha")
+        self.assertEqual(library["items"][0]["position_seconds"], 120)
+        self.assertEqual(library["items"][0]["duration_seconds"], 300)
+        serialized = json.dumps(library)
+        self.assertNotIn("private-auth-key", serialized)
+        self.assertNotIn("private-video-id", serialized)
+        self.assertNotIn("_mtime", serialized)
+
+        status, second_page = self.get_json("/api/library?type=movie&page=2&limit=1")
+        self.assertEqual(status, 200)
+        self.assertFalse(second_page["has_next"])
+        self.assertEqual(second_page["items"][0]["title"], "Zulu")
+        self.assertEqual(self.server.stremio_account._post_json.call_count, 1)
+
+        _, series_library = self.get_json("/api/library?type=series")
+        self.assertFalse(series_library["items"][0]["watched"])
+        self.assertTrue(series_library["items"][0]["current"])
+
+    def test_library_endpoint_rejects_unknown_type(self):
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(self.base + "/api/library?type=tv", timeout=5)
+        self.assertEqual(caught.exception.code, 400)
+        self.assertEqual(json.load(caught.exception)["error"], "invalid_library_type")
+
+    def test_library_endpoint_clamps_page_to_fit_shipped_selector(self):
+        config_path = self.server.stremio_account.config_path
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(json.dumps({"auth_key": "private-auth-key"}), encoding="utf-8")
+        self.server.stremio_account._post_json = mock.Mock(
+            return_value={
+                "result": [
+                    {"_id": f"tt{i:07d}", "type": "movie", "name": f"Movie {i:03d}"}
+                    for i in range(65)
+                ]
+            }
+        )
+
+        _, library = self.get_json("/api/library?type=movie&limit=999")
+        self.assertEqual(library["limit"], 60)
+        self.assertEqual(library["count"], 60)
+        self.assertEqual(library["total"], 65)
+        self.assertTrue(library["has_next"])
+
+    def test_series_meta_includes_safe_episode_state(self):
+        config_path = self.server.stremio_account.config_path
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(json.dumps({"auth_key": "private-auth-key"}), encoding="utf-8")
+        video_ids = ["series-1:1:1", "series-1:1:2", "series-1:1:3"]
+        watched_bytes = bytes([0b00000110])
+        encoded = base64.b64encode(zlib.compress(watched_bytes)).decode("ascii")
+        self.server.stremio_account._post_json = mock.Mock(
+            return_value={
+                "result": [
+                    {
+                        "_id": "series-1",
+                        "type": "series",
+                        "name": "Series One",
+                        "state": {
+                            "video_id": video_ids[2],
+                            "watched": f"{video_ids[2]}:3:{encoded}",
+                        },
+                    }
+                ]
+            }
+        )
+        metadata = {
+            "meta": {
+                "id": "series-1",
+                "type": "series",
+                "name": "Series One",
+                "videos": [
+                    {
+                        "id": video_id,
+                        "name": f"Episode {index}",
+                        "season": 1,
+                        "episode": index,
+                    }
+                    for index, video_id in enumerate(video_ids, 1)
+                ],
+            }
+        }
+        with mock.patch.object(pocket, "fetch_json", return_value=metadata):
+            status, response = self.get_json("/api/meta/series/series-1")
+
+        self.assertEqual(status, 200)
+        self.assertTrue(response["episode_state"]["episodes"][video_ids[1]]["watched"])
+        self.assertTrue(response["episode_state"]["episodes"][video_ids[2]]["watched"])
+        self.assertTrue(response["episode_state"]["episodes"][video_ids[2]]["current"])
+        self.assertFalse(response["episode_state"]["seasons"]["1"]["watched"])
+        self.assertNotIn("_watched", json.dumps(response))
+        self.assertNotIn("eJ", json.dumps(response))
 
     def test_account_link_endpoint_never_exposes_retrieval_code_or_auth_key(self):
         self.server.stremio_link.start = mock.Mock(

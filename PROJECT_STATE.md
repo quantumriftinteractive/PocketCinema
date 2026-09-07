@@ -1,6 +1,6 @@
 # PocketCinema Current Project State
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 Last updated by machine: macOS development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
@@ -260,6 +260,24 @@ checks and child log draining remain background work. The user physically
 confirmed normal Windows desktop use remained responsive after this repair, so
 the focused responsiveness acceptance is **PASS**. It does not change PCServer
 ownership, network-provider behavior, or the API.
+
+Stremio-backed My Library v1 is **Physically Confirmed PASS**. Stremio owns the
+library state; PCServer fetches, caches, and normalizes `libraryItem` data through
+the read-only datastore API, with no library writes or add/remove operations.
+The Miyoo exposes `My Library -> Movies / Series`, bounded paging at a maximum of
+60 content items per page, and hands both media types into the existing
+source-selection and playback flow. Series metadata carries safe episode-aware
+watched/current state: fully watched seasons show `WATCHED`, watched episodes
+show `WATCHED`, the current/latest episode shows `*`, and current-plus-watched
+episodes retain both markers without inventing a parent-series watched label.
+Physical acceptance confirmed the menu, linked-account series loading, page-one
+60-item boundary, next/previous page navigation, fixture 3% seasons 1--3 and
+episode markers, and movie/series playback handoff. The shared Thunderbolts
+playback failure was traced to runtime configuration: PCServer advertised stale
+`192.168.20.151` while the Miyoo used `100.82.23.65`; correcting the runtime
+advertisement made the same stream play successfully. This was not a Library
+code failure. Release-year fallback (`????`) and the roughly 60-second
+Matroska subtitle-package fallback remain separate follow-ups.
 
 ### Development Handoff — Windows system-tray lifecycle
 

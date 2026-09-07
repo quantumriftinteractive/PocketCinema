@@ -7,6 +7,8 @@
 - Subtitle behavior depends on the source and playback path.
 - Very large selector lists are bounded by the device build and available resources.
 - Remote access uses the standalone Tailscale companion; public port forwarding is not a PocketCinema setup.
-- Library, Next Episode, and broader UI polish are not part of this v1 guide.
+- Next Episode and broader UI polish are not part of this v1 guide. My Library
+  currently uses the linked account's available metadata; release-year fallback
+  and other metadata polish remain limited.
 
 PocketCinema does not bundle or hard-code a particular TV addon or channel list.

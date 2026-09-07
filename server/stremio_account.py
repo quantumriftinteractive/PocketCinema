@@ -1,3 +1,5 @@
+import base64
+import binascii
 import hashlib
 import ipaddress
 import json
@@ -6,13 +8,18 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import zlib
 from pathlib import Path
 
 
 API_URL = "https://api.strem.io/api/addonCollectionGet"
+DATASTORE_API_URL = "https://api.strem.io/api/datastoreGet"
 DEFAULT_TIMEOUT = 15
 DEFAULT_CACHE_TTL = 5 * 60
 MAX_ADDONS = 128
+MAX_WATCHED_BITFIELD_BYTES = 64 * 1024
+
+
 class StremioAccountError(RuntimeError):
     pass
 
@@ -94,6 +101,83 @@ def has_unsupported_stream_shape(raw):
     return any(raw.get(key) for key in ("infoHash", "externalUrl", "ytId"))
 
 
+def decode_watched_bitfield(value, ordered_video_ids):
+    """Decode Stremio's anchored little-endian bitfield into watched IDs."""
+    if not isinstance(value, str) or not value or not ordered_video_ids:
+        return set()
+    try:
+        parts = value.split(":")
+        if len(parts) < 3:
+            return None
+        encoded = parts.pop()
+        anchor_length = int(parts.pop())
+        anchor_id = ":".join(parts)
+        if anchor_length < 1 or not anchor_id:
+            return None
+        anchor_index = ordered_video_ids.index(anchor_id)
+        compressed = base64.b64decode(encoded, validate=True)
+        values = zlib.decompress(compressed)
+        if len(values) > MAX_WATCHED_BITFIELD_BYTES:
+            return None
+    except (ValueError, IndexError, TypeError, zlib.error, binascii.Error):
+        return None
+
+    offset = anchor_length - anchor_index - 1
+    watched_ids = set()
+    for index, video_id in enumerate(ordered_video_ids):
+        previous_index = index + offset
+        if previous_index < 0 or previous_index >= len(ordered_video_ids):
+            continue
+        byte_index = previous_index // 8
+        bit_index = previous_index % 8
+        if byte_index < len(values) and (values[byte_index] >> bit_index) & 1:
+            watched_ids.add(video_id)
+    return watched_ids
+
+
+def normalize_episode_state(library_item, episodes):
+    """Return safe watched/current flags aligned to normalized episode metadata."""
+    normalized_episodes = [
+        episode
+        for episode in episodes or []
+        if isinstance(episode, dict) and isinstance(episode.get("id"), str)
+    ]
+    ordered_video_ids = [episode["id"] for episode in normalized_episodes]
+    state = library_item if isinstance(library_item, dict) else {}
+    current_id = state.get("video_id") or ""
+    if current_id not in ordered_video_ids:
+        current_id = ""
+
+    decoded = decode_watched_bitfield(state.get("_watched"), ordered_video_ids)
+    watched_ids = decoded if isinstance(decoded, set) else set()
+
+    episode_state = {
+        video_id: {
+            "watched": video_id in watched_ids,
+            "current": video_id == current_id,
+        }
+        for video_id in ordered_video_ids
+    }
+    season_video_ids = {}
+    for episode in normalized_episodes:
+        season = episode.get("season")
+        if isinstance(season, bool) or season in (None, ""):
+            continue
+        season_video_ids.setdefault(str(season), []).append(episode["id"])
+
+    return {
+        "current_id": current_id,
+        "episodes": episode_state,
+        "seasons": {
+            season: {
+                "watched": bool(video_ids)
+                and all(episode_state[video_id]["watched"] for video_id in video_ids),
+            }
+            for season, video_ids in season_video_ids.items()
+        },
+    }
+
+
 def resource_url(transport_url, resource, item_type, item_id, extra=None):
     parsed = urllib.parse.urlparse(transport_url)
     base_path = parsed.path[: -len("/manifest.json")]
@@ -136,6 +220,10 @@ class StremioAccountBackend:
         self._cache_at = 0
         self._auth_fingerprint = ""
         self._last_error = ""
+        self._library_cache = None
+        self._library_cache_at = 0
+        self._library_auth_fingerprint = ""
+        self._library_last_error = ""
         self._lock = threading.Lock()
 
     def _read_auth_key(self):
@@ -153,9 +241,9 @@ class StremioAccountBackend:
             raise StremioAccountError("Stremio account configuration is invalid")
         return auth_key.strip()
 
-    def _post_json(self, payload):
+    def _post_json(self, payload, api_url=None):
         request = urllib.request.Request(
-            self.api_url,
+            api_url or self.api_url,
             data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
@@ -241,6 +329,137 @@ class StremioAccountBackend:
                 addons.append(addon)
         return addons
 
+    @staticmethod
+    def _milliseconds_to_seconds(value):
+        try:
+            return max(0, int(float(value or 0) / 1000))
+        except (TypeError, ValueError):
+            return 0
+
+    def _normalize_library_item(self, raw):
+        if not isinstance(raw, dict):
+            return None
+        if raw.get("removed") or raw.get("temp"):
+            return None
+
+        item_type = raw.get("type")
+        if item_type not in {"movie", "series"}:
+            return None
+        item_id = _safe_text(raw.get("_id") or raw.get("id"), "", 160)
+        title = _safe_text(raw.get("name"), item_id, 240)
+        if not item_id or not title:
+            return None
+
+        state = raw.get("state")
+        if not isinstance(state, dict):
+            state = {}
+        video_id = _safe_text(state.get("video_id"), "", 160)
+        last_watched = state.get("lastWatched")
+        if isinstance(last_watched, bool):
+            last_watched = None
+        elif isinstance(last_watched, (int, float)):
+            last_watched = max(0, last_watched)
+        elif not isinstance(last_watched, str):
+            last_watched = None
+        else:
+            last_watched = _safe_text(last_watched, "", 64) or None
+
+        try:
+            times_watched = max(0, int(float(state.get("timesWatched") or 0)))
+        except (TypeError, ValueError):
+            times_watched = 0
+
+        return {
+            "id": item_id,
+            "type": item_type,
+            "title": title,
+            "poster": (
+                raw.get("poster")
+                if isinstance(raw.get("poster"), str)
+                and validate_direct_stream_url(raw.get("poster"))
+                else ""
+            ),
+            "watched": item_type == "movie" and times_watched > 0,
+            "last_watched": last_watched,
+            "position_seconds": self._milliseconds_to_seconds(
+                state.get("timeOffset")
+            ),
+            "duration_seconds": self._milliseconds_to_seconds(
+                state.get("duration")
+            ),
+            "video_id": video_id,
+            "current": item_type == "series" and bool(video_id),
+            "_mtime": raw.get("_mtime"),
+            "_watched": _safe_text(state.get("watched"), "", 8192),
+        }
+
+    def _load_library(self, auth_key):
+        try:
+            payload = self._post_json(
+                {
+                    "authKey": auth_key,
+                    "collection": "libraryItem",
+                    "ids": [],
+                    "all": True,
+                },
+                api_url=DATASTORE_API_URL,
+            )
+        except Exception as exc:
+            raise StremioAccountError("Stremio account service is unavailable") from exc
+        if not isinstance(payload, dict):
+            raise StremioAccountError("Stremio account response is invalid")
+        if "error" in payload:
+            code = (payload.get("error") or {}).get("code")
+            if code == 1:
+                raise StremioAccountError("Stremio account session expired")
+            raise StremioAccountError("Stremio account request was rejected")
+        result = payload.get("result")
+        if not isinstance(result, list):
+            raise StremioAccountError("Stremio account library response is invalid")
+
+        items = []
+        seen = set()
+        for raw in result:
+            item = self._normalize_library_item(raw)
+            if item is None or (item["type"], item["id"]) in seen:
+                continue
+            seen.add((item["type"], item["id"]))
+            items.append(item)
+        return items
+
+    def library(self, force=False):
+        auth_key = self._read_auth_key()
+        if not auth_key:
+            with self._lock:
+                self._library_cache = None
+                self._library_auth_fingerprint = ""
+                self._library_last_error = ""
+            return []
+
+        fingerprint = hashlib.sha256(auth_key.encode("utf-8")).hexdigest()
+        now = time.monotonic()
+        with self._lock:
+            if (
+                not force
+                and self._library_cache is not None
+                and fingerprint == self._library_auth_fingerprint
+                and now - self._library_cache_at < self.cache_ttl
+            ):
+                return [dict(item) for item in self._library_cache]
+
+        try:
+            items = self._load_library(auth_key)
+        except StremioAccountError as exc:
+            with self._lock:
+                self._library_last_error = str(exc)
+            raise
+        with self._lock:
+            self._library_cache = list(items)
+            self._library_cache_at = now
+            self._library_auth_fingerprint = fingerprint
+            self._library_last_error = ""
+        return [dict(item) for item in items]
+
     def collection(self, force=False):
         auth_key = self._read_auth_key()
         if not auth_key:
@@ -284,7 +503,11 @@ class StremioAccountBackend:
         with self._lock:
             addons = list(self._cache or [])
             last_error = config_error or self._last_error
-            checked = self._cache is not None or bool(last_error)
+            checked = (
+                self._cache is not None
+                or self._library_cache is not None
+                or bool(last_error)
+            )
         return {
             "configured": configured,
             "checked": checked,

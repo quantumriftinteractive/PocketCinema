@@ -1,7 +1,9 @@
+import base64
 import json
 import os
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest import mock
 
@@ -101,6 +103,159 @@ class StremioAccountBackendTest(unittest.TestCase):
         self.assertEqual(self.backend._post_json.call_count, 2)
         self.assertEqual(
             self.backend._post_json.call_args.args[0]["authKey"], "replacement-key"
+        )
+
+    def test_library_request_normalizes_and_filters_entries(self):
+        seen = []
+
+        def fake_post(payload, api_url=None):
+            seen.append((payload, api_url))
+            return {
+                "result": [
+                    {
+                        "_id": "tt0000002",
+                        "type": "movie",
+                        "name": "Example Movie",
+                        "poster": "https://cdn.example/movie.jpg",
+                        "state": {
+                            "timesWatched": 1,
+                            "lastWatched": 1700000000000,
+                            "timeOffset": 125000,
+                            "duration": 600000,
+                        },
+                    },
+                    {
+                        "_id": "tt0000003",
+                        "type": "series",
+                        "name": "Example Series",
+                        "state": {
+                            "timesWatched": 4,
+                            "video_id": "tt0000003:1:2",
+                            "watched": "tt0000003:1:2:2:eJwDAAAAAAE=",
+                            "timeOffset": "90000",
+                            "duration": "300000",
+                        },
+                    },
+                    {"_id": "removed", "type": "movie", "name": "Removed", "removed": True},
+                    {"_id": "temporary", "type": "movie", "name": "Temporary", "temp": True},
+                    {"_id": "channel", "type": "tv", "name": "Unsupported"},
+                    {"_id": "tt0000002", "type": "movie", "name": "Duplicate"},
+                ]
+            }
+
+        self.backend._post_json = mock.Mock(side_effect=fake_post)
+        items = self.backend.library(force=True)
+
+        self.assertEqual(
+            seen,
+            [
+                (
+                    {
+                        "authKey": "private-auth-key",
+                        "collection": "libraryItem",
+                        "ids": [],
+                        "all": True,
+                    },
+                    stremio_account.DATASTORE_API_URL,
+                )
+            ],
+        )
+        self.assertEqual([item["id"] for item in items], ["tt0000002", "tt0000003"])
+        self.assertEqual(items[0]["position_seconds"], 125)
+        self.assertEqual(items[0]["duration_seconds"], 600)
+        self.assertTrue(items[0]["watched"])
+        self.assertEqual(items[1]["video_id"], "tt0000003:1:2")
+        self.assertFalse(items[1]["watched"])
+        self.assertTrue(items[1]["current"])
+        self.assertEqual(items[1]["position_seconds"], 90)
+        self.assertEqual(items[1]["_watched"], "tt0000003:1:2:2:eJwDAAAAAAE=")
+        self.assertEqual(seen[0][1], stremio_account.DATASTORE_API_URL)
+        self.assertNotIn("datastorePut", json.dumps(seen))
+
+    def test_episode_state_decodes_bitfield_and_marks_current(self):
+        video_ids = ["series:1:1", "series:1:2", "series:1:3", "series:1:4"]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00001010]))).decode("ascii")
+        watched = f"{video_ids[3]}:4:{encoded}"
+        episodes = [{"id": video_id} for video_id in video_ids]
+
+        result = stremio_account.normalize_episode_state(
+            {"video_id": video_ids[3], "_watched": watched}, episodes
+        )
+
+        self.assertEqual(result["current_id"], video_ids[3])
+        self.assertFalse(result["episodes"][video_ids[0]]["watched"])
+        self.assertTrue(result["episodes"][video_ids[1]]["watched"])
+        self.assertFalse(result["episodes"][video_ids[1]]["current"])
+        self.assertTrue(result["episodes"][video_ids[3]]["watched"])
+        self.assertTrue(result["episodes"][video_ids[3]]["current"])
+        self.assertFalse(result["seasons"])
+
+    def test_episode_state_marks_full_and_partial_seasons(self):
+        video_ids = [
+            "series:1:1", "series:1:2", "series:2:1", "series:2:2",
+        ]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000111]))).decode("ascii")
+        episodes = [
+            {"id": video_id, "season": season}
+            for video_id, season in zip(video_ids, [1, 1, 2, 2])
+        ]
+
+        result = stremio_account.normalize_episode_state(
+            {"video_id": video_ids[3], "_watched": f"{video_ids[3]}:4:{encoded}"},
+            episodes,
+        )
+
+        self.assertTrue(result["seasons"]["1"]["watched"])
+        self.assertFalse(result["seasons"]["2"]["watched"])
+        self.assertTrue(result["episodes"][video_ids[0]]["watched"])
+        self.assertTrue(result["episodes"][video_ids[1]]["watched"])
+        self.assertTrue(result["episodes"][video_ids[2]]["watched"])
+        self.assertFalse(result["episodes"][video_ids[3]]["watched"])
+        self.assertTrue(result["episodes"][video_ids[3]]["current"])
+
+    def test_unknown_video_id_does_not_invent_current_episode(self):
+        video_ids = ["series:1:1", "series:1:2"]
+        encoded = base64.b64encode(zlib.compress(bytes([0b00000011]))).decode("ascii")
+        result = stremio_account.normalize_episode_state(
+            {
+                "video_id": "unknown:1:9",
+                "_watched": f"{video_ids[1]}:2:{encoded}",
+            },
+            [{"id": video_id, "season": 1} for video_id in video_ids],
+        )
+
+        self.assertEqual(result["current_id"], "")
+        self.assertFalse(any(item["current"] for item in result["episodes"].values()))
+
+    def test_episode_state_fails_safely_for_malformed_or_mismatched_state(self):
+        episodes = [{"id": "series:1:1"}, {"id": "series:1:2"}]
+        malformed = stremio_account.normalize_episode_state(
+            {"video_id": "unknown:1:9", "_watched": "not-a-bitfield"}, episodes
+        )
+        self.assertEqual(malformed["current_id"], "")
+        self.assertFalse(any(item["watched"] for item in malformed["episodes"].values()))
+        self.assertFalse(any(item["current"] for item in malformed["episodes"].values()))
+
+        mismatch = stremio_account.normalize_episode_state(
+            {"_watched": "other:1:1:1:eJwDAAAAAAE="}, episodes
+        )
+        self.assertEqual(mismatch["current_id"], "")
+        self.assertFalse(any(item["watched"] for item in mismatch["episodes"].values()))
+
+    def test_library_is_cached_and_auth_change_invalidates_cache(self):
+        self.backend._post_json = mock.Mock(return_value={"result": []})
+        self.backend.library()
+        self.backend.library()
+        self.assertEqual(self.backend._post_json.call_count, 1)
+
+        self.config_path.write_text(
+            json.dumps({"auth_key": "replacement-key"}), encoding="utf-8"
+        )
+        self.backend.library()
+        self.assertEqual(self.backend._post_json.call_count, 2)
+        self.assertEqual(
+            self.backend._post_json.call_args.kwargs["api_url"],
+            stremio_account.DATASTORE_API_URL,
         )
 
     def test_expired_session_returns_only_generic_error(self):

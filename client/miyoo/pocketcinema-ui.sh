@@ -2114,7 +2114,7 @@ home_flow() {
       else
         server_action="No PCServer connection configured"
       fi
-      printf '%s\nSearch\nLive TV\nQuick Resume\nContinue Watching\nStremio Account\nSettings\nExit\n' \
+      printf '%s\nSearch\nMy Library\nLive TV\nQuick Resume\nContinue Watching\nStremio Account\nSettings\nExit\n' \
         "$server_action" >/tmp/pocketcinema-home.tsv
       action=$(select_from_file "PocketCinema" /tmp/pocketcinema-home.tsv)
     fi
@@ -2124,6 +2124,9 @@ home_flow() {
     case "$action" in
       Search)
         search_flow
+        ;;
+      "My Library")
+        library_flow
         ;;
       "Live TV")
         live_tv_flow
@@ -2181,6 +2184,112 @@ live_tv_flow() {
     title=$(printf '%s' "$line" | cut -f3)
     log "selected live channel id=$id title=$title"
     streams_flow "tv" "$id" "$title" "" 0
+  done
+}
+
+library_items_flow() {
+  library_type="$1"
+  library_label="$2"
+  library_page=1
+  while :; do
+    start_loading "PocketCinema" "Loading $library_label..."
+    api_get "/api/library?type=$library_type&page=$library_page&limit=60" 45 \
+      >/tmp/pocketcinema-library.json
+    library_rc=$?
+    stop_loading
+    if [ "$library_rc" -ne 0 ]; then
+      message "My Library" "Library unavailable"
+      return 1
+    fi
+    library_configured=$("$JQ" -r '.configured // false' /tmp/pocketcinema-library.json)
+    library_authenticated=$("$JQ" -r '.authenticated // false' /tmp/pocketcinema-library.json)
+    if [ "$library_configured" != "true" ] || [ "$library_authenticated" != "true" ]; then
+      message "My Library" "Connect Stremio account first"
+      return 10
+    fi
+    library_count=$("$JQ" -r '.count // 0' /tmp/pocketcinema-library.json)
+    if [ "$library_count" = "0" ]; then
+      if [ "$library_page" -gt 1 ] 2>/dev/null; then
+        library_page=$((library_page - 1))
+        continue
+      fi
+      message "My Library" "No $library_label found"
+      return 10
+    fi
+
+    "$JQ" -r '
+      .items | to_entries[] |
+      (if .value.type == "movie" and .value.watched then " WATCHED"
+       elif .value.type == "series" and .value.current then " *"
+       else "" end) as $marker |
+      "\(.key + 1). \(.value.title)\($marker)\t\(.value.type)\t\(.value.id)\t\(.value.title)"
+    ' /tmp/pocketcinema-library.json >/tmp/pocketcinema-library.tsv
+    if [ "$library_page" -gt 1 ] 2>/dev/null; then
+      printf 'Previous page\t__previous__\n' | cat - /tmp/pocketcinema-library.tsv \
+        >/tmp/pocketcinema-library-page.tsv
+      mv /tmp/pocketcinema-library-page.tsv /tmp/pocketcinema-library.tsv
+    fi
+    library_has_next=$("$JQ" -r '.has_next // false' /tmp/pocketcinema-library.json)
+    if [ "$library_has_next" = "true" ]; then
+      printf 'Next page\t__next__\n' >>/tmp/pocketcinema-library.tsv
+    fi
+
+    selected=$(select_from_file "My Library - $library_label" /tmp/pocketcinema-library.tsv)
+    [ -z "$selected" ] && return 10
+    line=$(grep -F "$(printf '%s\t' "$selected")" /tmp/pocketcinema-library.tsv | head -n 1)
+    if [ -z "$line" ]; then
+      log "library selection did not match selected=$selected"
+      message "My Library" "Selection failed"
+      return 1
+    fi
+    action=$(printf '%s' "$line" | cut -f2)
+    case "$action" in
+      __previous__)
+        library_page=$((library_page - 1))
+        continue
+        ;;
+      __next__)
+        library_page=$((library_page + 1))
+        continue
+        ;;
+    esac
+    type=$(printf '%s' "$line" | cut -f2)
+    id=$(printf '%s' "$line" | cut -f3)
+    title=$(printf '%s' "$line" | cut -f4)
+    library_year="????"
+    log "library selected type=$type id=$id title=$title page=$library_page"
+    if [ "$type" = "series" ]; then
+      series_flow "$id" "$title" "$library_year"
+    else
+      media_flow "$type" "$id" "$title" "$library_year" 0
+    fi
+    flow_rc=$?
+    [ "$flow_rc" -eq 10 ] || return "$flow_rc"
+  done
+}
+
+library_flow() {
+  printf 'Movies\tmovie\nSeries\tseries\nBack\tback\n' >/tmp/pocketcinema-library-types.tsv
+  while :; do
+    library_choice=$(select_from_file "My Library" /tmp/pocketcinema-library-types.tsv)
+    [ -z "$library_choice" ] && return 0
+    case "$library_choice" in
+      Movies)
+        library_items_flow movie Movies
+        ;;
+      Series)
+        library_items_flow series Series
+        ;;
+      Back)
+        return 0
+        ;;
+      *)
+        message "My Library" "Selection failed"
+        return 1
+        ;;
+    esac
+    flow_rc=$?
+    [ "$flow_rc" -eq 10 ] || return "$flow_rc"
   done
 }
 
@@ -2437,14 +2546,23 @@ search_flow() {
 }
 
 write_season_choices() {
-  "$JQ" -r '.seasons[] | "Season \(.number) (\(.episode_count) episodes)\t\(.number)"' "$1" >"$2"
+  "$JQ" -r '
+    . as $meta
+    | .seasons[]
+    | ((($meta.episode_state.seasons // {})[(.number | tostring)] // {}).watched // false) as $watched
+    | "Season \(.number) (\(.episode_count) episodes)\(if $watched then " WATCHED" else "" end)\t\(.number)"
+  ' "$1" >"$2"
 }
 
 write_episode_choices() {
   "$JQ" -r --argjson season "$2" --arg year "$4" '
-    .episodes[]
+    . as $meta
+    | $meta.episodes[]
     | select(.season == $season)
-    | "\(.episode). \(.title)\t\(.id)\t\(.title)\t\(.year // $year)\t\(.season)\t\(.episode)"
+    | (($meta.episode_state.episodes // {})[.id] // {}) as $state
+    | (if $state.watched then " WATCHED" else "" end) as $watched
+    | (if $state.current then " *" else "" end) as $current
+    | "\(.episode). \(.title)\($watched)\($current)\t\(.id)\t\(.title)\t\(.year // $year)\t\(.season)\t\(.episode)"
   ' "$1" >"$3"
 }
 

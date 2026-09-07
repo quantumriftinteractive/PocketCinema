@@ -1022,6 +1022,22 @@ Acceptance criterion: a real account-backed stream opens with multiple English
 Matroska tracks, R1 visibly cycles through them and off, audio/video remains
 smooth and synchronized, and a Menu exit cleans up the PCServer and Miyoo state.
 
+### Completed v1 feature: Stremio-backed My Library
+
+**Status: Confirmed**
+
+My Library v1 is read-only: PCServer retrieves and normalizes the linked
+Stremio account's `libraryItem` state, and the Miyoo presents Movies and Series
+with a maximum of 60 content items per page. Series navigation propagates safe
+episode-aware watched/current markers to seasons and episodes, then hands off to
+the existing source-selection and playback flow. Apps-context acceptance
+confirmed menu visibility, linked-account loading, next/previous pagination,
+watched/current semantics, and movie/series playback handoff. A shared playback
+failure observed during acceptance was traced to stale PCServer route
+advertisement rather than Library code; playback succeeded after the runtime
+advertisement was corrected. Release-year fallback and subtitle-package startup
+latency remain separate polish work, and Next Episode is still deferred.
+
 ### 23. PocketCinema Server Desktop Distribution
 
 **Status: Next**
@@ -1143,7 +1159,6 @@ behavior are stable:
 - audio-track selection;
 - arbitrary seeking within a live converted response until session-restart or
   seekable-output behavior is designed and measured;
-- Stremio library and watch-history sync;
 - posters, image caching, and richer media details;
 - favorites and watch history (the unified UI refresh is Milestone 25);
 - normal-UI subtitle position behavior: Normal, Bottom-clamped, and Top-clamped
