@@ -65,6 +65,32 @@ physically accepted; its planned presets are
 1.0x, 1.25x, 1.5x, 2.0x, 2.5x and 3.0x, with the production/default scale
 remaining 1.5x.
 
+## Current Library and runtime follow-ups
+
+The physically accepted My Library v1 remains read-only and production-valid.
+The following observations are separate release follow-ups, not Library
+acceptance failures:
+
+- Search showed Thunderbolts (2025), while My Library showed `????` for the
+  release year. This is a non-blocking metadata presentation gap.
+- The Matroska subtitle-package fallback may wait roughly 60 seconds before
+  ordinary playback starts. Historical M22 subtitle PASS evidence remains
+  valid; this is a separate startup UX/performance issue.
+- During the shared Thunderbolts failure, the Miyoo used
+  `100.82.23.65:8755` while PCServer advertised stale `192.168.20.151:8755`.
+  A runtime restart corrected the advertisement and the same stream played.
+  Before release, verify advertised-route persistence and resolution across a
+  normal restart, prevent stale-route reintroduction, and make the desktop
+  advertised-address configuration clear. No Library source-code fix was
+  required.
+
+Remaining distribution work is the Next Episode / Continue Series feature,
+macOS `.app` and macOS launch/runtime smoke, Windows clean-machine packaged
+smoke, fresh/distribution-SD validation, renderer/subtitle asset
+licensing/package completeness, advertised-route persistence/configuration
+verification, and unsigned/signing/runtime-warning review. The Windows
+development-machine packaged candidate and smoke already exist.
+
 The focused production UX fixes are physically confirmed PASS: stream/source-
 resolution helper processes are silent on Windows with their output and failure
 handling preserved, and Miyoo Search results render readable bounded Movie and

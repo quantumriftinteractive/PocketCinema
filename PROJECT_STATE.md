@@ -279,6 +279,32 @@ advertisement made the same stream play successfully. This was not a Library
 code failure. Release-year fallback (`????`) and the roughly 60-second
 Matroska subtitle-package fallback remain separate follow-ups.
 
+### Current Release Follow-ups
+
+- Library metadata presentation: Search supplied Thunderbolts (2025), while
+  My Library displayed `????` for the same title. This is a non-blocking
+  release-year enrichment/presentation gap; it does not affect Library identity,
+  watched state, navigation, or playback.
+- Playback startup: the Matroska subtitle-package fallback can wait roughly
+  60 seconds before ordinary playback begins. This is a separate startup UX /
+  performance issue. The historical M22 subtitle acceptance remains valid and
+  is not reopened by this observation.
+- Runtime route advertisement: during the shared Thunderbolts failure, the
+  Miyoo used `100.82.23.65:8755` while PCServer advertised stale
+  `192.168.20.151:8755`. Restarting the runtime corrected the advertisement and
+  the same title then played successfully; no Library source-code fix was
+  required. Before release, verify route persistence and resolution, confirm a
+  normal restart cannot reintroduce the stale route, and make the desktop
+  advertised-address configuration clear.
+- Remaining release/distribution work includes the focused Next Episode /
+  Continue Series feature, a macOS `.app` plus macOS launch/runtime smoke,
+  Windows clean-machine packaged-artifact smoke, fresh/distribution-SD
+  validation, renderer and subtitle-asset licensing/package completeness,
+  advertised-route persistence/configuration verification, and unsigned/signing
+  and runtime-warning review. The Windows packaged candidate and development-
+  machine smoke already exist; they must not be recreated as part of this
+  inventory.
+
 ### Development Handoff — Windows system-tray lifecycle
 
 The Windows tray lifecycle and its focused UX refinements are **Physically

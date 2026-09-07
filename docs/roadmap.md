@@ -1036,7 +1036,12 @@ watched/current semantics, and movie/series playback handoff. A shared playback
 failure observed during acceptance was traced to stale PCServer route
 advertisement rather than Library code; playback succeeded after the runtime
 advertisement was corrected. Release-year fallback and subtitle-package startup
-latency remain separate polish work, and Next Episode is still deferred.
+latency remain separate follow-ups, and Next Episode is the next focused product
+feature. The recorded route observation was Miyoo `100.82.23.65:8755` versus
+advertised `192.168.20.151:8755`; release work must verify route persistence,
+normal-restart behavior, and desktop advertised-address clarity. The roughly
+60-second subtitle-package delay is a separate startup UX/performance issue;
+historical M22 PASS evidence remains valid.
 
 ### 23. PocketCinema Server Desktop Distribution
 
@@ -1086,6 +1091,14 @@ is implemented, focused-automated-tested, and physically smoke-tested on the
 development machine. Clean-Windows acceptance and the other M23 release gates
 remain open. See [Windows packaging evidence](windows-packaging.md). M23 remains
 **Next**, with M21/M22 and accepted source desktop/tray evidence inherited.
+
+Current release follow-ups tracked alongside this milestone are: Next Episode /
+Continue Series; macOS `.app` packaging and macOS launch/runtime smoke; Windows
+clean-machine packaged-artifact smoke; fresh/distribution-SD validation;
+renderer/subtitle-asset licensing and package completeness; persistence and
+clarity of the runtime advertised PCServer route; and unsigned/signing/runtime-
+warning review. The existing Windows development-machine packaged candidate and
+smoke are evidence, not substitutes for the remaining clean/distribution gates.
 
 Acceptance criterion: a clean supported Windows PC can install or extract the
 actual PocketCinema Server release artifact, configure and persist the PCServer
