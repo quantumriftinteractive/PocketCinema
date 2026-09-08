@@ -289,6 +289,11 @@ uses canonical normalized episode order, handles season boundaries, omits
 unreliable or completed targets, and reserves one of the shipped selector's 64
 rows for the continuation action.
 
+The Miyoo jq compatibility seal renamed the continuation expression variable
+`$label` to `$action_label`; the resulting `CONTINUE - S4E7 Chapter 07: Sun`
+row was physically re-confirmed on-device without changing continuation
+semantics.
+
 ### Current Release Follow-ups
 
 - Library metadata presentation: Search supplied Thunderbolts (2025), while

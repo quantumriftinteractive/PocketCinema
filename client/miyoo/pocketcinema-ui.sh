@@ -2608,8 +2608,8 @@ series_flow() {
     [ "$series_continuation_kind" = "next" ]; then
     "$JQ" -r '
       .episode_state.continuation as $target |
-      (if $target.kind == "continue" then "CONTINUE" else "NEXT EPISODE" end) as $label |
-      "\($label) - S\($target.season)E\($target.episode) \($target.title)\t__continue__\t\($target.id)\t\($target.title)\t\($target.year // "")\t\($target.season)\t\($target.episode)"
+      (if $target.kind == "continue" then "CONTINUE" else "NEXT EPISODE" end) as $action_label |
+      "\($action_label) - S\($target.season)E\($target.episode) \($target.title)\t__continue__\t\($target.id)\t\($target.title)\t\($target.year // "")\t\($target.season)\t\($target.episode)"
     ' /tmp/pocketcinema-series-meta.json >/tmp/pocketcinema-continuation.tsv
     series_season_capacity=$((MAX_SELECTOR_ITEMS - 1))
     {
