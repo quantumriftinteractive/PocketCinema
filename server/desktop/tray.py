@@ -2,8 +2,10 @@
 from pathlib import Path
 import threading
 
+from .runtime import resource_path
 
-SERVER_ICON = Path(__file__).resolve().parents[2] / "UI_concept" / "Icons" / "PocketCinema_Server_icon.png"
+
+SERVER_ICON = resource_path("UI_concept", "Icons", "PocketCinema_Server_icon.png")
 
 
 def menu_state(state, busy=False, closing=False):

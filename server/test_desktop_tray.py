@@ -68,6 +68,14 @@ class TrayLifecycleTests(unittest.TestCase):
         desktop.root.withdraw.assert_not_called()
         desktop.lifecycle.stop.assert_not_called()
 
+    def test_macos_window_close_hides_without_stopping_owned_child(self):
+        desktop = self.desktop()
+        with mock.patch("server.desktop.gui.sys.platform", "darwin"):
+            desktop.close()
+        desktop.root.withdraw.assert_called_once()
+        desktop.lifecycle.stop.assert_not_called()
+        self.assertFalse(desktop._closing)
+
     def test_menu_follows_live_state_and_disables_transitions(self):
         desktop = self.desktop()
         for state, expected in [("Stopped", ("Start server", True, False)),

@@ -58,4 +58,14 @@ def restore_child_pipes():
 
 
 def resource_root():
+    """Return the source root or PyInstaller's bundled data root."""
+    if frozen():
+        if sys.platform == "darwin":
+            return Path(sys.executable).resolve().parents[1] / "Resources"
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
     return Path(__file__).resolve().parents[2]
+
+
+def resource_path(*parts):
+    """Resolve a read-only asset from source or a frozen application bundle."""
+    return resource_root().joinpath(*parts)

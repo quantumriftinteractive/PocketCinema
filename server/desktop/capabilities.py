@@ -13,6 +13,7 @@ import urllib.request
 
 from .config import ConfigurationError, validate_stremio_service_url
 from .config import DeviceEndpoint
+from .runtime import frozen, resource_path
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,10 @@ def detect_tool(name, manual_path="", platform=None, environ=None):
         available = _usable_executable(path)
         return ToolStatus(str(path), available, "manual")
     platform = platform or sys.platform
+    if platform == "darwin" and frozen():
+        bundled = resource_path("media-tools", "bin", name)
+        if _usable_executable(bundled):
+            return ToolStatus(str(bundled), True, "bundled")
     runtime_path = _stremio_runtime_tool(name, platform, environ or os.environ)
     if runtime_path:
         return ToolStatus(runtime_path, True, "Stremio runtime")

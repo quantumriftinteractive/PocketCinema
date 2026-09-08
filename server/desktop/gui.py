@@ -122,6 +122,15 @@ class PocketCinemaDesktop:
     def _build(self):
         self.root.title("PocketCinema Server")
         configure_tk_theme(self.root)
+        if sys.platform == "darwin":
+            mac_menu = tk.Menu(self.root, tearoff=False)
+            app_menu = tk.Menu(mac_menu, tearoff=False)
+            app_menu.add_command(label="Show PocketCinema Server", command=self.show)
+            app_menu.add_separator()
+            app_menu.add_command(label="Quit PocketCinema Server", command=self.quit)
+            mac_menu.add_cascade(label="PocketCinema Server", menu=app_menu)
+            self.root.configure(menu=mac_menu)
+            self._mac_menu = mac_menu
         icon = SERVER_ICON
         try:
             self.root.iconphoto(True, tk.PhotoImage(file=str(icon)))
@@ -679,6 +688,8 @@ class PocketCinemaDesktop:
                 self.tray.notify_hidden()
             else:
                 messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
+        elif sys.platform == "darwin":
+            self.root.withdraw()
         else:
             self.quit()
 
