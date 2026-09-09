@@ -1,0 +1,205 @@
+{
+  "components": [
+    {
+      "component": "FFmpeg/FFplay",
+      "license": "LGPL-2.1+ (configuration evidence shows no --enable-gpl or --enable-nonfree)",
+      "patch": "ffmpeg/final.patch",
+      "public_source": "corresponding-source/ffmpeg/ffmpeg-2.4.14.tar.xz",
+      "runtime": "runtime/ffplay",
+      "sha256": "736567ee95115876d7af7f99f2fa565417c351b748bdc05973618980da1df037",
+      "source_archive": "ffmpeg-2.4.14.tar.xz",
+      "version": "2.4.14"
+    },
+    {
+      "component": "SDL 1.2.15",
+      "license": "LGPL-2.1+",
+      "patches": [
+        "0001-use-correct-directfb-config.patch",
+        "0002-fix-compilation-with-libx11.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/SDL-1.2.15.tar.gz",
+      "runtime": "libSDL-1.2.so.0",
+      "sha256": "d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00",
+      "source_archive": "SDL-1.2.15.tar.gz",
+      "version": "1.2.15"
+    },
+    {
+      "component": "libass 0.15.2",
+      "license": "ISC",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/libass-0.15.2.tar.xz",
+      "runtime": "libass.so.9",
+      "sha256": "1be2df9c4485a57d78bb18c0a8ed157bc87a5a8dd48c661961c625cb112832fd",
+      "source_archive": "libass-0.15.2.tar.xz",
+      "version": "0.15.2"
+    },
+    {
+      "component": "bzip2 1.0.8",
+      "license": "bzip2 license",
+      "patches": [
+        "0001-build-objects-twice.patch",
+        "0002-improve-build-system.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/bzip2-1.0.8.tar.gz",
+      "runtime": "libbz2.so.1.0",
+      "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+      "source_archive": "bzip2-1.0.8.tar.gz",
+      "version": "1.0.8"
+    },
+    {
+      "component": "zlib 1.2.11",
+      "license": "zlib license",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/zlib-1.2.11.tar.xz",
+      "runtime": "libz.so.1",
+      "sha256": "4ff941449631ace0d4d203e3483be9dbc9da454084111f97ea0a2114e19bf066",
+      "source_archive": "zlib-1.2.11.tar.xz",
+      "version": "1.2.11"
+    },
+    {
+      "component": "Fontconfig 2.13.1",
+      "license": "Fontconfig license",
+      "patches": [
+        "0001-Fix-the-build-issue-with-enable-static.patch",
+        "0002-add-pthread-as-a-dependency-of-a-static-lib.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/fontconfig-2.13.1.tar.bz2",
+      "runtime": "libfontconfig.so.1",
+      "sha256": "f655dd2a986d7aa97e052261b36aa67b0a64989496361eca8d604e6414006741",
+      "source_archive": "fontconfig-2.13.1.tar.bz2",
+      "version": "2.13.1"
+    },
+    {
+      "component": "FreeType 2.10.4",
+      "license": "FTL/GPL-2.0+",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/freetype-2.10.4.tar.xz",
+      "runtime": "libfreetype.so.6",
+      "sha256": "86a854d8905b19698bbc8f23b860bc104246ce4854dcea8e3b0fb21284f75784",
+      "source_archive": "freetype-2.10.4.tar.xz",
+      "version": "2.10.4"
+    },
+    {
+      "component": "FriBidi 1.0.10",
+      "license": "LGPL-2.1+",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/fribidi-1.0.10.tar.xz",
+      "runtime": "libfribidi.so.0",
+      "sha256": "7f1c687c7831499bcacae5e8675945a39bacbad16ecaa945e9454a32df653c01",
+      "source_archive": "fribidi-1.0.10.tar.xz",
+      "version": "1.0.10"
+    },
+    {
+      "component": "HarfBuzz 3.0.0",
+      "license": "MIT, ISC",
+      "patches": [
+        "0001-meson.build-check-for-pthread.h.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/harfbuzz-3.0.0.tar.xz",
+      "runtime": "libharfbuzz.so.0",
+      "sha256": "036b0ee118451539783ec7864148bb4106be42a2eb964df4e83e6703ec46f3d9",
+      "source_archive": "harfbuzz-3.0.0.tar.xz",
+      "version": "3.0.0"
+    },
+    {
+      "component": "GLib 2.68.4",
+      "license": "LGPL-2.1+",
+      "patches": [
+        "0001-fix-compile-time-atomic-detection.patch",
+        "0002-remove-cpp-requirement.patch",
+        "0003-Add-Wno-format-nonliteral-to-compiler-arguments.patch",
+        "0004-meson.build-add-girdir-to-gio-2.0.pc-and-glib-2.0.pc.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/glib-2.68.4.tar.xz",
+      "runtime": "libglib-2.0.so.0",
+      "sha256": "62fd061d08a75492617e625a73e2c05e259f831acbb8e1f8b9c81f23f7993a3b",
+      "source_archive": "glib-2.68.4.tar.xz",
+      "version": "2.68.4"
+    },
+    {
+      "component": "PCRE 8.45",
+      "license": "BSD-3-Clause",
+      "patches": [
+        "0001-Kill-compatibility-bits.patch",
+        "0002-Disable-C-unit-tests.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/pcre-8.45.tar.bz2",
+      "runtime": "libpcre.so.1",
+      "sha256": "4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8",
+      "source_archive": "pcre-8.45.tar.bz2",
+      "version": "8.45"
+    },
+    {
+      "component": "Expat 2.4.1",
+      "license": "MIT",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/expat-2.4.1.tar.xz",
+      "runtime": "libexpat.so.1",
+      "sha256": "cf032d0dba9b928636548e32b327a2d66b1aab63c4f4a13dd132c2d1d2f2fb6a",
+      "source_archive": "expat-2.4.1.tar.xz",
+      "version": "2.4.1"
+    },
+    {
+      "component": "libpng 1.6.37",
+      "license": "libpng license",
+      "patches": [
+        "0001-Disable-pngfix-and-png-fix-itxt.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/libpng-1.6.37.tar.xz",
+      "runtime": "libpng16.so.16",
+      "sha256": "505e70834d35383537b6491e7ae8641f1a4bed1876dbfe361201fc80868d88ca",
+      "source_archive": "libpng-1.6.37.tar.xz",
+      "version": "1.6.37"
+    },
+    {
+      "component": "libffi 3.4.2",
+      "license": "MIT",
+      "patches": [
+        "0001-Fix-installation-location-of-libffi.patch",
+        "0002-Fix-use-of-compact-eh-frames-on-MIPS.patch",
+        "0003-libffi-enable-hardfloat-in-the-MIPS-assembly-code.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/libffi-3.4.2.tar.gz",
+      "runtime": "libffi.so.8",
+      "sha256": "540fb721619a6aba3bdeef7d940d8e9e0e6d2c193595bc243241b77ff9e93620",
+      "source_archive": "libffi-3.4.2.tar.gz",
+      "version": "3.4.2"
+    },
+    {
+      "component": "libuuid 2.37.2",
+      "license": "BSD-3-Clause",
+      "patches": [
+        "0001-libuuid-include-c-h-to-cover-restrict-keyword.patch",
+        "0002-libblkid-don-t-mark-cache-as-probed-if-sys-not-available.patch"
+      ],
+      "public_source": "corresponding-source/dependencies/util-linux-2.37.2.tar.xz",
+      "runtime": "libuuid.so.1",
+      "sha256": "6a0764c1aae7fb607ef8a6dd2c0f6c47d5e5fd27aa08820abaad9ec14e28e9d9",
+      "source_archive": "util-linux-2.37.2.tar.xz",
+      "version": "2.37.2"
+    },
+    {
+      "component": "tslib 1.22",
+      "license": "GPL-2.0+ programs; LGPL-2.1+ libraries",
+      "patches": [],
+      "public_source": "corresponding-source/dependencies/tslib-1.22.tar.xz",
+      "runtime": "libts.so.0",
+      "sha256": "aaf0aed410a268d7b51385d07fe4d9d64312038e87c447ec8a24c8db0a15617a",
+      "source_archive": "tslib-1.22.tar.xz",
+      "version": "1.22"
+    },
+    {
+      "component": "Plus Jakarta Sans",
+      "git_blob_sha1": "b88589a39657e0103d0911c6ced782fce08e757c",
+      "git_path": "assets/fonts/PlusJakartaSans.ttf",
+      "license": "SIL OFL 1.1",
+      "public_source": "font/PlusJakartaSans.ttf",
+      "runtime": "font/PlusJakartaSans.ttf",
+      "sha256": "ca8cefd42d9d711cc864703355cb935dc9829e45d7c31f0ab5791cb8f77637c8",
+      "stremio_web_commit": "1748dc1a3e95f0eb0d171f78aedb536e7df7cd61",
+      "version": "2.006"
+    }
+  ],
+  "format": 1,
+  "generated_from": "C:\\Users\\ysocr\\PocketCinema-Miyoo-v1.0.0-release-inputs"
+}

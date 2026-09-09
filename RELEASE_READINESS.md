@@ -43,6 +43,9 @@ font distribution checkout/blob is identified, while its upstream build artifact
 remains unresolved. See
 [provenance assessment](release-sources/miyoo/PROVENANCE.md). Fresh-install
 physical acceptance has not run.
+The public compliance metadata bundle and license/source-manifest audit now pass;
+the corresponding source archives remain separate release assets and final
+artifact packaging is still pending.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.

@@ -13,6 +13,12 @@ SDK's historical provenance remains C, but that is a reproducibility limitation.
 The unknown Tokotype export/build path is a provenance limitation only for the exact,
 unmodified font bytes.
 
+The public compliance bundle assembly and audit is **PASS** for the metadata and
+license bundle at `release-sources/miyoo/public/`. It contains 56 files and
+613,227 bytes, including all 19 Buildroot patches and the authoritative license
+texts. The 16 source archives remain separately delivered release assets named
+and hash-pinned by `SOURCE-MANIFEST.json`; they were not copied into Git.
+
 FFmpeg's official guidance asks distributors to provide the exact corresponding
 source, changes, build/configuration explanation, applicable license text, and the
 same source alongside the binary distribution. The preserved FFmpeg 2.4.14 archive,
@@ -27,6 +33,10 @@ ship the corresponding modified library sources and license texts, and preserve 
 way for users to replace compatible shared libraries. If final packaging discovers
 static linkage or a combined work for any LGPL library, add the application object
 files and relink instructions required by LGPL 2.1 before release.
+
+The candidate FFplay launcher exports `LD_LIBRARY_PATH` to the app-local
+`experiments/ffplay/lib` directory. The recovered `libass` and FreeType objects
+also contain the historical absolute SDK RPATH `/opt/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot/usr/lib`; this is a build-path artifact, not a bundled SDK path. Final packaging should retain the app-local search setup and confirm it on the target image.
 
 ## Dependency sufficiency
 

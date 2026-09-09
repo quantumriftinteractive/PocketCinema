@@ -355,6 +355,13 @@ complete the independent reproduction and release-artifact gates separately.
 Historical SDK configuration and Tokotype export provenance remain documented
 limitations. See `release-sources/miyoo/COMPLIANCE-REVIEW.md`.
 
+The public Miyoo compliance bundle metadata and license audit is now PASS at
+`release-sources/miyoo/public/`: 56 files, 613,227 bytes, all 19 Buildroot
+patches, license texts, FFmpeg configuration/patch metadata, source hashes, and
+replacement instructions. The corresponding source archives remain separate
+release assets and are not committed. This does not mark reproduction, fresh
+install, or final release acceptance PASS.
+
 ### Prior Windows system-tray lifecycle handoff
 
 The Windows tray lifecycle and its focused UX refinements are **Physically
