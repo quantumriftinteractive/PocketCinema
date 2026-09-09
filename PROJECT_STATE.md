@@ -336,23 +336,21 @@ were verified. The source staging script was tested without compiling. The
 original recovered tree, player, compiler, sysroot and font remain untouched.
 All fifteen deployment library files match the recovered SDK archive.
 
-The SDK is classified provenance C: strongly linked to Steward's Miyoo Mini /
-Buildroot 2021.11 family, with candidate package recipes and source hashes, but
-its exact final configuration and applied library patches remain unproven. Full PCRE
-LICENCE and local header notices were located. Official Tokotype history and
-release assets did not contain the exact recovered font. See
-`release-sources/miyoo/PROVENANCE.md` for source/license evidence, hashes,
-classification and storage policy. Large source/analysis copies remain ignored;
-no runtime artifacts or entire upstream source trees are committed. Off-machine
-archival of the original SDK/build tree/font is still required. No deployment,
-SD-card access, FFplay rebuild or selector rebuild occurred. All physical PASS
-evidence is inherited; redistribution remains blocked.
+The SDK remains provenance C: it is strongly linked to Steward's Miyoo Mini /
+Buildroot 2021.11 family, but its exact final configuration and applied package
+set remain unproven. The exact fifteen Buildroot 2021.11 dependency archives, all
+19 package patches, and declared license files are now preserved in the controlled
+external archive C:\\Users\\ysocr\\PocketCinema-Miyoo-v1.0.0-release-inputs; each
+package input is provenance A while the recovered SDK as a whole remains C. The
+exact shipped font is also tied to the local Stremio Web Git checkout/blob, while
+its upstream Tokotype build artifact remains unresolved. Large source/analysis
+copies remain ignored and no runtime artifacts or upstream trees are committed.
+No deployment, SD-card access, FFplay rebuild or selector rebuild occurred. All
+physical PASS evidence is inherited; redistribution remains blocked.
 
-Next provenance action: recover/attest the exact SDK configuration and dependency
-sources/patches, resolve the exact font processing/source chain, and arrange
-controlled external backups using `release-sources/miyoo/ARCHIVAL-PLAN.md` and
-`archival-manifest.json`. An independent FFplay reproduction build is a
-separate future gate and was not authorized in this preservation task.
+Next provenance action: attest the exact SDK configuration and package-patch
+application, resolve the font processing/source chain, and review the external
+archive before a separately authorized independent FFplay reproduction build.
 
 ### Prior Windows system-tray lifecycle handoff
 

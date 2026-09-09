@@ -78,14 +78,16 @@ replace the missing original configuration. Download URLs and hashes are in
 
 ## Dependency classification and source/license inventory
 
-Classification: A = proven stock upstream; B = proven Buildroot-patched;
-C = proven Miyoo/Onion-specific patches; D = exact source variant unknown.
-All recovered binaries are classified **C**: Buildroot/package versions and candidate
-recipes are corroborated, but exact source artifacts and applied patch sets are not
-proven. The candidate recipe column shows what
+Classification: A = exact upstream source archive plus the complete Buildroot
+2021.11 package patch directory is preserved; B = exact source archive with
+incomplete patch evidence; C = version/recipe corroborated only; D = unresolved.
+The fifteen dependency source archives now have class **A** package provenance:
+their checksums match Buildroot 2021.11 and every package patch shipped in that
+Buildroot source tree is preserved in the external archive. This establishes
+authoritative Buildroot package inputs; it does **not** prove that the recovered
+SDK used this exact package patch set. The SDK as a whole remains class C.
+The candidate recipe column shows what
 stock Buildroot 2021.11 would apply, not what was proven applied to these bytes.
-Zero package patches does not prove A; recipe hooks, global patches, manual
-changes and configuration remain possible. No C patch set was established.
 The candidate patch filenames and recipe/hash-file checksums are preserved in
 [buildroot-package-index.json](buildroot-package-index.json).
 
@@ -95,21 +97,21 @@ Header notices are evidence, not a claim of complete package-wide attribution.
 
 | Library/version | Class | Candidate recipe patches | Local license/copyright evidence | Still needed from exact source package |
 | --- | --- | --- | --- | --- |
-| SDL 1.2.15 | C | 2: DirectFB config, libX11 build | `usr/include/SDL/SDL.h`: LGPL notice | SDL-1.2.15 source, applied patches, full `COPYING` |
-| libass 0.15.2 | C | 0 | `usr/include/ass/ass.h`: ISC notice | libass-0.15.2 source and package `COPYING` |
-| bzip2 1.0.8 | C | 2: object/build-system changes | `usr/include/bzlib.h`: copyright, reference to LICENSE | bzip2-1.0.8 source/patches, `LICENSE` |
-| zlib 1.2.11 | C | 0 (`libzlib`) | `usr/include/zlib.h`: zlib notice | zlib-1.2.11 source, package `README` license |
-| Fontconfig 2.13.1 | C | 2: static build/pthread | `usr/include/fontconfig/fontconfig.h`: permission notice | fontconfig-2.13.1 source/patches, `COPYING` |
-| FreeType 2.10.4 | C | 0 | `usr/include/freetype2/freetype/freetype.h`: FTL/GPL reference | freetype-2.10.4 source; `docs/LICENSE.TXT`, `docs/FTL.TXT`, `docs/GPLv2.TXT` |
-| FriBidi 1.0.10 | C | 0 | `usr/include/fribidi/fribidi.h`: LGPL notice | fribidi-1.0.10 source, `COPYING` |
-| HarfBuzz 3.0.0 | C | 1: pthread header detection | `usr/include/harfbuzz/hb.h`: permission notice | harfbuzz-3.0.0 source/patch, aggregate `COPYING` including ucdn |
-| GLib 2.68.4 | C | 4: atomic detection, C++ requirement, compiler flag, pkg-config | `usr/include/glib-2.0/glib.h`: LGPL notice | glib-2.68.4 source/patches, `COPYING` |
-| PCRE 8.45 | C | 2: compatibility bits, C++ tests | `usr/share/doc/pcre/LICENCE`: full license; `COPYING` only points to it | pcre-8.45 source/patches; preserve recovered `LICENCE` |
-| Expat 2.4.1 | C | 0 | `usr/include/expat.h`: MIT notice | expat-2.4.1 source, aggregate `COPYING` |
-| libpng 1.6.37 | C | 1: disable pngfix tools | `usr/include/libpng16/png.h`: license text | libpng-1.6.37 source/patch, package `LICENSE` |
-| libffi 3.4.2 | C | 3: install location, two MIPS fixes | `usr/include/ffi.h`: MIT notice | libffi-3.4.2 source/patches, package `LICENSE`; ARM applicability assessed later |
-| libuuid 2.37.2 | C | 2 util-linux patches, one specifically libuuid | `usr/include/uuid/uuid.h`: BSD notice | util-linux-2.37.2 source/patches, `README.licensing`, `libuuid/COPYING`; assess libuuid separately from util-linux programs |
-| tslib 1.22 | C | 0 | `usr/include/tslib.h`: LGPL notice | tslib-1.22 source, `COPYING`; separate library/program terms |
+| SDL 1.2.15 | A | 2: DirectFB config, libX11 build | recovered `COPYING` | SDK application still unproven |
+| libass 0.15.2 | A | 0 | recovered `COPYING` | SDK application still unproven |
+| bzip2 1.0.8 | A | 2: object/build-system changes | recovered `LICENSE` | SDK application still unproven |
+| zlib 1.2.11 | A | 0 (`libzlib`) | recovered `README` | SDK application still unproven |
+| Fontconfig 2.13.1 | A | 2: static build/pthread | recovered `COPYING` | SDK application still unproven |
+| FreeType 2.10.4 | A | 0 | recovered FreeType license files | SDK application still unproven |
+| FriBidi 1.0.10 | A | 0 | recovered `COPYING` | SDK application still unproven |
+| HarfBuzz 3.0.0 | A | 1: pthread header detection | recovered `COPYING` | SDK application still unproven |
+| GLib 2.68.4 | A | 4: atomic detection, C++ requirement, compiler flag, pkg-config | recovered `COPYING` | SDK application still unproven |
+| PCRE 8.45 | A | 2: compatibility bits, C++ tests | recovered `LICENCE` | SDK application still unproven |
+| Expat 2.4.1 | A | 0 | recovered `COPYING` | SDK application still unproven |
+| libpng 1.6.37 | A | 1: disable pngfix tools | recovered `LICENSE` | SDK application still unproven |
+| libffi 3.4.2 | A | 3: install location, two MIPS fixes | recovered `LICENSE` | SDK application still unproven |
+| libuuid 2.37.2 | A | 2 util-linux patches, one specifically libuuid | recovered util-linux licensing files | SDK application still unproven |
+| tslib 1.22 | A | 0 | recovered `COPYING` | SDK application still unproven |
 
 Version evidence is installed `.pc` data except bzip2's header and FreeType's
 2.10.4 header macros (`freetype2.pc` reports its separate 23.4.17 numbering).
@@ -117,7 +119,9 @@ Authoritative source sites are recorded from the candidate Buildroot recipes:
 libsdl.org, libass/libass, sourceware.org/bzip2, zlib.net, fontconfig.org,
 Savannah FreeType, fribidi/fribidi, harfbuzz/harfbuzz, GNOME GLib, PCRE/Expat/libpng
 project release archives, libffi/libffi, kernel.org util-linux and libts/tslib.
-The actual upstream package archives have not been downloaded in this pass.
+The exact package archives named by those hashes, all package patch files, and
+the declared license files were recovered into the external archive. The small
+Git-side summary is [dependency-source-recovery.json](dependency-source-recovery.json).
 
 Sixteen original local license/header evidence files were copied into ignored
 `staging/license-evidence/`, preserving their relative paths. Their hashes are
@@ -152,6 +156,13 @@ was recovered under `inputs/PlusJakartaSans-2.6-OFL.txt`, SHA-256
 This is authoritative project license material but **not proof that tag 2.6
 contains the exact shipped font**. Exact upstream font commit/path and any
 intermediate processing remain unresolved. The recovered font was not changed.
+The exact runtime bytes are nevertheless tracked in the local Stremio Web
+checkout at commit `1748dc1a3e95f0eb0d171f78aedb536e7df7cd61`, path
+`assets/fonts/PlusJakartaSans.ttf`, with Git blob SHA-1
+`b88589a39657e0103d0911c6ced782fce08e757c` and 176,408 bytes. A direct checkout
+hash matches the recovered SHA-256. This establishes exact distribution
+checkout/blob provenance; it does not identify the upstream Tokotype build
+artifact. See [font-provenance.json](font-provenance.json).
 
 ## Proposed release structure and retention policy
 
@@ -196,8 +207,9 @@ font.** Off-machine archival of those recovered inputs remains explicitly open.
 ## Remaining gates and regression impact
 
 1. Recover/attest the exact SDK configuration, vendor patch history and artifact
-   digest relationship; obtain matching dependency corresponding source and full
-   package-wide notices/licenses. Buildroot 2021.11 is the candidate starting point.
+   digest relationship. The corresponding Buildroot package sources, patches,
+   and declared licenses are now preserved, but their application to the
+   recovered SDK remains unproven.
 2. Resolve the exact font source/processing chain; retain its complete applicable
    OFL/copyright material without substituting a different font silently.
 3. Back up recovered original inputs in controlled external storage and produce

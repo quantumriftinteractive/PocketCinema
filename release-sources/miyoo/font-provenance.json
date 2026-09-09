@@ -1,0 +1,16 @@
+{
+  "runtime_path": ".tmp/stremio-web/assets/fonts/PlusJakartaSans.ttf",
+  "runtime_sha256": "ca8cefd42d9d711cc864703355cb935dc9829e45d7c31f0ab5791cb8f77637c8",
+  "runtime_bytes": 176408,
+  "distribution_repository": "Stremio Web checkout",
+  "distribution_commit": "1748dc1a3e95f0eb0d171f78aedb536e7df7cd61",
+  "distribution_path": "assets/fonts/PlusJakartaSans.ttf",
+  "git_blob_sha1": "b88589a39657e0103d0911c6ced782fce08e757c",
+  "git_blob_bytes": 176408,
+  "git_checkout_matches_sha256": true,
+  "embedded_family": "Plus Jakarta Sans",
+  "embedded_version": "2.006",
+  "license": "SIL Open Font License 1.1",
+  "upstream_tokotype_artifact": "unresolved",
+  "assessment": "Exact distribution checkout/blob provenance established; upstream font build/source artifact remains unidentified."
+}

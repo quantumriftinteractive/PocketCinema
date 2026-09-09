@@ -21,7 +21,7 @@ def main():
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     failures = []
     for item in manifest["items"]:
-        path = args.root / Path(item["path"])
+        path = args.root / Path(item.get("archive_path", item["path"]))
         if not path.is_file():
             if item.get("required", True):
                 failures.append(f"MISSING required {item['id']}: {path}")

@@ -3,13 +3,13 @@
   "purpose": "Hash inventory for an external, controlled archival copy; not a Git payload.",
   "recorded": "2026-09-09",
   "items": [
-    {"id": "ffmpeg-source-archive", "category": "upstream-source", "path": ".tmp/ffmpeg-2.4.14.tar.xz", "sha256": "736567ee95115876d7af7f99f2fa565417c351b748bdc05973618980da1df037", "required": true},
-    {"id": "ffplay-shipped", "category": "recovered-runtime", "path": ".tmp/ffmpeg-2.4.14/ffplay", "sha256": "3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6", "required": true},
-    {"id": "arm-compiler", "category": "toolchain", "path": ".tmp/arm-gnu/bin/arm-none-linux-gnueabihf-gcc.exe", "sha256": "a5077d9333eb16fcd86075fe699dab79c70c4d3ae1e880d817c6acc066a68202", "required": true},
-    {"id": "arm-compiler-archive", "category": "toolchain", "path": ".tmp/arm-gnu/arm-gnu-toolchain.zip", "sha256": "1ae2b1abdae0c37869c92526f5d3533fc7e6d47c242a593f374674d45d0a5152", "required": false},
-    {"id": "miyoo-sdk", "category": "sdk", "path": ".tmp/toolchain/toolchain.tar.gz", "sha256": "2b39aaf388114cbe773701ed2310a8e8240ff775c4aafdafa4c4859790126581", "required": true},
-    {"id": "runtime-font", "category": "font", "path": ".tmp/stremio-web/assets/fonts/PlusJakartaSans.ttf", "sha256": "ca8cefd42d9d711cc864703355cb935dc9829e45d7c31f0ab5791cb8f77637c8", "required": true},
-    {"id": "buildroot-config-candidate", "category": "corroborating-source", "path": "release-sources/miyoo/inputs/buildroot-2021.11_config", "sha256": "d889c98485b6786bb23e8558af5aa0786a792c25e53739847e9637448c53d577", "required": false},
-    {"id": "font-license-evidence", "category": "license", "path": "release-sources/miyoo/inputs/PlusJakartaSans-2.6-OFL.txt", "sha256": "578bfe73675edc639f6aaa6e2e9ac598936bf696f95f034fb7682dca2edc53c7", "required": false}
+    {"id": "ffmpeg-source-archive", "category": "upstream-source", "path": ".tmp/ffmpeg-2.4.14.tar.xz", "archive_path": "upstream/ffmpeg/ffmpeg-2.4.14.tar.xz", "sha256": "736567ee95115876d7af7f99f2fa565417c351b748bdc05973618980da1df037", "required": true},
+    {"id": "ffplay-shipped", "category": "recovered-runtime", "path": ".tmp/ffmpeg-2.4.14/ffplay", "archive_path": "runtime/ffplay", "sha256": "3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6", "required": true},
+    {"id": "arm-compiler", "category": "toolchain", "path": ".tmp/arm-gnu/bin/arm-none-linux-gnueabihf-gcc.exe", "archive_path": "toolchain/compiler/arm-none-linux-gnueabihf-gcc.exe", "sha256": "a5077d9333eb16fcd86075fe699dab79c70c4d3ae1e880d817c6acc066a68202", "required": true},
+    {"id": "arm-compiler-archive", "category": "toolchain", "path": ".tmp/arm-gnu/arm-gnu-toolchain.zip", "archive_path": "toolchain/arm-gnu-toolchain.zip", "sha256": "1ae2b1abdae0c37869c92526f5d3533fc7e6d47c242a593f374674d45d0a5152", "required": false},
+    {"id": "miyoo-sdk", "category": "sdk", "path": ".tmp/toolchain/toolchain.tar.gz", "archive_path": "sdk/toolchain.tar.gz", "sha256": "2b39aaf388114cbe773701ed2310a8e8240ff775c4aafdafa4c4859790126581", "required": true},
+    {"id": "runtime-font", "category": "font", "path": ".tmp/stremio-web/assets/fonts/PlusJakartaSans.ttf", "archive_path": "font/PlusJakartaSans.ttf", "sha256": "ca8cefd42d9d711cc864703355cb935dc9829e45d7c31f0ab5791cb8f77637c8", "required": true},
+    {"id": "buildroot-config-candidate", "category": "corroborating-source", "path": "release-sources/miyoo/inputs/buildroot-2021.11_config", "archive_path": "source-info/buildroot-2021.11_config", "sha256": "d889c98485b6786bb23e8558af5aa0786a792c25e53739847e9637448c53d577", "required": false},
+    {"id": "font-license-evidence", "category": "license", "path": "release-sources/miyoo/inputs/PlusJakartaSans-2.6-OFL.txt", "archive_path": "licenses/PlusJakartaSans-2.6-OFL.txt", "sha256": "578bfe73675edc639f6aaa6e2e9ac598936bf696f95f034fb7682dca2edc53c7", "required": false}
   ]
 }
