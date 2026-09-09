@@ -1,0 +1,312 @@
+--- a/ffplay.c
++++ b/ffplay.c
+@@ -29,6 +29,8 @@
+ #include <limits.h>
+ #include <signal.h>
+ #include <stdint.h>
++#include <stdlib.h>
++#include <unistd.h>
+ 
+ #include "libavutil/avstring.h"
+ #include "libavutil/colorspace.h"
+@@ -278,6 +280,9 @@
+ #endif
+ 
+     int last_video_stream, last_audio_stream, last_subtitle_stream;
++    int subtitle_notice_active;
++    int subtitle_notice_serial;
++    int64_t subtitle_notice_until;
+ 
+     SDL_cond *continue_read_thread;
+ } VideoState;
+@@ -285,6 +290,9 @@
+ /* options specified by the user */
+ static AVInputFormat *file_iformat;
+ static const char *input_filename;
++static const char *subtitle_filter_file;
++static const char *subtitle_font_scale;
++static const char *subtitle_notice_font;
+ static const char *window_title;
+ static int fs_screen_width;
+ static int fs_screen_height;
+@@ -333,6 +341,17 @@
+ 
+ /* current context */
+ static int is_full_screen;
++    /* 0 follows the stream DAR, 3 uses aspect-preserving fullscreen zoom. */
++static int display_aspect_mode;
++
++static void check_aspect_request(VideoState *is)
++{
++    if (access("/tmp/pocketstremio-aspect-request", F_OK) == 0) {
++        unlink("/tmp/pocketstremio-aspect-request");
++        display_aspect_mode = display_aspect_mode == 3 ? 0 : 3;
++        is->force_refresh = 1;
++    }
++}
+ static int64_t audio_callback_time;
+ 
+ static AVPacket flush_pkt;
+@@ -823,20 +842,19 @@
+     if (aspect_ratio <= 0.0)
+         aspect_ratio = 1.0;
+     aspect_ratio *= (float)pic_width / (float)pic_height;
+-
+     /* XXX: we suppose the screen has a 1.0 pixel ratio */
+     height = scr_height;
+     width = ((int)rint(height * aspect_ratio)) & ~1;
+     if (width > scr_width) {
+-        width = scr_width;
++        width = scr_width & ~1;
+         height = ((int)rint(width / aspect_ratio)) & ~1;
+     }
+     x = (scr_width - width) / 2;
+     y = (scr_height - height) / 2;
+-    rect->x = scr_xleft + x;
+-    rect->y = scr_ytop  + y;
+-    rect->w = FFMAX(width,  1);
+-    rect->h = FFMAX(height, 1);
++    rect->x = (scr_xleft + x) & ~1;
++    rect->y = (scr_ytop + y) & ~1;
++    rect->w = FFMAX(width & ~1,  2);
++    rect->h = FFMAX(height & ~1, 2);
+ }
+ 
+ static void video_image_display(VideoState *is)
+@@ -849,7 +867,7 @@
+ 
+     vp = &is->pictq[(is->pictq_rindex + is->pictq_rindex_shown) % VIDEO_PICTURE_QUEUE_SIZE];
+     if (vp->bmp) {
+-        if (is->subtitle_st) {
++        if (is->subtitle_st && !subtitle_filter_file) {
+             if (is->subpq_size > 0) {
+                 sp = &is->subpq[is->subpq_rindex];
+ 
+@@ -879,6 +897,16 @@
+ 
+         if (rect.x != is->last_display_rect.x || rect.y != is->last_display_rect.y || rect.w != is->last_display_rect.w || rect.h != is->last_display_rect.h || is->force_refresh) {
+             int bgcolor = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
++            fprintf(stderr,
++                    "DISPLAY src=%dx%d sar=%d/%d dst=%d,%d %dx%d "
++                    "screen=%dx%d pitch=%d flags=0x%x bpp=%d "
++                    "overlay_pitch=%d,%d,%d format=0x%x\n",
++                    vp->width, vp->height, vp->sar.num, vp->sar.den,
++                    rect.x, rect.y, rect.w, rect.h,
++                    screen->w, screen->h, screen->pitch, screen->flags,
++                    screen->format ? screen->format->BitsPerPixel : 0,
++                    vp->bmp->pitches[0], vp->bmp->pitches[1],
++                    vp->bmp->pitches[2], vp->bmp->format);
+             fill_border(is->xleft, is->ytop, is->width, is->height, rect.x, rect.y, rect.w, rect.h, bgcolor, 1);
+             is->last_display_rect = rect;
+         }
+@@ -1118,6 +1146,9 @@
+         av_log(NULL, AV_LOG_FATAL, "SDL: could not set video mode - exiting\n");
+         do_exit(is);
+     }
++    /* Clear stale PocketStremio/infoPanel pixels in letterbox areas. */
++    SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
++    SDL_Flip(screen);
+     if (!window_title)
+         window_title = input_filename;
+     SDL_WM_SetCaption(window_title, window_title);
+@@ -1783,6 +1814,13 @@
+     char sws_flags_str[128];
+     char buffersrc_args[256];
+     int ret;
++    int subtitle_si = -1;
++    int subtitle_count = 0;
++    int i;
++    char subtitle_args[2048];
++    char subtitle_notice[64];
++    char filtergraph_buf[4096];
++    const char *filtergraph = vfilters;
+     AVFilterContext *filt_src = NULL, *filt_out = NULL, *last_filter = NULL;
+     AVCodecContext *codec = is->video_st->codec;
+     AVRational fr = av_guess_frame_rate(is->ic, is->video_st, NULL);
+@@ -1856,7 +1894,48 @@
+         }
+     }
+ 
+-    if ((ret = configure_filtergraph(graph, vfilters, filt_src, last_filter)) < 0)
++    if (subtitle_filter_file && is->subtitle_stream >= 0) {
++        for (i = 0; i < (int)is->ic->nb_streams; i++) {
++            if (is->ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE) {
++                subtitle_count++;
++                if (i <= is->subtitle_stream)
++                    subtitle_si++;
++            }
++        }
++        if (subtitle_si >= 0)
++            snprintf(subtitle_args, sizeof(subtitle_args),
++                     "filename=%s:si=%d", subtitle_filter_file, subtitle_si);
++    }
++
++    filtergraph_buf[0] = '\0';
++    if (subtitle_si >= 0) {
++        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
++                    "subtitles=%s:font_scale=%s", subtitle_args,
++                    subtitle_font_scale ? subtitle_font_scale : "1.5");
++    }
++    if (subtitle_filter_file && subtitle_notice_font &&
++        is->subtitle_notice_active) {
++        if (is->subtitle_stream < 0)
++            av_strlcpy(subtitle_notice, "Subtitles off", sizeof(subtitle_notice));
++        else
++            snprintf(subtitle_notice, sizeof(subtitle_notice), "Subtitles %d/%d",
++                     subtitle_si + 1, subtitle_count);
++        if (*filtergraph_buf)
++            av_strlcat(filtergraph_buf, ",", sizeof(filtergraph_buf));
++        av_strlcatf(filtergraph_buf, sizeof(filtergraph_buf),
++                    "drawtext=fontfile=%s:text='%s':fontcolor=white:fontsize=20:"
++                    "borderw=2:bordercolor=black:x=w-tw-12:y=12",
++                    subtitle_notice_font, subtitle_notice);
++    }
++    if (vfilters && *vfilters) {
++        if (*filtergraph_buf)
++            av_strlcat(filtergraph_buf, ",", sizeof(filtergraph_buf));
++        av_strlcat(filtergraph_buf, vfilters, sizeof(filtergraph_buf));
++    }
++    if (*filtergraph_buf)
++        filtergraph = filtergraph_buf;
++
++    if ((ret = configure_filtergraph(graph, filtergraph, filt_src, last_filter)) < 0)
+         goto fail;
+ 
+     is->in_video_filter  = filt_src;
+@@ -1962,6 +2041,8 @@
+     int last_h = 0;
+     enum AVPixelFormat last_format = -2;
+     int last_serial = -1;
++    int last_subtitle_stream = -2;
++    int last_subtitle_notice_serial = -1;
+     int last_vfilter_idx = 0;
+ #endif
+ 
+@@ -1978,10 +2059,17 @@
+             continue;
+ 
+ #if CONFIG_AVFILTER
++        if (is->subtitle_notice_active &&
++            av_gettime_relative() >= is->subtitle_notice_until) {
++            is->subtitle_notice_active = 0;
++            is->subtitle_notice_serial++;
++        }
+         if (   last_w != frame->width
+             || last_h != frame->height
+             || last_format != frame->format
+             || last_serial != serial
++            || last_subtitle_stream != is->subtitle_stream
++            || last_subtitle_notice_serial != is->subtitle_notice_serial
+             || last_vfilter_idx != is->vfilter_idx) {
+             av_log(NULL, AV_LOG_DEBUG,
+                    "Video frame changed from size:%dx%d format:%s serial:%d to size:%dx%d format:%s serial:%d\n",
+@@ -2004,6 +2092,8 @@
+             last_h = frame->height;
+             last_format = frame->format;
+             last_serial = serial;
++            last_subtitle_stream = is->subtitle_stream;
++            last_subtitle_notice_serial = is->subtitle_notice_serial;
+             last_vfilter_idx = is->vfilter_idx;
+             frame_rate = filt_out->inputs[0]->frame_rate;
+         }
+@@ -3199,6 +3289,13 @@
+     video_open(is, 1, NULL);
+ }
+ 
++static void show_subtitle_notice(VideoState *is)
++{
++    is->subtitle_notice_active = 1;
++    is->subtitle_notice_until = av_gettime_relative() + 1000000;
++    is->subtitle_notice_serial++;
++}
++
+ static void toggle_audio_display(VideoState *is)
+ {
+     int bgcolor = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
+@@ -3219,6 +3316,7 @@
+     double remaining_time = 0.0;
+     SDL_PumpEvents();
+     while (!SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_ALLEVENTS)) {
++        check_aspect_request(is);
+         if (!cursor_hidden && av_gettime_relative() - cursor_last_shown > CURSOR_HIDE_DELAY) {
+             SDL_ShowCursor(0);
+             cursor_hidden = 1;
+@@ -3281,6 +3379,10 @@
+                 break;
+             case SDLK_f:
+                 toggle_full_screen(cur_stream);
++                cur_stream->force_refresh = 1;
++                break;
++            case SDLK_RETURN:
++                display_aspect_mode = display_aspect_mode == 3 ? 0 : 3;
+                 cur_stream->force_refresh = 1;
+                 break;
+             case SDLK_p:
+@@ -3303,6 +3405,7 @@
+                 break;
+             case SDLK_t:
+                 stream_cycle_channel(cur_stream, AVMEDIA_TYPE_SUBTITLE);
++                show_subtitle_notice(cur_stream);
+                 break;
+             case SDLK_w:
+ #if CONFIG_AVFILTER
+@@ -3521,6 +3624,9 @@
+     if (!strcmp(filename, "-"))
+         filename = "pipe:";
+     input_filename = filename;
++    subtitle_filter_file = getenv("POCKETSTREMIO_SUBTITLE_FILE");
++    subtitle_font_scale = getenv("POCKETCINEMA_SUBTITLE_FONT_SCALE");
++    subtitle_notice_font = getenv("POCKETSTREMIO_DEFAULT_FONT");
+ }
+ 
+ static int opt_codec(void *optctx, const char *opt, const char *arg)
+@@ -3658,6 +3764,10 @@
+     int flags;
+     VideoState *is;
+     char dummy_videodriver[] = "SDL_VIDEODRIVER=dummy";
++    const char *aspect_mode = getenv("POCKETSTREMIO_ASPECT_MODE");
++
++    if (aspect_mode != NULL)
++        display_aspect_mode = atoi(aspect_mode) == 3 ? 3 : 0;
+ 
+     init_dynload();
+ 
+--- a/libavfilter/vf_subtitles.c
++++ b/libavfilter/vf_subtitles.c
+@@ -55,6 +55,7 @@
+     uint8_t rgba_map[4];
+     int     pix_step[4];       ///< steps per pixel for each plane of the main output
+     int original_w, original_h;
++    double font_scale;
+     FFDrawContext draw;
+ } AssContext;
+ 
+@@ -219,7 +220,8 @@
+         return ret;
+ 
+     /* Initialize fonts */
+-    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, getenv("POCKETSTREMIO_DEFAULT_FONT"), NULL, 1,
++                  getenv("POCKETSTREMIO_FONTCONFIG_FILE"), 1);
+ 
+     ass->track = ass_read_file(ass->library, ass->filename, NULL);
+     if (!ass->track) {
+@@ -248,6 +250,7 @@
+ 
+ static const AVOption subtitles_options[] = {
+     COMMON_OPTIONS
++    {"font_scale", "set subtitle font scale", OFFSET(font_scale),       AV_OPT_TYPE_DOUBLE, {.dbl = 1.0}, 0.5,       3.0,      FLAGS},
+     {"charenc",      "set input character encoding", OFFSET(charenc),      AV_OPT_TYPE_STRING, {.str = NULL}, CHAR_MIN, CHAR_MAX, FLAGS},
+     {"stream_index", "set stream index",             OFFSET(stream_index), AV_OPT_TYPE_INT,    { .i64 = -1 }, -1,       INT_MAX,  FLAGS},
+     {"si",           "set stream index",             OFFSET(stream_index), AV_OPT_TYPE_INT,    { .i64 = -1 }, -1,       INT_MAX,  FLAGS},
+@@ -361,7 +364,9 @@
+     }
+ 
+     /* Initialize fonts */
+-    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, getenv("POCKETSTREMIO_DEFAULT_FONT"), NULL, 1,
++                  getenv("POCKETSTREMIO_FONTCONFIG_FILE"), 1);
++    ass_set_font_scale(ass->renderer, ass->font_scale);
+ 
+     /* Open decoder */
+     dec_ctx = st->codec;

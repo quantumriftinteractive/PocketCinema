@@ -1,0 +1,110 @@
+{
+  "sdk_archive_sha256": "2b39aaf388114cbe773701ed2310a8e8240ff775c4aafdafa4c4859790126581",
+  "libraries": {
+    "libSDL-1.2.so.0.11.4": {
+      "sysroot_relative_path": "usr/lib/libSDL-1.2.so.0.11.4",
+      "deployed_name": "libSDL-1.2.so.0",
+      "sha256": "b3a20ca2d95aa4bb9531c26e0830257c356f6e2a42f35fb850f13c4abf04c01b",
+      "bytes": 327564,
+      "archive_member_matches": true
+    },
+    "libass.so.9.1.3": {
+      "sysroot_relative_path": "usr/lib/libass.so.9.1.3",
+      "deployed_name": "libass.so.9",
+      "sha256": "26776ca13a4a6b51580915e565c026243fb6275349635f05eef285ecd58f69c0",
+      "bytes": 240304,
+      "archive_member_matches": true
+    },
+    "libbz2.so.1.0.8": {
+      "sysroot_relative_path": "usr/lib/libbz2.so.1.0.8",
+      "deployed_name": "libbz2.so.1.0",
+      "sha256": "cbc32484844544ade1070e62153b54fef1865bbc37c45827a6b89ce648598d73",
+      "bytes": 80452,
+      "archive_member_matches": true
+    },
+    "libz.so.1.2.11": {
+      "sysroot_relative_path": "usr/lib/libz.so.1.2.11",
+      "deployed_name": "libz.so.1",
+      "sha256": "06fbe1b55c5228f952a59f57a66aa4b09188435b2624bfa7e8c5851d623578c1",
+      "bytes": 120356,
+      "archive_member_matches": true
+    },
+    "libfontconfig.so.1.12.0": {
+      "sysroot_relative_path": "usr/lib/libfontconfig.so.1.12.0",
+      "deployed_name": "libfontconfig.so.1",
+      "sha256": "e420ccda8d600303fc025df85934c5360bb67c88f68f61260dc42df2747b7c6b",
+      "bytes": 331172,
+      "archive_member_matches": true
+    },
+    "libfreetype.so.6.17.4": {
+      "sysroot_relative_path": "usr/lib/libfreetype.so.6.17.4",
+      "deployed_name": "libfreetype.so.6",
+      "sha256": "6518d3fd8b7574e07efc4ca1e8a9d7634cd8ba153865b862f3c4bb95421257d4",
+      "bytes": 728344,
+      "archive_member_matches": true
+    },
+    "libfribidi.so.0.4.0": {
+      "sysroot_relative_path": "usr/lib/libfribidi.so.0.4.0",
+      "deployed_name": "libfribidi.so.0",
+      "sha256": "7aa769364c85ddcddd0cbd2f00f81888c114a3688f5349379bac283e7f208170",
+      "bytes": 121772,
+      "archive_member_matches": true
+    },
+    "libharfbuzz.so.0.30000.0": {
+      "sysroot_relative_path": "usr/lib/libharfbuzz.so.0.30000.0",
+      "deployed_name": "libharfbuzz.so.0",
+      "sha256": "5a5ea58e9a8738a306585b6cfd77552484cc28c10d6feccc454dbd6103f6255c",
+      "bytes": 1255716,
+      "archive_member_matches": true
+    },
+    "libglib-2.0.so.0.6800.4": {
+      "sysroot_relative_path": "usr/lib/libglib-2.0.so.0.6800.4",
+      "deployed_name": "libglib-2.0.so.0",
+      "sha256": "f3de91dc47d4bc14b939b1e822640ee73d6105bd4bd8f74889360cdffc4c932f",
+      "bytes": 1444344,
+      "archive_member_matches": true
+    },
+    "libpcre.so.1.2.13": {
+      "sysroot_relative_path": "usr/lib/libpcre.so.1.2.13",
+      "deployed_name": "libpcre.so.1",
+      "sha256": "38384f8b33ddc477caa8707047e1dc8a754690db6237d24429e72fb3ebc8e282",
+      "bytes": 278848,
+      "archive_member_matches": true
+    },
+    "libexpat.so.1.8.1": {
+      "sysroot_relative_path": "usr/lib/libexpat.so.1.8.1",
+      "deployed_name": "libexpat.so.1",
+      "sha256": "a88c70e706aece3708f9afad4b2c95267247832bb42eb23ed32a8249f029586b",
+      "bytes": 249632,
+      "archive_member_matches": true
+    },
+    "libpng16.so.16.37.0": {
+      "sysroot_relative_path": "usr/lib/libpng16.so.16.37.0",
+      "deployed_name": "libpng16.so.16",
+      "sha256": "0d1d88ce35742d18f8bfac66f1b6a8abd9f6e9943862a3d1bb87475d706f676c",
+      "bytes": 222572,
+      "archive_member_matches": true
+    },
+    "libffi.so.8.1.0": {
+      "sysroot_relative_path": "usr/lib/libffi.so.8.1.0",
+      "deployed_name": "libffi.so.8",
+      "sha256": "74e7783e9749c3d781c5c04237d8b8b486f901e765bddd8862327b6eabcf850a",
+      "bytes": 39844,
+      "archive_member_matches": true
+    },
+    "libuuid.so.1.3.0": {
+      "sysroot_relative_path": "lib/libuuid.so.1.3.0",
+      "deployed_name": "libuuid.so.1",
+      "sha256": "e6db979d40b111fd9f406debf315ac60ffee44ad47f841724f48eae0f97312fc",
+      "bytes": 48480,
+      "archive_member_matches": true
+    },
+    "libts.so.0.10.4": {
+      "sysroot_relative_path": "usr/lib/libts.so.0.10.4",
+      "deployed_name": "libts.so.0",
+      "sha256": "206b4d75aaf941a30d0d3a8152fd47547dcec8db3ba79724ebb8cb1382dc7a28",
+      "bytes": 21700,
+      "archive_member_matches": true
+    }
+  }
+}

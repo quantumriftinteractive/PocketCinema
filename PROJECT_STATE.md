@@ -1,7 +1,7 @@
 # PocketCinema Current Project State
 
-Last updated: 2026-09-07
-Last updated by machine: macOS development checkout
+Last updated: 2026-09-09
+Last updated by machine: Windows development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
@@ -327,7 +327,32 @@ semantics.
   machine smoke already exist; they must not be recreated as part of this
   inventory.
 
-### Development Handoff — Windows system-tray lifecycle
+### Development Handoff - Miyoo source preservation (2026-09-09)
+
+The recovered matching FFplay 2.4.14 Windows source/configuration is now
+preserved as small Git metadata under `release-sources/miyoo/`. The final patch
+recreates both modified source files exactly; all 4,706 pristine archive members
+were verified. The source staging script was tested without compiling. The
+original recovered tree, player, compiler, sysroot and font remain untouched.
+All fifteen deployment library files match the recovered SDK archive.
+
+The SDK is strongly linked to Steward's Miyoo Mini / Buildroot 2021.11 family;
+its exact configuration and applied library patches remain unproven. Full PCRE
+LICENCE and local header notices were located. Official Tokotype history and
+release assets did not contain the exact recovered font. See
+`release-sources/miyoo/PROVENANCE.md` for source/license evidence, hashes,
+classification and storage policy. Large source/analysis copies remain ignored;
+no runtime artifacts or entire upstream source trees are committed. Off-machine
+archival of the original SDK/build tree/font is still required. No deployment,
+SD-card access, FFplay rebuild or selector rebuild occurred. All physical PASS
+evidence is inherited; redistribution remains blocked.
+
+Next provenance action: recover/attest the exact SDK configuration and dependency
+sources/patches, resolve the exact font processing/source chain, and arrange
+controlled external backups. An independent FFplay reproduction build is a
+separate future gate and was not authorized in this preservation task.
+
+### Prior Windows system-tray lifecycle handoff
 
 The Windows tray lifecycle and its focused UX refinements are **Physically
 Confirmed PASS**: X hides while PCServer keeps running, one native notification
@@ -382,7 +407,8 @@ remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
 candidate runtime is pinned to measured build inputs and needs updating/review
 before public release.
 
-Next exact action: continue M23 release/distribution gates. The focused Windows
+Next exact action: continue the provenance gates above, then remaining M23
+release/distribution gates. The focused Windows
 stream-search, Miyoo Movie/Series, subtitle font-size, My Library, and Next
 Episode / Continue Series gates are physical PASS. The source tray UX and
 packaged Windows smoke gates are physical PASS. Production PASS and Impact-First
@@ -583,8 +609,9 @@ Pending:
   pointer array, per-item line buffer, dynamic rendering, wraparound navigation,
   and cleanup all scale with the parsed count, exposing the current server
   maximum without changing callers or addon behavior. The ARM reproducibility
-  build remains pending because this checkout lacks the ignored ARM
-  compiler/sysroot; the current prebuilt 64-item selector remains the release
+  build remains pending; the Windows compiler/sysroot has been recovered but
+  this source-preservation task explicitly excludes rebuilding; the current
+  prebuilt 64-item selector remains the release
   binary, and the 128-item source change is unbuilt and unshipped. The earlier
   Greek-channel removal idea was rejected: those entries are linked
   account-addon data, not a PocketCinema-shipped catalog.
@@ -602,6 +629,6 @@ Pending:
   only if they remain observable. Remote IPv4 presentation preference is now
   physically confirmed under the accepted focused tray UX evidence.
 
-- ARM selector reproducibility rebuild: unavailable on this checkout because the
-  ignored ARM cross-toolchain is absent. The deployed prebuilt-helper ABI is
-  retained and documented.
+- ARM selector reproducibility rebuild: Windows compiler/sysroot recovered;
+  rebuilding is deferred to a separate controlled task. The deployed prebuilt
+  helper and its ABI remain unchanged.

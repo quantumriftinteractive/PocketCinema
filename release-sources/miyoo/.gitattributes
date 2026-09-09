@@ -1,0 +1,3 @@
+# Preserve recovered bytes, including generated/context-line trailing spaces.
+ffmpeg-2.4.14-pocketcinema/final.patch -text whitespace=-trailing-space
+ffmpeg-2.4.14-pocketcinema/configuration/* -text whitespace=-trailing-space

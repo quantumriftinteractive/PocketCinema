@@ -1,0 +1,19 @@
+{
+  "ffmpeg_version": "2.4.14",
+  "archive_filename": "ffmpeg-2.4.14.tar.xz",
+  "archive_sha256": "736567ee95115876d7af7f99f2fa565417c351b748bdc05973618980da1df037",
+  "shipped_ffplay_sha256": "3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6",
+  "modified_source_sha256": {
+    "ffplay.c": "b9020d7e8faaa6ade5641994ee3daaf24ede29200a16e34101b9542478553b22",
+    "libavfilter/vf_subtitles.c": "f3e10bd48ad62088b9949bc819e6fa5fb5994fdeea9dce2374fe1f04f6f7bf42"
+  },
+  "metadata_sha256": {
+    "final.patch": "18d917d32cb0279acc7804849560d33bd7355602c5caa78d001552320b3f5747",
+    "configuration/config.h": "61f378e9fbb713a51f7c43294f543378d8e49137d658c9ccf4b6b58708e129b8",
+    "configuration/config.mak": "d47e8ddcf95d383ed0d17e662aeac362c98b4ed7df48350f8a7d4d684ae175b1",
+    "configuration/configure-command.txt": "cf34e7936a6b07a546d06f42202a50755891979e7fe14e4531a05a5f58d8a1b9",
+    "configuration/pkg-config-arm.sh": "5ea1f5f0380b73a946c8b8e08c4019d77079c92b2ccc3f87a7162ef43b44de2b"
+  },
+  "compiler_sha256": "a5077d9333eb16fcd86075fe699dab79c70c4d3ae1e880d817c6acc066a68202",
+  "independent_rebuild_verified": false
+}

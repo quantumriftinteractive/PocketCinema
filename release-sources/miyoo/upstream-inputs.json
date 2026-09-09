@@ -1,0 +1,31 @@
+{
+  "retrieved": "2026-09-09",
+  "inputs": {
+    "buildroot-2021.11.tar.gz": {
+      "url": "https://github.com/steward-fu/website/releases/download/miyoo-mini/buildroot-2021.11.tar.gz",
+      "sha256": "9b3c372076b5d3de4a1ffb6693a8b94723144fe2d894398bf42d5ddbc73d9911",
+      "bytes": 7095981
+    },
+    "buildroot-2021.11-upstream.tar.gz": {
+      "url": "https://buildroot.org/downloads/buildroot-2021.11.tar.gz",
+      "sha256": "9b3c372076b5d3de4a1ffb6693a8b94723144fe2d894398bf42d5ddbc73d9911",
+      "bytes": 7095981
+    },
+    "buildroot-2021.11_config": {
+      "url": "https://github.com/steward-fu/website/releases/download/miyoo-mini/buildroot-2021.11_config",
+      "sha256": "d889c98485b6786bb23e8558af5aa0786a792c25e53739847e9637448c53d577",
+      "bytes": 124112
+    },
+    "PlusJakartaSans-2.6-OFL.txt": {
+      "url": "https://raw.githubusercontent.com/tokotype/PlusJakartaSans/960fcb9c47ff640ccd643d9c096593137ad8cee3/OFL.txt",
+      "sha256": "578bfe73675edc639f6aaa6e2e9ac598936bf696f95f034fb7682dca2edc53c7",
+      "bytes": 4398
+    },
+    "ffmpeg-2.4.14.tar.xz": {
+      "url": "https://ffmpeg.org/releases/ffmpeg-2.4.14.tar.xz",
+      "sha256": "736567ee95115876d7af7f99f2fa565417c351b748bdc05973618980da1df037",
+      "bytes": 6435560,
+      "recovered_archive_matches": true
+    }
+  }
+}

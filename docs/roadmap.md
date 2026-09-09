@@ -1115,6 +1115,13 @@ other M23 release gates remain open. See [Windows packaging evidence](windows-pa
 and [macOS packaging evidence](macos-packaging.md). M23 remains **Next**, with
 M21/M22 and accepted source desktop/tray evidence inherited.
 
+Miyoo source preservation is implemented and verified: the recovered FFmpeg
+2.4.14 final patch reconstructs the exact two modified source files without a
+rebuild. SDK family/source investigation and local license evidence are recorded
+in [the provenance assessment](../release-sources/miyoo/PROVENANCE.md). Exact
+dependency source variants, font upstream matching, external input archival,
+and independent reproduction remain open; no runtime or acceptance changed.
+
 Current release follow-ups tracked alongside this milestone are: macOS
 signing/notarization, licensing, and final bundle review; Windows clean-machine
 packaged-artifact smoke; fresh/distribution-SD validation;

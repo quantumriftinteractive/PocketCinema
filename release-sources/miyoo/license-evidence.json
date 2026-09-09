@@ -1,0 +1,18 @@
+{
+  "usr/share/doc/pcre/LICENCE": "51b3dea44f63338b84b9c97b3d793826a8397309068cf9379a423216ab8ea5b2",
+  "usr/share/doc/pcre/COPYING": "17abe1dbb92b21ab173cf9757dd57b0b15cd8d863b2ccdef635fdbef03077fb0",
+  "usr/include/SDL/SDL.h": "7dcd342424ce3f57bb9b55ffe110fc1184b4c9a9cade82117afbfd571f71ed92",
+  "usr/include/bzlib.h": "6ac62e811669598ee30c9e1c379b9e627f6ff17a5a3dc1e0b4fa8b8ea75e580d",
+  "usr/include/zlib.h": "4ddc82b4af931ab55f44d977bde81bfbc4151b5dcdccc03142831a301b5ec3c8",
+  "usr/include/libpng16/png.h": "f8e248049a97831f5e9fb24ec0c7c6b7cacb3b3ba7303300b4f5b2b90bae3c40",
+  "usr/include/ass/ass.h": "0b5e07e1453b088f484371c8d6cd05cf58415870e16b780a1e87f141bc34c7bc",
+  "usr/include/fontconfig/fontconfig.h": "3b9040ec01ac11d10b2947c6b2773f94e445b3f4be7c9969da59ae646e8c5c8f",
+  "usr/include/freetype2/freetype/freetype.h": "62bea06f14c2edd426b129d14b0e57a4d3650f6c230eab8ec8b85eede156c53f",
+  "usr/include/fribidi/fribidi.h": "a3c26eda78b6563361253a094f2a7f5b725ed2bd7c6a8dfaa65883cf174ee18b",
+  "usr/include/harfbuzz/hb.h": "22841f8b24124650f0f083ac2cd6c39759b8db9d37628914693e112c7b333213",
+  "usr/include/glib-2.0/glib.h": "0f1f70a5cabdfbf19ea25b50f34f624d13bc1a363324f7026d3dbebac96aeace",
+  "usr/include/expat.h": "3ede451508ff14e740e4f384b96830b3604477ae88f64110bf45619c3d90ec1f",
+  "usr/include/ffi.h": "c54d40941def61374237336b164c9b9fcc15019dea5ca6493050b99f8738f870",
+  "usr/include/uuid/uuid.h": "a38b1d66dec105686bce76e0663d8e1e2eadc372bb55c786995b1257e1566266",
+  "usr/include/tslib.h": "bac3474eb7fc92fc1fd88406f561be7b518bfb8a466510527628e8667fbc6f87"
+}

@@ -1,0 +1,434 @@
+[
+  {
+    "package": "sdl",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/sdl/0001-use-correct-directfb-config.patch": {
+        "sha256": "6e79aa474f95bbee68a3f7d98fdebe2f7d65253e7941c5a4596e4f410f77c354"
+      },
+      "buildroot-2021.11/package/sdl/0002-fix-compilation-with-libx11.patch": {
+        "sha256": "c704578fbe40f70b6009d3298f58542e0aff1b8e493c63b6f48b13212556f8ad"
+      },
+      "buildroot-2021.11/package/sdl/sdl.hash": {
+        "sha256": "aec442587e7b24d86e49f2e599102ec0d4d0743a50abca617de15a14c306169e"
+      },
+      "buildroot-2021.11/package/sdl/sdl.mk": {
+        "sha256": "e1201803f9b8ad23e1ae5d1032c7bad73b4e740533409a87e3a0d1d7b7500098"
+      }
+    },
+    "source_license_metadata": [
+      "SDL_VERSION = 1.2.15",
+      "SDL_SOURCE = SDL-$(SDL_VERSION).tar.gz",
+      "SDL_SITE = http://www.libsdl.org/release",
+      "SDL_LICENSE = LGPL-2.1+",
+      "SDL_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256\td6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00\tSDL-1.2.15.tar.gz",
+      "sha256\tbb117c0fbd7f57f64170b690285d7df07c2371b578e3b3cd3aa2e1155ef461a0\tCOPYING"
+    ]
+  },
+  {
+    "package": "libass",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libass/libass.hash": {
+        "sha256": "cb961466c8f96fd4ce27ef0b73ebbc31e8a1be8aeeec220a4b50f18315930438"
+      },
+      "buildroot-2021.11/package/libass/libass.mk": {
+        "sha256": "ef03e460f039b55587f3d5b23f086e69820a18244d51c466bd3acba7c7d39e8a"
+      }
+    },
+    "source_license_metadata": [
+      "LIBASS_VERSION = 0.15.2",
+      "LIBASS_SOURCE = libass-$(LIBASS_VERSION).tar.xz",
+      "LIBASS_SITE = https://github.com/libass/libass/releases/download/$(LIBASS_VERSION)",
+      "LIBASS_LICENSE = ISC",
+      "LIBASS_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256  1be2df9c4485a57d78bb18c0a8ed157bc87a5a8dd48c661961c625cb112832fd  libass-0.15.2.tar.xz",
+      "sha256  f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c  COPYING"
+    ]
+  },
+  {
+    "package": "bzip2",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/bzip2/0001-build-objects-twice.patch": {
+        "sha256": "4cf98b9c67fc636382977f3a1d5e8d120550b876d592280fb610d4f6ef7a79fb"
+      },
+      "buildroot-2021.11/package/bzip2/0002-improve-build-system.patch": {
+        "sha256": "454eb1642db937f0d07cffb89b7d334a1796fadf306b27af998eacf08781fa8f"
+      },
+      "buildroot-2021.11/package/bzip2/bzip2.hash": {
+        "sha256": "80dc621aa004cee25377d846d884bff8003550208a4c3dea2f701d7285a07231"
+      },
+      "buildroot-2021.11/package/bzip2/bzip2.mk": {
+        "sha256": "41398d0f4c3144f444ab5d75cc668e42bd0cdbb6213a9ef7f2d5ece6d586ce46"
+      }
+    },
+    "source_license_metadata": [
+      "BZIP2_VERSION = 1.0.8",
+      "BZIP2_SITE = https://sourceware.org/pub/bzip2",
+      "BZIP2_LICENSE = bzip2 license",
+      "BZIP2_LICENSE_FILES = LICENSE"
+    ],
+    "upstream_hash_entries": [
+      "sha512 083f5e675d73f3233c7930ebe20425a533feedeaaa9d8cc86831312a6581cefbe6ed0d08d2fa89be81082f2a5abdabca8b3c080bf97218a1bd59dc118a30b9f3  bzip2-1.0.8.tar.gz",
+      "sha256 c6dbbf828498be844a89eaa3b84adbab3199e342eb5cb2ed2f0d4ba7ec0f38a3  LICENSE"
+    ]
+  },
+  {
+    "package": "libzlib",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libzlib/libzlib.hash": {
+        "sha256": "b59c8872533ec6b735a4a2290bd6d28c2dbfaa8e378e3095694c787c0ccae4c0"
+      },
+      "buildroot-2021.11/package/libzlib/libzlib.mk": {
+        "sha256": "568e21ac5278e31616bc8fefd150c4af1256fcce72e1e8370d354187d4be26cd"
+      }
+    },
+    "source_license_metadata": [
+      "LIBZLIB_VERSION = 1.2.11",
+      "LIBZLIB_SOURCE = zlib-$(LIBZLIB_VERSION).tar.xz",
+      "LIBZLIB_SITE = http://www.zlib.net",
+      "LIBZLIB_LICENSE = Zlib",
+      "LIBZLIB_LICENSE_FILES = README"
+    ],
+    "upstream_hash_entries": [
+      "sha256 4ff941449631ace0d4d203e3483be9dbc9da454084111f97ea0a2114e19bf066  zlib-1.2.11.tar.xz",
+      "sha256 7960b6b1cc63e619abb77acaea5427159605afee8c8b362664f4effc7d7f7d15  README"
+    ]
+  },
+  {
+    "package": "fontconfig",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/fontconfig/0001-Fix-the-build-issue-with-enable-static.patch": {
+        "sha256": "fed8317cad904c81ce7453ae8254b95f1b6c2d8e7e3613c586c80b11e8985748"
+      },
+      "buildroot-2021.11/package/fontconfig/0002-add-pthread-as-a-dependency-of-a-static-lib.patch": {
+        "sha256": "24ddccf56de8efa2383cfb62c56fdddfd1cbef9b010af92f77e59a51d241e8ff"
+      },
+      "buildroot-2021.11/package/fontconfig/fontconfig.hash": {
+        "sha256": "423f0c7f49b673a210a3439bb9c4da4ca917041e0be180b1e5d0d3c94926237f"
+      },
+      "buildroot-2021.11/package/fontconfig/fontconfig.mk": {
+        "sha256": "4436347ca925b3f816af089af9aff11a8675b2504665494ae3fb2d2b98f0fec3"
+      }
+    },
+    "source_license_metadata": [
+      "FONTCONFIG_VERSION = 2.13.1",
+      "FONTCONFIG_SITE = http://fontconfig.org/release",
+      "FONTCONFIG_SOURCE = fontconfig-$(FONTCONFIG_VERSION).tar.bz2",
+      "FONTCONFIG_LICENSE = fontconfig license",
+      "FONTCONFIG_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256 f655dd2a986d7aa97e052261b36aa67b0a64989496361eca8d604e6414006741 fontconfig-2.13.1.tar.bz2",
+      "sha256 fa4cd9ab005185e10cd8f7504518856c7dd36c01e766c2bac87f4fc638e9f886 COPYING"
+    ]
+  },
+  {
+    "package": "freetype",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/freetype/freetype.hash": {
+        "sha256": "eb8e4b3454b262e6778593aebc3e6ca9196eaca8faf8e3d906c6d555d91f30ff"
+      },
+      "buildroot-2021.11/package/freetype/freetype.mk": {
+        "sha256": "21a59d0432173e5142c570290153adf26a7754a027ff0344517c26a73ec5d2ca"
+      }
+    },
+    "source_license_metadata": [
+      "FREETYPE_VERSION = 2.10.4",
+      "FREETYPE_SOURCE = freetype-$(FREETYPE_VERSION).tar.xz",
+      "FREETYPE_SITE = http://download.savannah.gnu.org/releases/freetype",
+      "FREETYPE_LICENSE = Dual FTL/GPL-2.0+",
+      "FREETYPE_LICENSE_FILES = docs/LICENSE.TXT docs/FTL.TXT docs/GPLv2.TXT"
+    ],
+    "upstream_hash_entries": [
+      "sha1  0181862673f7216ad2b5074f95fc131209e30b27  freetype-2.10.4.tar.xz",
+      "sha256  86a854d8905b19698bbc8f23b860bc104246ce4854dcea8e3b0fb21284f75784  freetype-2.10.4.tar.xz",
+      "sha256  fd056de4196903a676208ef58cfddafc7d583d1f28fa2e44c309cf84a59e62fb  docs/LICENSE.TXT",
+      "sha256  08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1  docs/FTL.TXT",
+      "sha256  c4120c6752c910c299e3bd9cb3a46ff262c268303ca2069b61f92f10a5656c18  docs/GPLv2.TXT"
+    ]
+  },
+  {
+    "package": "libfribidi",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libfribidi/libfribidi.hash": {
+        "sha256": "8c92205b4a74d1a4a858c6f1c2a9eb5c4756938eb15fb7baa595105a79467a5f"
+      },
+      "buildroot-2021.11/package/libfribidi/libfribidi.mk": {
+        "sha256": "3cfaa121ad1056e427111c0fd92f2652907edd05a5e58cf78ac41bfdeea4a049"
+      }
+    },
+    "source_license_metadata": [
+      "LIBFRIBIDI_VERSION = 1.0.10",
+      "LIBFRIBIDI_SOURCE = fribidi-$(LIBFRIBIDI_VERSION).tar.xz",
+      "LIBFRIBIDI_SITE = https://github.com/fribidi/fribidi/releases/download/v$(LIBFRIBIDI_VERSION)",
+      "LIBFRIBIDI_LICENSE = LGPL-2.1+",
+      "LIBFRIBIDI_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256  7f1c687c7831499bcacae5e8675945a39bacbad16ecaa945e9454a32df653c01  fribidi-1.0.10.tar.xz",
+      "sha256  32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b  COPYING"
+    ]
+  },
+  {
+    "package": "harfbuzz",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/harfbuzz/0001-meson.build-check-for-pthread.h.patch": {
+        "sha256": "fdc936e808e04cf3f52950d12ce3a4ca9d114012d45b5f23d96c106e63a2a453"
+      },
+      "buildroot-2021.11/package/harfbuzz/harfbuzz.hash": {
+        "sha256": "f888da62d8e6957d816ff07c17ea3382f1df2273c1669c001eedb0fd4cf5eb1f"
+      },
+      "buildroot-2021.11/package/harfbuzz/harfbuzz.mk": {
+        "sha256": "718189e6b7b8cf637271fdea73ff647e5f40819f16fb4a7969dc7ec221304afb"
+      }
+    },
+    "source_license_metadata": [
+      "HARFBUZZ_VERSION = 3.0.0",
+      "HARFBUZZ_SITE = https://github.com/harfbuzz/harfbuzz/releases/download/$(HARFBUZZ_VERSION)",
+      "HARFBUZZ_SOURCE = harfbuzz-$(HARFBUZZ_VERSION).tar.xz",
+      "HARFBUZZ_LICENSE = MIT, ISC (ucdn library)",
+      "HARFBUZZ_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256  036b0ee118451539783ec7864148bb4106be42a2eb964df4e83e6703ec46f3d9  harfbuzz-3.0.0.tar.xz",
+      "sha256  4345e1735f8bc6d812fed5180cabb5a5e88a4109d332652f2a45c13cfa5ee692  COPYING"
+    ]
+  },
+  {
+    "package": "libglib2",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libglib2/0001-fix-compile-time-atomic-detection.patch": {
+        "sha256": "aac07191be42213f9c9357f8c85eacf806ceb1ee32664486c7b57a87920f026c"
+      },
+      "buildroot-2021.11/package/libglib2/0002-remove-cpp-requirement.patch": {
+        "sha256": "ac3ded9de40d1bbe69a3c792c2984ee7651ff2bca4d95fc2939fef9f9c325c5b"
+      },
+      "buildroot-2021.11/package/libglib2/0003-Add-Wno-format-nonliteral-to-compiler-arguments.patch": {
+        "sha256": "f6e744261068366125d5f06faed8550e4bb47eec6628ca7dc09ec4ff266ee435"
+      },
+      "buildroot-2021.11/package/libglib2/0004-meson.build-add-girdir-to-gio-2.0.pc-and-glib-2.0.pc.patch": {
+        "sha256": "c60a432dd61297c091359eb8d57c359d031eae9c39a8bb7bcaeb627b1893d51c"
+      },
+      "buildroot-2021.11/package/libglib2/libglib2.hash": {
+        "sha256": "8ece0ef31e9827c25243132fa7a36c79bc384aa38cac5deacb5f5fcf48338894"
+      },
+      "buildroot-2021.11/package/libglib2/libglib2.mk": {
+        "sha256": "5f77c67a3b276ec657b6ac2c05ae2680ea44733548a4d9cfbcd0a2731e927991"
+      }
+    },
+    "source_license_metadata": [
+      "LIBGLIB2_VERSION_MAJOR = 2.68",
+      "LIBGLIB2_VERSION = $(LIBGLIB2_VERSION_MAJOR).4",
+      "LIBGLIB2_SOURCE = glib-$(LIBGLIB2_VERSION).tar.xz",
+      "LIBGLIB2_SITE = http://ftp.gnome.org/pub/gnome/sources/glib/$(LIBGLIB2_VERSION_MAJOR)",
+      "LIBGLIB2_LICENSE = LGPL-2.1+",
+      "LIBGLIB2_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256  62fd061d08a75492617e625a73e2c05e259f831acbb8e1f8b9c81f23f7993a3b  glib-2.68.4.tar.xz",
+      "sha256  dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551  COPYING"
+    ]
+  },
+  {
+    "package": "pcre",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/pcre/0001-Kill-compatibility-bits.patch": {
+        "sha256": "f2098e3face66e8ec4305031f02eaffba3cc7fb6b9e3e42b0c24b56eeb0aaf5b"
+      },
+      "buildroot-2021.11/package/pcre/0002-Disable-C-unit-tests.patch": {
+        "sha256": "1b0c421f5c2cd85f488da7f2b9176cd76217894119614c5d2b68401383af1ce3"
+      },
+      "buildroot-2021.11/package/pcre/pcre.hash": {
+        "sha256": "42ba2a43c77f693af78cd4fd0052c00c24c68f53ac37a7749f30dfbeb497c745"
+      },
+      "buildroot-2021.11/package/pcre/pcre.mk": {
+        "sha256": "49f75ee67242c2a2f783670a419efb209a26fbf0ec13bf00cf2bcdf86674eb63"
+      }
+    },
+    "source_license_metadata": [
+      "PCRE_VERSION = 8.45",
+      "PCRE_SITE = http://downloads.sourceforge.net/project/pcre/pcre/$(PCRE_VERSION)",
+      "PCRE_SOURCE = pcre-$(PCRE_VERSION).tar.bz2",
+      "PCRE_LICENSE = BSD-3-Clause",
+      "PCRE_LICENSE_FILES = LICENCE"
+    ],
+    "upstream_hash_entries": [
+      "sha256  4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8  pcre-8.45.tar.bz2",
+      "sha256  51b3dea44f63338b84b9c97b3d793826a8397309068cf9379a423216ab8ea5b2  LICENCE"
+    ]
+  },
+  {
+    "package": "expat",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/expat/expat.hash": {
+        "sha256": "191b62fa6bf56d4a8bb2d824255555e7d9233224ba29b3feed4c119dfb3bbc5b"
+      },
+      "buildroot-2021.11/package/expat/expat.mk": {
+        "sha256": "f1bd212431501cc832815fe454e60c2ab10b85111e1f0843d3ac5252b60e9781"
+      }
+    },
+    "source_license_metadata": [
+      "EXPAT_VERSION = 2.4.1",
+      "EXPAT_SITE = http://downloads.sourceforge.net/project/expat/expat/$(EXPAT_VERSION)",
+      "EXPAT_SOURCE = expat-$(EXPAT_VERSION).tar.xz",
+      "EXPAT_LICENSE = MIT",
+      "EXPAT_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "md5  a4fb91a9441bcaec576d4c4a56fa3aa6  expat-2.4.1.tar.xz",
+      "sha1  7988e4df355162500f09837aa95cbb48e6754420  expat-2.4.1.tar.xz",
+      "sha256  cf032d0dba9b928636548e32b327a2d66b1aab63c4f4a13dd132c2d1d2f2fb6a  expat-2.4.1.tar.xz",
+      "sha256  8c6b5b6de8fae20b317f4992729abc0e520bfba4c7606cd1e9eeb87418eebdec  COPYING"
+    ]
+  },
+  {
+    "package": "libpng",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libpng/0001-Disable-pngfix-and-png-fix-itxt.patch": {
+        "sha256": "b54a69dc2e323c48c91ba57e5085254738c9270016e2ccf92666fa562d6a2dcc"
+      },
+      "buildroot-2021.11/package/libpng/libpng.hash": {
+        "sha256": "0cea085f8207d1f19f36566abb025babef1bc5045bc85eef51d8ca01a9760571"
+      },
+      "buildroot-2021.11/package/libpng/libpng.mk": {
+        "sha256": "1f591f8cf1f36f4e70349c2e75baa4cc1ffe0ee2da25e8554426707fc97b0b3d"
+      }
+    },
+    "source_license_metadata": [
+      "LIBPNG_VERSION = 1.6.37",
+      "LIBPNG_SOURCE = libpng-$(LIBPNG_VERSION).tar.xz",
+      "LIBPNG_SITE = http://downloads.sourceforge.net/project/libpng/libpng$(LIBPNG_SERIES)/$(LIBPNG_VERSION)",
+      "LIBPNG_LICENSE = Libpng-2.0",
+      "LIBPNG_LICENSE_FILES = LICENSE"
+    ],
+    "upstream_hash_entries": [
+      "md5 015e8e15db1eecde5f2eb9eb5b6e59e9  libpng-1.6.37.tar.xz",
+      "sha1 3ab93fabbf4c27e1c4724371df408d9a1bd3f656  libpng-1.6.37.tar.xz",
+      "sha256 505e70834d35383537b6491e7ae8641f1a4bed1876dbfe361201fc80868d88ca  libpng-1.6.37.tar.xz",
+      "sha256 bf5e22b9dce8464064ae17a48ea1133c3369ac9e1d80ef9e320e5219aa14ea9b  LICENSE"
+    ]
+  },
+  {
+    "package": "libffi",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/libffi/0001-Fix-installation-location-of-libffi.patch": {
+        "sha256": "a50fa5730b88f545eb932f43bcb7ac5f7cc0ad83616843d12566734e95500fab"
+      },
+      "buildroot-2021.11/package/libffi/0002-Fix-use-of-compact-eh-frames-on-MIPS.patch": {
+        "sha256": "18ee0e3f21979811f0e1f7fc0f3adfb68604f41af7ded54cc38497537941ace8"
+      },
+      "buildroot-2021.11/package/libffi/0003-libffi-enable-hardfloat-in-the-MIPS-assembly-code.patch": {
+        "sha256": "c2bb7f947260963fae02162903a8217b3c0f5dddc62e245e411811293214ce2e"
+      },
+      "buildroot-2021.11/package/libffi/libffi.hash": {
+        "sha256": "f6d58ed91dad8d146521c5201a5dcc30349159f1d1c80ec586adef2654cc614d"
+      },
+      "buildroot-2021.11/package/libffi/libffi.mk": {
+        "sha256": "cd6c4f6a86cdf953107c01df136a9191808be28cdcc2c2ad75d8d3b1575f7cff"
+      }
+    },
+    "source_license_metadata": [
+      "LIBFFI_VERSION = 3.4.2",
+      "LIBFFI_SITE = \\",
+      "LIBFFI_LICENSE = MIT",
+      "LIBFFI_LICENSE_FILES = LICENSE"
+    ],
+    "upstream_hash_entries": [
+      "sha256  540fb721619a6aba3bdeef7d940d8e9e0e6d2c193595bc243241b77ff9e93620  libffi-3.4.2.tar.gz",
+      "sha256  a61d06e8f7be57928e71e800eb9273b05cb8868c484108afe41e4305bb320dde  LICENSE"
+    ]
+  },
+  {
+    "package": "util-linux",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/util-linux/0001-libuuid-include-c-h-to-cover-restrict-keyword.patch": {
+        "sha256": "b4debd94c96be5795218111c13162cc2bc6df7f14fdc446b6bfbed333f5ffee8"
+      },
+      "buildroot-2021.11/package/util-linux/0002-libblkid-don-t-mark-cache-as-probed-if-sys-not-available.patch": {
+        "sha256": "7f7cf2cf13c3e908b55e9f0bdf47458e7eaea0deb7432a67f493976c6f08bfea"
+      },
+      "buildroot-2021.11/package/util-linux/util-linux-libs/util-linux-libs.mk": {
+        "sha256": "6ea8af2567e851eaa0501c91b0b33642d8a56197c998ed82d10231a4648188df"
+      },
+      "buildroot-2021.11/package/util-linux/util-linux.hash": {
+        "sha256": "596fddb61fa6cb183653eb27a7758e7f37281dfa0d5b78cc03a1d829222262c5"
+      },
+      "buildroot-2021.11/package/util-linux/util-linux.mk": {
+        "sha256": "a8824f976489116e9f92a16b98bf4153e1db6769b7b113f342ef36425f730b49"
+      }
+    },
+    "source_license_metadata": [
+      "UTIL_LINUX_VERSION_MAJOR = 2.37",
+      "UTIL_LINUX_VERSION = $(UTIL_LINUX_VERSION_MAJOR).2",
+      "UTIL_LINUX_SOURCE = util-linux-$(UTIL_LINUX_VERSION).tar.xz",
+      "UTIL_LINUX_SITE = $(BR2_KERNEL_MIRROR)/linux/utils/util-linux/v$(UTIL_LINUX_VERSION_MAJOR)",
+      "UTIL_LINUX_LICENSE = GPL-2.0+, BSD-4-Clause, LGPL-2.1+ (libblkid, libfdisk, libmount), BSD-3-Clause (libuuid), ISC (rfkill)",
+      "UTIL_LINUX_LICENSE_FILES = README.licensing \\"
+    ],
+    "upstream_hash_entries": [
+      "sha256  6a0764c1aae7fb607ef8a6dd2c0f6c47d5e5fd27aa08820abaad9ec14e28e9d9  util-linux-2.37.2.tar.xz",
+      "sha256  869660b5269f4f40a8a679da7f403ea3a6e71d46087aab5e14871b09bcb55955  README.licensing",
+      "sha256  9b718a9460fed5952466421235bc79eb49d4e9eacc920d7a9dd6285ab8fd6c6d  Documentation/licenses/COPYING.BSD-3-Clause",
+      "sha256  ba7640f00d93e72e92b94b9d71f25ec53bac2f1682f5c4adcccb0018359f60f8  Documentation/licenses/COPYING.BSD-4-Clause-UC",
+      "sha256  8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643  Documentation/licenses/COPYING.GPL-2.0-or-later",
+      "sha256  e53348ce276358e9997014071c5294b36a18c4b34f32f00ee57b9acce0aafd63  Documentation/licenses/COPYING.ISC",
+      "sha256  dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551  Documentation/licenses/COPYING.LGPL-2.1-or-later"
+    ]
+  },
+  {
+    "package": "tslib",
+    "exact_sdk_patch_status": "D: unknown",
+    "candidate_buildroot": "2021.11",
+    "files": {
+      "buildroot-2021.11/package/tslib/tslib.hash": {
+        "sha256": "6c91909922a5b9040d143ff01cf535df26388af8c43d9d30d923d6b30ebf45ea"
+      },
+      "buildroot-2021.11/package/tslib/tslib.mk": {
+        "sha256": "de9bf3fa86ec1b21f98dd17c907485593224ffbc650043d990bace21a67089f4"
+      }
+    },
+    "source_license_metadata": [
+      "TSLIB_VERSION = 1.22",
+      "TSLIB_SITE = https://github.com/libts/tslib/releases/download/$(TSLIB_VERSION)",
+      "TSLIB_SOURCE = tslib-$(TSLIB_VERSION).tar.xz",
+      "TSLIB_LICENSE = GPL-2.0+ (programs), LGPL-2.1+ (libraries)",
+      "TSLIB_LICENSE_FILES = COPYING"
+    ],
+    "upstream_hash_entries": [
+      "sha256  aaf0aed410a268d7b51385d07fe4d9d64312038e87c447ec8a24c8db0a15617a  tslib-1.22.tar.xz",
+      "sha256  9b872a8a070b8ad329c4bd380fb1bf0000f564c75023ec8e1e6803f15364b9e9  COPYING"
+    ]
+  }
+]
