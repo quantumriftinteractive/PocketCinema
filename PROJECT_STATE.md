@@ -369,6 +369,15 @@ The corresponding-source release asset is now assembled and verified outside Git
 the exact 16 source archives, 19 patches, licenses, notices, and manifests while
 excluding compiler/SDK/sysroot/runtime/selector/font binaries and user state.
 
+The authorized independent FFplay reproduction attempt was run in the isolated
+external workspace `C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-reproduction`.
+Source and patch verification passed, but configure failed while probing libass:
+the recovered Arm GNU 15.2.1 compiler's `libgcc_s.so.1` requires GLIBC_2.34
+pthread symbols absent from the recovered Miyoo sysroot. No configuration or
+binary was produced. The reproduction gate is classified D (build failed),
+documented in `release-sources/miyoo/REPRODUCTION-2026-09-09.md`; compliance
+source sufficiency remains separate, but final v1 approval remains open.
+
 ### Prior Windows system-tray lifecycle handoff
 
 The Windows tray lifecycle and its focused UX refinements are **Physically

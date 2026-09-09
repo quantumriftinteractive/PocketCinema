@@ -49,6 +49,11 @@ artifact packaging is still pending.
 The corresponding-source ZIP release asset is now assembled and hash-verified;
 independent reproduction, fresh-install acceptance, and final artifact review
 remain open.
+The first independent FFplay reproduction attempt is documented as D (build
+failed): the recovered Arm GNU 15.2.1 compiler/sysroot pair cannot satisfy the
+compiler runtime's GLIBC_2.34 pthread symbols. No binary was produced or
+deployed; this remains an engineering release gate rather than a source-license
+gap.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
