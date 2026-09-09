@@ -1,8 +1,8 @@
 # Windows standalone candidate (M23)
 
-Status: **v1.0.0 implemented, focused package audit PASS; lifecycle and clean-machine acceptance pending**.
-This is an unsigned Windows x64 one-directory candidate, not a public release
-or completion of M23. The accepted source desktop/tray PASS remains inherited.
+Status: **v1.0.0 package SEALED; focused package, lifecycle, and clean-machine
+acceptance PASS**. This is an unsigned Windows x64 one-directory release
+artifact. The accepted source desktop/tray PASS remains inherited.
 
 ## Build and artifact
 
@@ -42,8 +42,8 @@ other shipped file. The build prints the ZIP SHA-256. Fixed archive timestamps,
 hash seed and pinned inputs reduce variation; rebuild verification is separate
 from acceptance on a clean Windows machine.
 
-Two clean builds on the development Windows machine produced identical ZIP
-SHA-256 `03f91526b3009b3d198b915f1fbef0045d19116e9ed9683df73c4eb62570b1b1`.
+The sealed Windows ZIP SHA-256 is
+`09900F330078B51F6A6BF937D8DF9F6841B5C77141755C0C8D7A33E97EF1A63B`.
 The candidate has 974 shipped files / 39,049,194 bytes extracted; the content
 audit covers 972 runtime/notice files before adding its two generated manifests
 and 290 frozen modules. PE metadata and all seven ICO sizes were inspected.
@@ -135,7 +135,9 @@ and the extracted-ZIP native smoke (missing/manual/normal Stremio-runtime tools)
 The packaged development-machine physical gate is **PASS**. It confirmed settings
 load, canonical identity, no-console launch, Local/Remote route presentation,
 active-mode tooltip, one X notification, tray restore, Start/Stop/Restart and
-exact-owned-child Quit cleanup. The clean-machine gate remains **PENDING**.
+exact-owned-child Quit cleanup. The clean-machine gate is **PASS**. The clean
+machine's initial failure was caused by its Public Windows network profile and
+disabled inbound allow rules; no PocketCinema package defect was identified.
 
 ```powershell
 & ./.tmp/windows-build-venv/Scripts/python.exe -m unittest server.test_desktop_runtime server.test_desktop server.test_desktop_tray server.test_desktop_refinements server.test_desktop_notifications -q
@@ -156,7 +158,7 @@ It does not claim that the development machine is a clean Windows installation.
 | Changed area | Verification | Inherited evidence and reason |
 | --- | --- | --- |
 | Frozen entry/child pipes and paths | Unit tests + real frozen child lifecycle | Core API/media behavior unchanged |
-| Packaged Tk/tray/dependencies | Native automated smoke; packaged developer-machine physical smoke PASS | Source tray UX PASS retained; clean-machine validation remains |
+| Packaged Tk/tray/dependencies | Native automated smoke; packaged developer-machine and clean-machine physical smoke PASS | Source tray UX PASS retained |
 | Running settings lock | 68 focused tests and packaged physical confirmation PASS | Configuration semantics remain unchanged; no broad retest |
 | Per-user settings and external-tool loading | Isolated profile, missing/manual tools, restart and content checks | Schema, route selection, validation and privacy semantics unchanged |
 | Media, M21/M22, transport, subtitles, accounts, Miyoo | No broad regression matrix | No code, assets, configuration semantics or deployed runtime changes in those paths |
@@ -173,17 +175,14 @@ GUI/tray/settings-lock PASS evidence remains inherited.
 
 ## Next physical gate and remaining release work
 
-The corrected v1.0.0 package-content, hash, metadata, tool-launch, and bundled
-resolution checks are PASS. The packaged developer-machine lifecycle smoke,
-running-settings-lock confirmation, and focused stream-search no-console
-physical check remain inherited or pending according to their existing evidence
-and must not be broadly repeated. Clean-Windows acceptance remains pending. The
-next gate is the focused lifecycle smoke against this corrected candidate.
+The corrected v1.0.0 package-content, hash, metadata, tool-launch, bundled
+resolution, lifecycle, and clean-machine checks are PASS. The clean machine
+required a trusted Private network profile and enabled inbound local-network
+rules; this was an environmental setup issue, not a package defect.
 
 Later, a clean supported Windows installation must verify no Python/repository/
 build-tool/launch-script requirement, normal launch/icon/no console, GUI/tray
 lifecycle, settings creation and persistence, occupied port, unreachable Stremio,
 missing tools, clean Stop/Restart/Quit/no orphans and sanitized logs. This is
-**pending**, as are signing/public distribution, runtime updates and licensing
-review, later macOS distribution, and Miyoo renderer/runtime provenance and
-fresh-deployment gates. M23 remains **Next / incomplete**.
+Signing/public distribution and licensing review remain applicable caveats for
+the unsigned candidate. The sealed artifact is ready for final release assembly.

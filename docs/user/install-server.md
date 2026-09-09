@@ -15,6 +15,15 @@ Stremio account.
 The release package is intended to run without installing Python, cloning the
 repository, or preparing PowerShell commands.
 
+On Windows, allow PocketCinema Server through Windows Defender Firewall on your
+trusted home network when Windows prompts. Windows normally uses a **Private**
+network profile for a trusted home network. PCServer accepts local connections
+on TCP **8755** and local discovery uses UDP **8754**. A policy that disables
+inbound rules on **Public** networks can block PocketCinema even when the app
+appears in Allowed Apps; switch the trusted network to the appropriate Private
+profile or follow your administrator's policy instead of disabling the
+firewall.
+
 > [SCREENSHOT SHOT-01]
 > **PocketCinema Server launched from the Windows release package.**
 > The final image should show the normal end-user launch path without private

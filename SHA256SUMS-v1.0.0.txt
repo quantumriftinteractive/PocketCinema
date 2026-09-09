@@ -1,0 +1,7 @@
+# PocketCinema v1.0.0 public release artifacts
+# SHA-256 values are for the complete distribution files named below.
+
+046e3a07413b6aee20659834ba01c3a2563f0d32412da4d5284e13c780fbf7b9  PocketCinema-Miyoo-v1.0.0.zip
+09900F330078B51F6A6BF937D8DF9F6841B5C77141755C0C8D7A33E97EF1A63B  PocketCinema-Server-1.0.0-windows-x64.zip
+9b1384147d210a0dcb8e8cb05184d122c0e500921233cf2994ca23cfbea032a0  PocketCinema-Server-1.0.0-macos-arm64.zip
+75e9cd126ac893d619926f69c808b71081d56dc5f5fd7f4dd48d442bde30cc3b  PocketCinema-Miyoo-v1.0.0-corresponding-source.zip

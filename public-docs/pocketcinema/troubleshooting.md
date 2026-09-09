@@ -8,7 +8,11 @@
 - For Local, put both devices on the same trusted network.
 - For Remote, confirm the independent private-network companion and any
   configured proxy are working.
-- Check the computer firewall and the configured PCServer port.
+- On Windows, use a **Private** profile for a trusted home network and allow
+  PocketCinema Server through Windows Defender Firewall when prompted. Local
+  PCServer uses TCP **8755** and discovery uses UDP **8754**. A policy that
+  disables inbound rules on Public networks can block the app even when it is
+  listed in Allowed Apps; do not disable Windows Firewall.
 
 > [SCREENSHOT SHOT-17]
 > **Representative PocketCinema connection failure.**

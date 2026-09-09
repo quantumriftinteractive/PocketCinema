@@ -6,9 +6,17 @@ Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
-Release state: Not release-ready. Milestones 21 and 22 remain physically
-confirmed; fresh-install, packaging/licensing, and final release-scope gates are
-open.
+Release state: v1.0.0 platform artifacts sealed; final tag/publication pending.
+Milestones 21 and 22 remain physically confirmed, and the final release
+assembly is tracked separately from post-v1 engineering work.
+
+Final v1.0.0 assembly status: Miyoo, Windows x64, and macOS arm64 platform
+artifacts are sealed. The Miyoo and macOS distribution ZIPs were assembled
+locally under ignored `.tmp/final-release-assembly/`; the sealed Windows ZIP
+and Miyoo corresponding-source ZIP remain separate release assets identified by
+their recorded SHA-256 values. Final user documentation, the 16-page public
+export, and the tracked checksum plan are current. No tag or publication has
+been created.
 
 PocketCinema is the canonical pre-release identity. PocketStremio/`PSS` names
 in historical evidence describe the application that was physically tested at
