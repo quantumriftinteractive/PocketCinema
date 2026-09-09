@@ -15,9 +15,6 @@ PocketCinema and the optional Tailscale companion are separate applications:
 
 Do not merge these directories or copy Tailscale state into PocketCinema.
 
-> [SCREENSHOT SHOT-04]
-> **PocketCinema visible in the OnionOS Apps menu.**
-> The final image should show the real PocketCinema icon and distinguish it
-> from other apps without exposing personal device data.
+![SHOT-04 — PocketCinema visible in the OnionOS Apps menu.](assets/screenshots/shot-04-apps.png)
 
 After launching, continue with [Connect PocketCinema](connect.md).

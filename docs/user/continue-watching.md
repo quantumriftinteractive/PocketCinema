@@ -14,14 +14,9 @@ resume or playback action. You can also choose a season and episode manually
 through the normal series browsing flow. PocketCinema does not expose a
 separate automatic episode-advance screen or action in the supported v1 UI.
 
-> [SCREENSHOT SHOT-09]
-> **Continue Watching with saved resume items.**
-> The final image should show the actual list and its `A OPEN`, `X REMOVE`, and
-> `B BACK` controls.
+![SHOT-09 — Continue Watching with saved resume items.](assets/screenshots/shot-09-continue-watching.png)
 
-> [SCREENSHOT SHOT-10]
-> **Episode list for a selected season.**
-> Include this only if the list is sufficiently readable at manual size.
+![SHOT-10 — Episode list for a selected season.](assets/screenshots/shot-10-season-selection.png)
 
 During playback, the Miyoo Menu button exits. PocketCinema excludes startup and
 unverified pause time from saved progress.

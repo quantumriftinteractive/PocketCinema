@@ -28,7 +28,4 @@ change during everyday use.
 Settings are saved in the PocketCinema app configuration and are separate from
 the Tailscale companion's settings.
 
-> [SCREENSHOT SHOT-16]
-> **PocketCinema Settings screen.**
-> The final image should show the user-relevant connection, audio, and subtitle
-> controls without private addresses or proxy details.
+![SHOT-16 — PocketCinema Settings screen.](assets/screenshots/shot-16-settings.png)

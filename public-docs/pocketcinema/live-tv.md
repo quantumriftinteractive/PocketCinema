@@ -13,7 +13,4 @@ Live streams may take longer to start and may offer less seeking than movies or
 episodes. Channel playback uses the normal PocketCinema source and playback
 path.
 
-> [SCREENSHOT SHOT-15]
-> **Live TV channel list from a linked account.**
-> The final image should show a generic channel list without provider-specific
-> account details or raw stream URLs.
+![SHOT-15 — Live TV channel list from a linked account.](assets/screenshots/shot-15-live-tv.png)

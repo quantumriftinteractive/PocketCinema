@@ -19,10 +19,4 @@ available during playback.
 Available tracks depend on the selected source. A preference cannot create a
 subtitle when the source provides none.
 
-> [SCREENSHOT SHOT-12]
-> **Optional dedicated subtitle-selection screen.**
-> Include this only when a real source exposes that screen; do not stage one.
-
-> [SCREENSHOT SHOT-13]
-> **Playback with subtitles visible on the Miyoo.**
-> Use a real physical capture; avoid staged playback screens and glare.
+![SHOT-13 — Playback with subtitles visible on the Miyoo.](assets/screenshots/shot-13-paused-subtitles.png)

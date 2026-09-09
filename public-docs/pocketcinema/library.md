@@ -13,10 +13,7 @@ when the account provides that information.
 PocketCinema's Library is read-only. It does not add, remove, or edit items in
 your Stremio account.
 
-> [SCREENSHOT SHOT-14]
-> **My Library showing the Movies and Series choices or a populated library list.**
-> The final image should show where account-backed content appears; remove any
-> personal titles or account identifiers that should not be published.
+![SHOT-14 — My Library showing a populated Movies list.](assets/screenshots/shot-14-library-movies.png)
 
 If the Library is empty, confirm that the intended Stremio account is linked and
 that its addons or service are available.

@@ -8,8 +8,6 @@ Selecting a movie opens its actions. Selecting a series opens its seasons and
 episodes. If there are no results, try a shorter title or check the PCServer
 connection and account/service setup.
 
-> [SCREENSHOT SHOT-07]
-> **PocketCinema Search results with Movie and Series labels.**
-> The final image should make the next selection obvious.
+![SHOT-07 — PocketCinema Search results with Movie and Series labels.](assets/screenshots/shot-07-search-results.png)
 
 Continue with [Watch your first movie](first-movie.md) or [Continue Watching](continue-watching.md).

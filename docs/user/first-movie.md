@@ -15,16 +15,8 @@ This is the shortest path from a connected Miyoo to playback.
 During playback, use the Miyoo Menu button to exit and return to PocketCinema.
 PocketCinema saves valid watched progress when possible.
 
-> [SCREENSHOT SHOT-07]
-> **Search results for a movie title.**
-> The final image should show readable Movie and Series labels.
+![SHOT-07 — Search results for a movie title.](assets/screenshots/shot-07-search-results.png)
 
-> [SCREENSHOT SHOT-11]
-> **Source choices for the selected movie.**
-> The final image should show the user-facing source, mode, and media summary,
-> with private upstream information hidden.
+![SHOT-11 — Source choices for the selected movie.](assets/screenshots/shot-11-source-selection.png)
 
-> [SCREENSHOT SHOT-13]
-> **Movie playback with a selected subtitle visible.**
-> The final image should be a real physical Miyoo capture with readable text,
-> consistent orientation, and no glare.
+![SHOT-13 — Movie playback with a selected subtitle visible.](assets/screenshots/shot-13-paused-subtitles.png)

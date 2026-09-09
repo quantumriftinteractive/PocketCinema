@@ -27,14 +27,9 @@ Do not use `127.0.0.1` as the Miyoo's PCServer address. On the Miyoo, that means
 the Miyoo itself. The `127.0.0.1` default belongs to a Stremio Service running
 locally on the PCServer computer.
 
-> [SCREENSHOT SHOT-05]
-> **PocketCinema first-run setup.**
-> The final image should show Local, Remote, and Both / automatic as they appear
-> on the device.
+![SHOT-05 — PocketCinema first-run setup.](assets/screenshots/shot-05-first-run-connection.png)
 
-> [SCREENSHOT SHOT-06]
-> **PocketCinema Home screen after a successful connection.**
-> The status at the top should show that PCServer is connected.
+![SHOT-06 — PocketCinema Home screen after a successful connection.](assets/screenshots/shot-06-connected-home.png)
 
 Remote access should use the independent Tailscale companion or another private,
 access-controlled route. Do not expose PCServer through public port forwarding.

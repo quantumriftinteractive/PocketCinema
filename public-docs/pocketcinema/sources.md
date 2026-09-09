@@ -15,7 +15,4 @@ but can support media that is not directly suitable for the device.
 Some sources are rejected because they are unavailable, unsafe, or outside the
 device's supported playback limits. Try another listed source when this happens.
 
-> [SCREENSHOT SHOT-11]
-> **PocketCinema source-selection screen with DIRECT and CONVERT information.**
-> The final image should show readable user-facing labels and no raw addon,
-> credential-bearing, or upstream URLs.
+![SHOT-11 — PocketCinema source-selection screen.](assets/screenshots/shot-11-source-selection.png)
