@@ -1,4 +1,21 @@
 {
   "product": "PocketCinema",
-  "files": ["index.md", "requirements.md", "installation.md", "pcserver-setup.md", "local-connection.md", "remote-connection.md", "stremio-account.md", "browsing-and-playback.md", "subtitles.md", "live-tv.md", "troubleshooting.md", "privacy-and-security.md", "limitations.md"]
+  "files": [
+    "index.md",
+    "install-server.md",
+    "configure-server.md",
+    "install-miyoo.md",
+    "connect.md",
+    "first-movie.md",
+    "search.md",
+    "library.md",
+    "continue-watching.md",
+    "sources.md",
+    "subtitles.md",
+    "live-tv.md",
+    "settings.md",
+    "troubleshooting.md",
+    "advanced-reference.md",
+    "privacy-and-security.md"
+  ]
 }

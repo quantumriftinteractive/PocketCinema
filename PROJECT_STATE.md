@@ -115,14 +115,14 @@ Tailscale, or PCServer behavior change.
 
 ## Active Work and Next Action
 
-Milestone 23 is active. The initial functional macOS source-development desktop
-shell is implemented and automatically tested; its revised main screen is
-visually confirmed, but owned-start/stop and Miyoo acceptance remain pending and
-it is not packaged. Its Tk UI owns only a tracked PCServer child, persists non-secret
-settings under the per-user PocketCinema directory, validates the editable
-PCServer-only Stremio Service HTTP origin, detects FFmpeg/FFprobe, displays
-sanitized status/log output, and uses the canonical server PNG as its window
-icon. The server core remains independently source-runnable.
+Milestone 23 is active. The packaged macOS `PocketCinema Server.app` v1 baseline
+(1.0.0 (1)) is physically accepted: its regular foreground UI uses the canonical
+icon, bundles FFmpeg/FFprobe 9.0.1, cleanly shuts down on red X, native Quit, and
+Cmd+Q, and cleans up its owned PCServer child. The bundle is ad-hoc signed but
+not Developer ID signed or notarized, so clean-Mac Gatekeeper warnings remain a
+release-review item. The known-good baseline is
+`4ec89b591ded17685eef36bc9a8d821672b6ee6a`; the discarded hide-to-background /
+Dock-reopen experiment is not part of v1.
 The documented direct macOS source entry point now resolves the repository
 package root correctly instead of requiring `PYTHONPATH` or `python -m`.
 The current development shell uses Homebrew Python 3.14 with `python-tk@3.14`
@@ -147,8 +147,9 @@ Mac cannot reach the gaming PC's intentionally localhost-contained Stremio
 Service through its tailnet address; that is an expected split-host limitation,
 not a Stremio or historical playback regression.
 
-Advertised-route persistence is hardened by
-`6f9aa411f1729170c5c98efe4552c0623445236d`: Start and Restart atomically save
+Advertised-route persistence is complete and sealed by
+`6f9aa411f1729170c5c98efe4552c0623445236d` and
+`dd0d695425c8690c7372664401ec6700b47f7fab`: Start and Restart atomically save
 the requested settings before launching the owned child, so a later desktop-app
 restart cannot reintroduce a previous manual route. Automatic mode resolves
 current interfaces at launch, explicit Custom/manual routes remain persisted,
@@ -315,17 +316,14 @@ semantics.
   is not reopened by this observation.
 - Runtime route advertisement: during the shared Thunderbolts failure, the
   Miyoo used `100.82.23.65:8755` while PCServer advertised stale
-  `192.168.20.151:8755`. Restarting the runtime corrected the advertisement and
-  the same title then played successfully; no Library source-code fix was
-  required. Before release, verify route persistence and resolution, confirm a
-  normal restart cannot reintroduce the stale route, and make the desktop
-  advertised-address configuration clear.
-- Remaining release/distribution work includes a macOS `.app` plus macOS
-  launch/runtime smoke,
+  `192.168.20.151:8755`. Start/Restart now persist the requested route before
+  launch; the stale-route persistence regression is sealed by the automated
+  PASS gate and no new Miyoo playback retest was required.
+- Remaining release/distribution work includes
   Windows clean-machine packaged-artifact smoke, fresh/distribution-SD
   validation, renderer and subtitle-asset licensing/package completeness,
-  advertised-route persistence/configuration verification, and unsigned/signing
-  and runtime-warning review. The Windows packaged candidate and development-
+  final release-artifact audit, and unsigned/signing and runtime-warning review.
+  The Windows packaged candidate and development-
   machine smoke already exist; they must not be recreated as part of this
   inventory.
 
@@ -390,9 +388,9 @@ Episode / Continue Series gates are physical PASS. The source tray UX and
 packaged Windows smoke gates are physical PASS. Production PASS and Impact-First
 Regression Testing preserve M21/M22 and accepted transport/playback/subtitle/
 account evidence without broad retests. Clean-Windows acceptance, public
-distribution/signing/runtime review, later macOS distribution and
-renderer-asset/licensing/fresh-deployment gates remain pending; M23 remains
-incomplete. Micro-stutter work remains deferred.
+distribution/signing/runtime review, renderer-asset/licensing/fresh-deployment
+and final release-artifact gates remain pending; M23 remains incomplete.
+Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
@@ -537,8 +535,10 @@ Pending:
   acceptance remain PASS.
 
 - Windows clean-machine acceptance, public distribution/signing/runtime review,
-  macOS distribution and Miyoo runtime/renderer packaging/licensing remain M23
-  release work. Build/artifact instructions: `docs/windows-packaging.md`.
+  Miyoo runtime/renderer packaging/licensing, and final release-artifact review
+  remain M23 release work. macOS packaging/lifecycle is physically accepted;
+  its unsigned/notarization and licensing review remain open. Build/artifact
+  instructions: `docs/windows-packaging.md` and `docs/macos-packaging.md`.
 
 - Subtitle font-size settings are implemented, deployed through the standard
   Miyoo path, and physically confirmed PASS. The supported presets are 1.0x,

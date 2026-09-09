@@ -1,5 +1,24 @@
 # Subtitles
 
-Choose subtitle language preferences in PocketCinema Settings. Subtitle support depends on what the selected source provides and on the selected playback path. PCServer can use the supported server-side subtitle/conversion path when direct device playback is not suitable.
+When subtitle tracks are available, PocketCinema opens **Select Subtitles**
+after you choose a source. Select a language or **No subtitles**.
 
-The production subtitle font-size presets are 1.0x, 1.25x, 1.5x (default), 2.0x, 2.5x, and 3.0x. If a source has no compatible subtitle track, changing the preference cannot create one.
+1. Choose **Subtitle languages** in Settings if you want preferred languages
+   used automatically.
+2. During a normal movie or episode selection, choose a listed subtitle track,
+   or choose **No subtitles**.
+3. If selectable tracks are available during playback, use the supported R1
+   control to cycle tracks and subtitles-off. The brief track notice confirms
+   the change.
+4. Change **Subtitle size** in Settings when text is too small or too large.
+
+Available tracks depend on the selected source. A preference cannot create a
+subtitle when the source provides none.
+
+> [SCREENSHOT SHOT-12]
+> **Subtitle selection with a language choice and No subtitles.**
+> The final image should show the actual device labels clearly.
+
+> [SCREENSHOT SHOT-13]
+> **Playback with subtitles visible on the Miyoo.**
+> Use a real physical capture; avoid staged playback screens and glare.

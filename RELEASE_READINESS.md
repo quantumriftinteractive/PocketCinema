@@ -32,14 +32,18 @@ release artifacts. See `docs/production-pass-audit.md`.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
-The source-development desktop shell is implemented and automatically tested.
+The packaged macOS `PocketCinema Server.app` v1 baseline is physically accepted
+with bundle version 1.0.0 (1), bundled FFmpeg/FFprobe 9.0.1, regular foreground
+lifecycle, clean red-X/native-Quit/Cmd+Q shutdown, and owned-child cleanup. It
+is ad-hoc signed rather than Developer ID signed or notarized, so Gatekeeper
+warning review remains open. The source-development desktop shell is also
+implemented and automatically tested.
 The Local desktop path, Remote-route smoke, and Windows desktop responsiveness
 are physically confirmed, as recorded in `PROJECT_STATE.md` and the Production
-PASS audit. Milestone 23 remains incomplete: packaged-distribution acceptance and
-fresh-deployment work are still pending. Until Milestone 23 is accepted from an
-actual packaged artifact, the Python/PowerShell workflow
-below remains a developer/source path, not the intended end-user v1.0
-installation.
+PASS audit. Milestone 23 remains incomplete: Windows clean-machine packaged
+distribution, fresh-deployment, licensing, privacy, and final artifact work are
+still pending. The Python/PowerShell workflow below remains a developer/source
+path, not the intended end-user v1.0 installation.
 
 Windows tray lifecycle and all focused UX refinements are physically confirmed
 PASS: IPv4-preferred Remote presentation, silent server actions, active listen
@@ -56,7 +60,7 @@ and disables runtime configuration while preserving Stop/Restart/Copy/status/log
 and Stop restores editing. This does not mark clean-machine acceptance or Windows
 distribution fully release-complete. The pinned Python 3.11.0/Tcl-Tk 8.6.12 candidate
 requires runtime updating/review before public release. Windows clean-machine,
-signing/distribution, later macOS, renderer-asset/licensing and fresh-deployment
+signing/distribution, macOS notarization/licensing, renderer-asset/licensing and fresh-deployment
 acceptance remain release gates; M23 is incomplete. The packaged smoke confirmed
 existing settings, no-console launch, canonical identity, Local/Remote route
 presentation, active-mode hover, one X notification, tray restore, Start/Stop/
@@ -78,19 +82,18 @@ acceptance failures:
   valid; this is a separate startup UX/performance issue.
 - During the shared Thunderbolts failure, the Miyoo used
   `100.82.23.65:8755` while PCServer advertised stale `192.168.20.151:8755`.
-  The cause was that Start/Restart applied edited desktop settings only to that
-  child invocation; a later desktop-app restart could reload the old saved
-  manual route. Start/Restart now atomically save the requested route before
-  launching the child. Automatic mode still resolves only current interfaces,
-  while an explicit Custom/manual route remains stable. `/api/status` exposes
-  the child’s effective advertised route and `/api/play` returns only its
-  approved current/request route. The stale-route persistence gate is
-  automated **PASS**; no Library source-code fix or new Miyoo test was needed.
+  Start/Restart now atomically persists the requested route before launching
+  or replacing the child. Automatic mode still resolves only current
+  interfaces, while an explicit Custom/manual route remains stable.
+  `/api/status` exposes the child’s effective advertised route and `/api/play`
+  returns only its approved current/request route. The stale-route persistence
+  gate is automated **PASS** and sealed; no Library source-code fix or new
+  Miyoo test was needed.
 
 The Next Episode / Continue Series feature is now physically accepted and no
-longer an open product candidate. Remaining distribution work is macOS `.app`
-and macOS launch/runtime smoke, Windows clean-machine packaged
-smoke, fresh/distribution-SD validation, renderer/subtitle asset
+longer an open product candidate. macOS packaging and foreground lifecycle are
+physically accepted; remaining distribution work is Windows clean-machine
+packaged smoke, fresh/distribution-SD validation, renderer/subtitle asset
 licensing/package completeness, and unsigned/signing/runtime-warning review. The Windows
 development-machine packaged candidate and smoke already exist.
 
@@ -333,7 +336,7 @@ Suitable:
 - narrow configuration/UI changes; and
 - addon-path inspection without broad implementation.
 
-Avoid macOS packaging, generic TV-addon
+Avoid broad macOS packaging changes, generic TV-addon
 implementation, cross-platform architecture, and broad release validation.
 
 ### Medium healthy budget (~25–50%)
@@ -350,8 +353,8 @@ Prefer Astra Medium for architecture work.
 
 Suitable:
 
-- macOS distribution and frozen `.app` packaging;
-- menu-bar/background lifecycle and signing/notarization preparation;
+- macOS signing/notarization and final bundle review;
+- foreground lifecycle release validation;
 - generic TV-addon implementation if investigation reveals broader changes; and
 - fresh-machine release validation.
 
@@ -365,7 +368,7 @@ Suitable:
    support using StremTV US as the known-good test case.
 4. Keep the accepted Library and Next Episode paths stable while addressing
    remaining release/distribution gates.
-5. Continue macOS distribution with a fresh or larger budget.
+5. Complete macOS signing/notarization, licensing, and final bundle review.
 6. Rebuild the final Windows candidate after remaining v1 features settle.
 7. Complete clean-machine acceptance.
 8. Complete signing, notarization, runtime, and licensing review.
@@ -773,6 +776,6 @@ onboarding, final movie/episode/converted regressions, reproducible release
 artifacts, third-party notices, and the privacy review must still pass before
 publishing. Milestone 21 is confirmed, so Milestone 23 desktop implementation
 may proceed; the Windows release must still
-pass the clean-PC packaged-artifact acceptance above. A macOS build is not a
-supported end-user release until its equivalent clean-bundle, architecture,
-signing, notarization, privacy, lifecycle, and real-Miyoo checks pass.
+pass the clean-PC packaged-artifact acceptance above. The macOS packaged app is
+the intended end-user path, but public release still requires its remaining
+signing, notarization, privacy, licensing, and real-Miyoo checks.

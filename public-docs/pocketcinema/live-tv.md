@@ -1,5 +1,19 @@
 # Live TV
 
-Live TV is account-backed. PCServer discovers compatible `type=tv` catalogs from the linked Stremio account and presents their channels through PocketCinema. The list depends on the addons installed on that account; PocketCinema does not ship a built-in country or channel catalog and does not filter channels by addon name or country.
+Live TV comes from compatible addons attached to the linked Stremio account.
+PocketCinema does not ship a fixed built-in channel catalogue. Available
+channels therefore depend on the account, installed addons, and current service
+availability.
 
-Select a channel to request its stream. PCServer keeps the upstream URL private and either serves a compatible path or performs the supported bounded HLS conversion for the Miyoo. Live streams may take longer to start and may have limited seeking compared with on-demand media.
+1. Choose **Live TV** from Home.
+2. Select a channel.
+3. Wait for the live stream to prepare and begin.
+
+Live streams may take longer to start and may offer less seeking than movies or
+episodes. Channel playback uses the normal PocketCinema source and playback
+path.
+
+> [SCREENSHOT SHOT-15]
+> **Live TV channel list from a linked account.**
+> The final image should show a generic channel list without provider-specific
+> account details or raw stream URLs.

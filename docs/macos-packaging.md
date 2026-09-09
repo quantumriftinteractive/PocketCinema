@@ -1,5 +1,9 @@
 # macOS PocketCinema Server packaging
 
+Status: **Physically accepted v1 baseline.** The packaged application is
+`PocketCinema Server.app`, bundle version `1.0.0 (1)`, with normal foreground
+application behavior.
+
 The macOS release candidate is built with `scripts/build-macos.py` in an
 isolated PyInstaller environment. The output is:
 
@@ -41,10 +45,13 @@ runtime libraries reported by `otool -L`.
 
 ## macOS window behavior
 
-On macOS the red close button withdraws the main window without stopping the
-owned PCServer child. The application menu provides **Show PocketCinema
-Server** and **Quit PocketCinema Server**. Quit uses the normal lifecycle
-cleanup path. The existing Windows tray implementation is unchanged.
+The red close button performs canonical clean application shutdown, including
+stopping the owned PCServer child. Native **Quit** and Cmd+Q use the same
+shutdown path. The app is a regular foreground application: it has no custom
+status item, menu-bar-only mode, or hide-to-background/Dock-reopen lifecycle.
+
+Background or Dock-reopen behavior is deferred beyond v1. The existing Windows
+tray implementation is unchanged.
 
 The candidate is ad-hoc signed for local smoke testing. It is not Developer ID
 signed or notarized; a clean Mac may require the user to approve or open it

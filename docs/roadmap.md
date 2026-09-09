@@ -1038,8 +1038,10 @@ advertisement rather than Library code; playback succeeded after the runtime
 advertisement was corrected. Release-year fallback and subtitle-package startup
 latency remain separate follow-ups. The recorded route observation was Miyoo
 `100.82.23.65:8755` versus
-advertised `192.168.20.151:8755`; release work must verify route persistence,
-normal-restart behavior, and desktop advertised-address clarity. The roughly
+advertised `192.168.20.151:8755`; Start/Restart now atomically persists the
+requested route before child launch, and the stale-route persistence gate is
+sealed by commits `6f9aa411f1729170c5c98efe4552c0623445236d` and
+`dd0d695425c8690c7372664401ec6700b47f7fab`. The roughly
 60-second subtitle-package delay is a separate startup UX/performance issue;
 historical M22 PASS evidence remains valid.
 
@@ -1067,9 +1069,9 @@ navigation retained the expected existing `Play / Back` action menu.
 
 Replace the developer-oriented PocketCinema server launch experience with a
 small cross-platform desktop control application while preserving the existing
-Python server as the core implementation. The first implementation target is a
-macOS development shell; Windows remains the required first end-user release
-target. Milestone 23 implementation must not
+Python server as the core implementation. The accepted macOS implementation is
+a packaged regular foreground app; Windows remains the required clean-machine
+end-user release target. Milestone 23 must not
 begin until Milestone 21 is marked **Confirmed** and its device-facing
 acceptance criteria are supported by the required evidence. Code presence alone
 does not satisfy that gate.
@@ -1094,9 +1096,10 @@ does not satisfy that gate.
 - Produce a one-directory Windows application bundle first. Do not redistribute
   FFmpeg/FFprobe or other external binaries until exact provenance, licensing,
   notices, and update responsibilities are approved.
-- Prepare the same architecture for a later macOS `.app`, with Apple Silicon,
-  Intel/universal-build feasibility, signing, hardened-runtime, and notarization
-  requirements documented and tested before release claims.
+- The macOS `.app` baseline is implemented and physically accepted as a regular
+  foreground application with bundled FFmpeg/FFprobe 9.0.1, clean shutdown,
+  and ad-hoc signing. Developer ID signing, notarization, licensing, and final
+  release-artifact review remain open before public release claims.
 - Preserve direct play, conversion/downscaling, subtitle modes, multi-audio,
   account linking, progress, Continue Watching, Resume, Menu cleanup, opaque
   upstream URLs, PCServer-only Stremio Service access (with the secure local
@@ -1106,16 +1109,17 @@ Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop
 
 Windows packaging checkpoint: an unsigned standalone x64 one-directory candidate
 is implemented, focused-automated-tested, and physically smoke-tested on the
-development machine. Clean-Windows acceptance and the other M23 release gates
-remain open. See [Windows packaging evidence](windows-packaging.md). M23 remains
-**Next**, with M21/M22 and accepted source desktop/tray evidence inherited.
+development machine. The macOS packaged foreground baseline is likewise
+physically accepted, but remains ad-hoc signed. Clean-Windows acceptance and the
+other M23 release gates remain open. See [Windows packaging evidence](windows-packaging.md)
+and [macOS packaging evidence](macos-packaging.md). M23 remains **Next**, with
+M21/M22 and accepted source desktop/tray evidence inherited.
 
-Current release follow-ups tracked alongside this milestone are: macOS `.app`
-packaging and macOS launch/runtime smoke; Windows
-clean-machine packaged-artifact smoke; fresh/distribution-SD validation;
-renderer/subtitle-asset licensing and package completeness; persistence and
-clarity of the runtime advertised PCServer route; and unsigned/signing/runtime-
-warning review. The existing Windows development-machine packaged candidate and
+Current release follow-ups tracked alongside this milestone are: macOS
+signing/notarization, licensing, and final bundle review; Windows clean-machine
+packaged-artifact smoke; fresh/distribution-SD validation;
+renderer/subtitle-asset licensing and package completeness; final release-artifact
+audit; and unsigned/signing/runtime-warning review. The existing Windows development-machine packaged candidate and
 smoke are evidence, not substitutes for the remaining clean/distribution gates.
 
 Acceptance criterion: a clean supported Windows PC can install or extract the
