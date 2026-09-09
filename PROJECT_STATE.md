@@ -147,6 +147,15 @@ Mac cannot reach the gaming PC's intentionally localhost-contained Stremio
 Service through its tailnet address; that is an expected split-host limitation,
 not a Stremio or historical playback regression.
 
+Advertised-route persistence is hardened by
+`6f9aa411f1729170c5c98efe4552c0623445236d`: Start and Restart atomically save
+the requested settings before launching the owned child, so a later desktop-app
+restart cannot reintroduce a previous manual route. Automatic mode resolves
+current interfaces at launch, explicit Custom/manual routes remain persisted,
+and `/api/status` exposes the child’s effective advertised route. Focused
+configuration, lifecycle, and playback-route regression coverage passes; no
+new Miyoo test is required because this changes persisted configuration only.
+
 Focused Local M23 physical acceptance is **PASS**. The desktop-managed Mac
 PCServer ran with Automatic / Local network on port 8757, displayed its concrete
 Local and detected Remote routes without Advanced Settings, and accepted a
@@ -387,8 +396,8 @@ incomplete. Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `8a53db1`
-Remote verified: YES — `8a53db1` is reachable from fetched `origin/main`
+Checkpoint commit: `6f9aa411f1729170c5c98efe4552c0623445236d`
+Remote verified: YES — `6f9aa411f1729170c5c98efe4552c0623445236d` is reachable from fetched `origin/main`
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
