@@ -666,3 +666,10 @@ Pending:
 - ARM selector reproducibility rebuild: Windows compiler/sysroot recovered;
   rebuilding is deferred to a separate controlled task. The deployed prebuilt
   helper and its ABI remain unchanged.
+
+The one authorized configure retry restored the historical linker flags in a
+fresh isolated workspace. The libass link probe passed without the prior
+GLIBC_2.34 failure, but configure stopped at `freetype2` because the recovered
+pkg-config shim supplied `/usr/include/freetype2` and `ft2build.h` was not found.
+No generated configuration or build output was produced; the reproduction gate
+remains D and a full FFplay build is not authorized.

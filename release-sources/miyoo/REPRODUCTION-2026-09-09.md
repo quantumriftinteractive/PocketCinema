@@ -97,3 +97,25 @@ Root cause: **B — missing historical link environment**. The smallest supporte
 next correction is one retry with the exact preserved configure command preceded
 by the historical `LDFLAGS` value above. Do not add `-static-libgcc`, substitute a
 toolchain, or alter the configure command. That retry has not been executed.
+
+## Controlled configure retry
+
+The preserved patched source was copied to the fresh isolated workspace
+`C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-reproduction-retry-20260909`; the prior
+failed workspace and authoritative recovered inputs were left unchanged. The
+exact historical linker environment was restored:
+
+```text
+LDFLAGS=" -L/c/Users/ysocr/MM--PocketStremio/.tmp/toolchain/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot/usr/lib -Wl,-rpath-link,/c/Users/ysocr/MM--PocketStremio/.tmp/toolchain/mmiyoo/arm-buildroot-linux-gnueabihf/sysroot/usr/lib"
+```
+
+The retry used the recovered Arm GNU 15.2.1 compiler, recovered Miyoo sysroot,
+and copied `pkg-config-arm.sh` shim. Configure exited with failure at the next
+smallest boundary, `freetype2`: the shim returned `-I/usr/include/freetype2`,
+and the cross compiler could not find `ft2build.h`. The libass probe passed its
+link step with target sysroot `-L` entries first; the prior GLIBC_2.34
+`libgcc_s.so.1` failure did not recur. No `config.h` or `config.mak` was
+generated, so reproduced hashes are unavailable. Classification: **D - CONFIGURE
+STILL FAILS**. No build or deployment is authorized by this result; the next
+action requires separately authorized investigation of the historical
+freetype/pkg-config include-path environment.
