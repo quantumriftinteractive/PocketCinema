@@ -39,3 +39,61 @@ the known-good shipped binary remains
 This blocks the independent reproduction gate and leaves final v1 release
 approval open. It does not invalidate the corresponding-source or license bundle;
 no compiler/sysroot substitution or build workaround was attempted.
+
+## Bounded compatibility investigation
+
+The failing linker command was:
+
+```text
+arm-none-linux-gnueabihf-gcc.exe --sysroot=<miyoo-sysroot> -isysroot <miyoo-sysroot> -Wl,--as-needed -Wl,-z,noexecstack -I/usr/include -L/usr/lib -pthread -o <probe> <object> -lass -lfontconfig -lfreetype -lfribidi -lharfbuzz -lexpat -luuid -lglib-2.0 -lpcre -lpng16 -lbz2 -lz -lm -lm -lbz2 -lz -pthread
+```
+
+The effective `-L` order was `/usr/lib` from the pkg-config shim, with no
+historical sysroot `-L` entry in this failing probe. The compiler's default
+search directories select:
+
+`C:\Users\ysocr\MM--PocketStremio\.tmp\arm-gnu\arm-none-linux-gnueabihf\lib\libgcc_s.so.1`
+
+SHA-256:
+`13a1a42b29a36b0acd0ccbbb3b932e49734bf59679117577d508090aed970e59`.
+It is ELF32 little-endian ARM, needs `libc.so.6`, and requires GLIBC_2.34
+pthread symbols.
+
+Recovered candidates were:
+
+| Path family | SHA-256 | GLIBC requirement |
+| --- | --- | --- |
+| `arm-gnu/arm-none-linux-gnueabihf/lib/libgcc_s.so.1` and its `libc/usr/lib` copy | `13a1a42b29a36b0acd0ccbbb3b932e49734bf59679117577d508090aed970e59` | GLIBC_2.4 and GLIBC_2.34 |
+| Miyoo SDK sysroot `lib/` and `usr/lib/` | `c9b53158286d9d29c1b5f8469b7c722f0a74f47209e0eb915042c64f58370b70` | GLIBC_2.4 only |
+| recovered prebuilt target toolchain `lib/` and `libc/usr/lib` | `c9b53158286d9d29c1b5f8469b7c722f0a74f47209e0eb915042c64f58370b70` | GLIBC_2.4 only |
+
+All candidates are ELF32 little-endian ARM and need `libc.so.6`. The first pair
+belongs to the recovered Arm GNU 15.2.1 compiler archive; the compatible pair is
+present in the recovered target SDK/prebuilt inputs.
+
+GCC reports its default sysroot as the compiler's bundled `arm-none-linux-gnueabihf/libc`,
+while the explicit `--sysroot` points at the Miyoo SDK. `--print-multi-lib` reports
+only `.;`. `-print-file-name=libgcc_s.so.1` returns the bare runtime name, while
+the failing linker diagnostic identifies the bundled compiler path above.
+
+The known-good FFplay does **not** have `libgcc_s.so.1` in `DT_NEEDED`; its
+interpreter is `/lib/ld-linux-armhf.so.3`, and its highest observed GLIBC symbol
+version is GLIBC_2.28. It therefore does not require the incompatible GLIBC_2.34
+runtime at execution time.
+
+Historical `config.mak` and the successful configure log preserve this environment:
+
+```text
+LDFLAGS=" -L<sysroot>/usr/lib -Wl,-rpath-link,<sysroot>/usr/lib"
+```
+
+Successful historical probe/link commands place the sysroot `-L` before the
+pkg-config `/usr/lib` entries. Retained historical objects, including `ffplay.o`,
+`cmdutils.o`, and `vf_subtitles.o`, contain GCC 15.2.1 comments and do not carry
+the GLIBC_2.34 pthread requirement. The incompatibility is therefore a final
+compiler-runtime selection problem, not a source/object incompatibility.
+
+Root cause: **B — missing historical link environment**. The smallest supported
+next correction is one retry with the exact preserved configure command preceded
+by the historical `LDFLAGS` value above. Do not add `-static-libgcc`, substitute a
+toolchain, or alter the configure command. That retry has not been executed.

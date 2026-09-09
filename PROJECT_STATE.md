@@ -378,6 +378,14 @@ binary was produced. The reproduction gate is classified D (build failed),
 documented in `release-sources/miyoo/REPRODUCTION-2026-09-09.md`; compliance
 source sufficiency remains separate, but final v1 approval remains open.
 
+The bounded follow-up isolated the failure: the compiler selected its GLIBC_2.34
+`libgcc_s.so.1`, while recovered target sysroot copies require only GLIBC_2.4.
+Historical `config.mak` and configure evidence preserve
+`LDFLAGS=" -L<sysroot>/usr/lib -Wl,-rpath-link,<sysroot>/usr/lib"`, placing the
+target library directory first. The proposed next retry is limited to that
+historical environment correction; no retry has run. Details are in
+`release-sources/miyoo/REPRODUCTION-2026-09-09.md`.
+
 ### Prior Windows system-tray lifecycle handoff
 
 The Windows tray lifecycle and its focused UX refinements are **Physically
