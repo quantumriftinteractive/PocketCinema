@@ -35,8 +35,3 @@ Reference](advanced-reference.md).
 PocketCinema does not require public port forwarding. Tailscale, when used for
 remote access, is a separate OnionOS companion application; PocketCinema does
 not install, sign in to, or manage it.
-
-> [SCREENSHOT SHOT-02]
-> **PocketCinema Server configuration window.**
-> The final image should show the main settings a new user reviews before
-> starting PCServer, with private addresses and account information hidden.

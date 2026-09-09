@@ -35,11 +35,6 @@ When PCServer is running, its configuration controls are locked. Stop the
 server before changing them. Use **Restart** after saving a change that should
 be applied immediately.
 
-> [SCREENSHOT SHOT-03]
-> **PocketCinema Server running with a usable Miyoo connection address.**
-> The final image should show the Running status and connection information;
-> hide private IP addresses before publication.
-
 For account-backed browsing, link the Stremio account through the PocketCinema
 account flow:
 

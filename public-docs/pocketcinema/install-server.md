@@ -24,11 +24,6 @@ appears in Allowed Apps; switch the trusted network to the appropriate Private
 profile or follow your administrator's policy instead of disabling the
 firewall.
 
-> [SCREENSHOT SHOT-01]
-> **PocketCinema Server launched from the Windows release package.**
-> The final image should show the normal end-user launch path without private
-> usernames, paths, or account information.
-
 ## macOS
 
 1. Open `PocketCinema Server.app` from the supplied macOS release package.
@@ -45,8 +40,3 @@ may show the standard Gatekeeper warning.
 Do not use the repository's source-development launcher as the normal user
 installation path.
 Windows may keep the application available through its system tray.
-
-> [SCREENSHOT SHOT-02]
-> **PocketCinema Server open on macOS.**
-> Use the same main configuration image as the general setup section when the
-> macOS and Windows interfaces are visually equivalent.
