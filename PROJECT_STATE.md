@@ -454,13 +454,18 @@ Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `fe6509e`
-Remote verified: YES - `fe6509e` is reachable from fetched origin/main
-Machine: macOS development checkout
+Checkpoint commit: `219888f`
+Remote verified: YES - `219888f` is reachable from fetched origin/main
+Machine: Windows development checkout
 Branch: `main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
 
 Completed:
+
+- Bounded read-only FFplay material-difference investigation localized the
+  earliest divergence to the generated `FFMPEG_CONFIGURATION` text in
+  `cmdutils.o` and classified it as a configuration-define difference. No
+  rebuild, deployment, selector access, or binary modification occurred.
 
 - PocketCinema public user documentation was created under canonical
   `docs/user/` and exported deterministically from its allowlist to
