@@ -682,3 +682,10 @@ compiler does not rewrite an explicit `-I/usr/...`; classification is D (wrong
 pkg-config file selected). The next configure retry, if separately authorized,
 should invoke the preserved sysroot-aware experiment shim. No retry or build was
 run here.
+
+The authorized configure retry using the preserved sysroot-aware pkg-config shim
+now succeeds. libass and FreeType pass, the GLIBC_2.34 runtime failure remains
+absent, and generated configuration differs from historical only by workspace
+paths and duplicate equivalent linker flags. Classification is B (configure pass
+with explained non-material differences). A full independent FFplay build is now
+eligible for separate authorization; no build or deployment occurred.

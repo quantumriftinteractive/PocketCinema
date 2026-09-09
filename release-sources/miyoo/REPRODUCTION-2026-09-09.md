@@ -151,3 +151,34 @@ shim with unrooted FreeType output, while historical success used the preserved
 sysroot-aware experiment shim. The single supported correction is to invoke the
 preserved `experiments/ffplay/pkg-config-arm.sh` behavior for the next configure
 retry. No configure retry was run during this investigation.
+
+## Configure reproduction pass with explained differences
+
+A fresh isolated retry workspace was used:
+`C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-reproduction-retry-20260909-sysrootshim`.
+The verified patched source hashes remained `ffplay.c`
+`b9020d7e8faaa6ade5641994ee3daaf24ede29200a16e34101b9542478553b22` and
+`libavfilter/vf_subtitles.c`
+`f3e10bd48ad62088b9949bc819e6fa5fb5994fdeea9dce2374fe1f04f6f7bf42`.
+
+Configure used the recovered Arm GNU 15.2.1 compiler, Miyoo sysroot, historical
+ target-first `LDFLAGS`, and the preserved sysroot-aware
+`experiments/ffplay/pkg-config-arm.sh`. It exited 0. The libass and FreeType
+probes passed, and no GLIBC_2.34/libgcc_s failure appeared.
+
+Generated hashes are:
+
+```text
+config.h   7356d35833f6a6dfb374b64b0cc785875b2a5abe75ace4e7c0d9cca6ec32e5b0
+config.mak b1c220356646b8d6f38156a34b47a32caac555fab4e82aad4871bf279ee05dcb
+```
+
+Historical hashes remain `config.h`
+`61f378e9fbb713a51f7c43294f543378d8e49137d658c9ccf4b6b58708e129b8` and
+`config.mak` `d47e8ddcf95d383ed0d17e662aeac362c98b4ed7df48350f8a7d4d684ae175b1`.
+Bounded textual comparison found only workspace/logfile/pkg-config path changes
+and the equivalent target-first linker flags appearing twice because the
+historical `LDFLAGS` environment and preserved `--extra-ldflags` both contribute
+the same entries. No enabled-component or link-library difference was found.
+Classification: **B - CONFIGURE PASS WITH EXPLAINED NON-MATERIAL DIFFERENCES**.
+No build was run. The independent FFplay build can now be separately authorized.
