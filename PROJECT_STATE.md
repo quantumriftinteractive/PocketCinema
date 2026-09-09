@@ -711,3 +711,13 @@ rebuild or deployment occurred. One future corrected rebuild may be separately
 authorized using the historical configure-command representation and the
 preserved sysroot-aware pkg-config shim resolved through PATH; the current
 independent reproduction gate remains blocked.
+
+The bounded five-object comparison found no source, compile-command, or
+generated-header mismatch. `cmdutils.o` differs at one embedded build-time
+`__TIME__`; `mpegaudio.o` and `rmsipr.o` have post-preprocessing code/relocation
+differences; `display.o` differs in relocation/attribute metadata; and
+`log2_tab.o` differs only in object metadata. Classification is G (one
+object-specific cause plus unrelated others), so the independent FFplay
+reproduction gate remains blocked. No rebuild occurred. One future retry, if
+separately authorized, may restore the historical source-tree path and working
+directory while preserving all existing flags.

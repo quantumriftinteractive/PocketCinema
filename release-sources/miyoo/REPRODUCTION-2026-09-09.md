@@ -268,3 +268,41 @@ preserved sysroot-aware experiment shim via `PATH`. Do not execute that retry in
 this checkpoint. A corrected rebuild may be authorized only as a separate task
 after this bounded finding is reviewed; it must still be compared against the
 known-good binary before any release decision.
+
+## Bounded five-object difference investigation
+
+No configure, build, strip, deployment, or binary/object modification was
+performed. The five source files are byte-identical between the historical and
+reproduction trees. Reconstructed compile commands are identical in compiler,
+defines, include paths, flags, and relative source names; dependency files match
+after workspace-root normalization.
+
+| Object | Bounded result |
+| --- | --- |
+| `cmdutils.o` | Mixed: `.text`, relocations, symbols, and metadata match; `.rodata.str1.1` has the same size but different bytes. |
+| `libavcodec/mpegaudio.o` | Code and relocation difference; historical code uses ARM integer division while reproduced code calls `__aeabi_idiv`; ARM attributes also differ. |
+| `libavformat/rmsipr.o` | Code and relocation difference; constant data matches. |
+| `libavutil/display.o` | `.text` bytes match; relocation and ARM-attribute metadata differ. |
+| `libavutil/log2_tab.o` | Inspected section contents and sizes match; the remaining object hash difference is object metadata. |
+
+Preprocessed output is byte-identical for `mpegaudio.c`, `rmsipr.c`, `display.c`,
+and `log2_tab.c`. `cmdutils.c` first differs at its generated build-time string:
+the historical object contains `13:58:25`, while the reproduction contains
+`13:58:24` in the compiler identification line. Its `FFMPEG_CONFIGURATION`
+text is otherwise exact. This is a timestamp difference, not a configure-path
+difference.
+
+The four remaining differences occur after preprocessing. Their commands and
+preprocessed inputs match, but GCC emitted different code or object metadata;
+the preserved historical invocation contains no explicit reproducibility seed
+that identifies why. Classification is **G - one object-specific cause plus
+unrelated others**, rather than one shared generated-header or configuration
+cause. The independent reproduction gate remains blocked; no runtime or release
+evidence is invalidated.
+
+Exactly one future correction is proposed: perform one separately authorized
+rebuild from the historical source-tree path and working directory
+`<repo>/.tmp/ffmpeg-2.4.14`, preserving the existing command and flags, so the
+compiler sees the same path context as the retained historical objects. This was
+not executed and is not claimed to resolve the timestamp or all four
+post-preprocessing differences.
