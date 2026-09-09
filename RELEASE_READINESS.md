@@ -31,9 +31,10 @@ runtime-library inputs until M23 packaging/licensing work provides reproducible
 release artifacts. See `docs/production-pass-audit.md`.
 The host-side package assembler now produces a technically self-contained
 Miyoo v1 folder from an explicit prebuilt runtime input without the ARM sysroot
-or legacy-state migration. Redistribution remains blocked pending exact FFplay
-2.4.14 source/configuration, bundled-library provenance, font provenance, and
-the required notices/source-offer material. The Windows FFmpeg source/configuration
+or legacy-state migration. Redistribution remains pending assembly of the required notices/source bundle and
+final dynamic-link/replacement audit. Exact FFmpeg source/configuration, bundled
+library inputs, and the unmodified font are preserved; historical SDK and font
+export provenance remain documented limitations. The Windows FFmpeg source/configuration
 and final patch are now preserved and byte-verified. Exact Buildroot 2021.11
 dependency archives, all package patches, and declared license files are preserved
 externally with package-level provenance A; the recovered SDK remains classified C

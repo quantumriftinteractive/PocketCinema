@@ -336,7 +336,7 @@ were verified. The source staging script was tested without compiling. The
 original recovered tree, player, compiler, sysroot and font remain untouched.
 All fifteen deployment library files match the recovered SDK archive.
 
-The SDK remains provenance C: it is strongly linked to Steward's Miyoo Mini /
+The SDK historical provenance remains C: it is strongly linked to Steward's Miyoo Mini /
 Buildroot 2021.11 family, but its exact final configuration and applied package
 set remain unproven. The exact fifteen Buildroot 2021.11 dependency archives, all
 19 package patches, and declared license files are now preserved in the controlled
@@ -346,11 +346,14 @@ exact shipped font is also tied to the local Stremio Web Git checkout/blob, whil
 its upstream Tokotype build artifact remains unresolved. Large source/analysis
 copies remain ignored and no runtime artifacts or upstream trees are committed.
 No deployment, SD-card access, FFplay rebuild or selector rebuild occurred. All
-physical PASS evidence is inherited; redistribution remains blocked.
+physical PASS evidence is inherited; redistribution remains pending the public
+notices/source bundle and final dynamic-link compliance audit.
 
-Next provenance action: attest the exact SDK configuration and package-patch
-application, resolve the font processing/source chain, and review the external
-archive before a separately authorized independent FFplay reproduction build.
+Next exact action: assemble and audit the public notices/corresponding-source
+bundle, verify the final dynamic-link and FFmpeg GPL/nonfree conditions, then
+complete the independent reproduction and release-artifact gates separately.
+Historical SDK configuration and Tokotype export provenance remain documented
+limitations. See `release-sources/miyoo/COMPLIANCE-REVIEW.md`.
 
 ### Prior Windows system-tray lifecycle handoff
 

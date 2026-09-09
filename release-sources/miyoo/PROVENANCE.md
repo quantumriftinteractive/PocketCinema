@@ -85,7 +85,7 @@ The fifteen dependency source archives now have class **A** package provenance:
 their checksums match Buildroot 2021.11 and every package patch shipped in that
 Buildroot source tree is preserved in the external archive. This establishes
 authoritative Buildroot package inputs; it does **not** prove that the recovered
-SDK used this exact package patch set. The SDK as a whole remains class C.
+SDK used this exact package patch set. The SDK historical provenance remains class C, while the final compliance assessment is class B after the public notices/source bundle and dynamic-link audit are completed.
 The candidate recipe column shows what
 stock Buildroot 2021.11 would apply, not what was proven applied to these bytes.
 The candidate patch filenames and recipe/hash-file checksums are preserved in
@@ -204,14 +204,16 @@ durable archive destination has been configured or uploaded in this pass.
 **Preserving Git metadata is not a backup of the SDK, original build tree or
 font.** Off-machine archival of those recovered inputs remains explicitly open.
 
+See [final compliance sufficiency review](COMPLIANCE-REVIEW.md) for the redistribution assessment.
+
 ## Remaining gates and regression impact
 
-1. Recover/attest the exact SDK configuration, vendor patch history and artifact
-   digest relationship. The corresponding Buildroot package sources, patches,
-   and declared licenses are now preserved, but their application to the
-   recovered SDK remains unproven.
-2. Resolve the exact font source/processing chain; retain its complete applicable
-   OFL/copyright material without substituting a different font silently.
+1. Assemble and audit the public notices/corresponding-source bundle, including
+   the dynamic-link replacement path and the preserved FFmpeg configuration. The
+   exact SDK configuration and vendor patch chronology remain a reproducibility
+   limitation, not an independent redistribution condition.
+2. Retain the exact unmodified font bytes with copyright/OFL material. The
+   upstream Tokotype export chain is provenance-only and need not block the bundle.
 3. Back up recovered original inputs in controlled external storage and produce
    the final source/notice assets. No release asset is published by this work.
 4. Run a separately authorized independent FFplay reproduction build later;
