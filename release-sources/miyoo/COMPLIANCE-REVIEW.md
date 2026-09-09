@@ -19,6 +19,13 @@ license bundle at `release-sources/miyoo/public/`. It contains 56 files and
 texts. The 16 source archives remain separately delivered release assets named
 and hash-pinned by `SOURCE-MANIFEST.json`; they were not copied into Git.
 
+The corresponding-source release asset has now been assembled and verified as
+`C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-corresponding-source.zip`: 71 files,
+44,451,360 bytes, SHA-256
+`6edc880455ebee6eb881376d7a53544433ce2162e9b0f9ccbec63f7021175ba8`. It contains
+16 source archives and 19 patches, with no compiler, SDK, sysroot, runtime binary,
+font binary, selector, or user state.
+
 FFmpeg's official guidance asks distributors to provide the exact corresponding
 source, changes, build/configuration explanation, applicable license text, and the
 same source alongside the binary distribution. The preserved FFmpeg 2.4.14 archive,
@@ -84,10 +91,11 @@ gate and archival backup.
 
 ## Gates
 
-Remaining before public redistribution: assemble/review the notices and source
-archive, verify the final package's dynamic dependencies and FFmpeg GPL/nonfree
-configuration, confirm source links/hashes, and complete the existing artifact and
-fresh-install acceptance gates. No FFplay rebuild or Miyoo deployment is implied.
+Remaining before public redistribution: complete the final release-artifact
+inventory/review and fresh-install acceptance gates. The corresponding-source
+archive is assembled and verified; independent FFplay reproduction remains a
+separate authorized engineering gate. No FFplay rebuild or Miyoo deployment is
+implied.
 
 Authoritative references: [FFmpeg legal guidance](https://ffmpeg.org/legal.html),
 [LGPL 2.1](https://www.gnu.org/licenses/lgpl-2.1.html),

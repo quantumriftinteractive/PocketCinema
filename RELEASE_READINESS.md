@@ -46,6 +46,9 @@ physical acceptance has not run.
 The public compliance metadata bundle and license/source-manifest audit now pass;
 the corresponding source archives remain separate release assets and final
 artifact packaging is still pending.
+The corresponding-source ZIP release asset is now assembled and hash-verified;
+independent reproduction, fresh-install acceptance, and final artifact review
+remain open.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.

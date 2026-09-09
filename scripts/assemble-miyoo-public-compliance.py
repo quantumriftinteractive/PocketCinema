@@ -91,6 +91,8 @@ def main() -> int:
             if member.name in {"ffmpeg-2.4.14/LICENSE.md", "ffmpeg-2.4.14/COPYING.LGPLv2.1", "ffmpeg-2.4.14/COPYING.GPLv2"}:
                 target = out / "licenses" / Path(member.name).name
                 target.write_bytes(archive.extractfile(member).read())
+    if args.include_archives:
+        copy_verified(ffmpeg_archive, out / "corresponding-source/ffmpeg" / ffmpeg_archive.name, ffmpeg["sha256"])
 
     for item in recovery["packages"]:
         package = item["package"]

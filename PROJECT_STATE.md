@@ -362,6 +362,13 @@ replacement instructions. The corresponding source archives remain separate
 release assets and are not committed. This does not mark reproduction, fresh
 install, or final release acceptance PASS.
 
+The corresponding-source release asset is now assembled and verified outside Git:
+`C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-corresponding-source.zip`, 71 files,
+44,451,360 bytes, SHA-256
+`6edc880455ebee6eb881376d7a53544433ce2162e9b0f9ccbec63f7021175ba8`. It contains
+the exact 16 source archives, 19 patches, licenses, notices, and manifests while
+excluding compiler/SDK/sysroot/runtime/selector/font binaries and user state.
+
 ### Prior Windows system-tray lifecycle handoff
 
 The Windows tray lifecycle and its focused UX refinements are **Physically
