@@ -11,7 +11,7 @@ PROXY=
 LOCAL_PCSERVER=
 REMOTE_PCSERVER=
 CONNECTION_MODE=
-DEFAULT_QUERY=big buck bunny
+DEFAULT_QUERY=
 AUTO_FIRST=0
 # App-local decoded-audio gain for normal Onion FFplay playback (1 to 2).
 # 2.0 is +6 dB and may clip unusually loud sources.

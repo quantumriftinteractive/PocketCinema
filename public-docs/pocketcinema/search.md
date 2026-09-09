@@ -12,5 +12,4 @@ connection and account/service setup.
 > **PocketCinema Search results with Movie and Series labels.**
 > The final image should make the next selection obvious.
 
-Continue with [Watch your first movie](first-movie.md) or [Continue Watching
-and Next Episode](continue-watching.md).
+Continue with [Watch your first movie](first-movie.md) or [Continue Watching](continue-watching.md).

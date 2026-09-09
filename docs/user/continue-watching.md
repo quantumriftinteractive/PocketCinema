@@ -1,4 +1,4 @@
-# Continue Watching and Next Episode
+# Continue Watching
 
 PocketCinema keeps a compact Continue Watching list for playback with valid
 progress.
@@ -9,19 +9,15 @@ progress.
 2. Select an item.
 3. Choose the available resume or playback action.
 
-For a series, open the series from Search or My Library. Its season screen can
-show **CONTINUE** or **NEXT EPISODE** when watched/current state is available.
-
-- **CONTINUE** returns to the known current episode or saved position.
-- **NEXT EPISODE** advances to the next unwatched episode when one is known,
-  including across a season boundary.
-
-You can always choose a season and episode manually instead.
+For a series, open the series from Search or My Library and use the available
+resume or playback action. You can also choose a season and episode manually
+through the normal series browsing flow. PocketCinema does not expose a
+separate automatic episode-advance screen or action in the supported v1 UI.
 
 > [SCREENSHOT SHOT-09]
-> **Series season screen showing CONTINUE or NEXT EPISODE.**
-> The final image should make the difference between the automatic action and
-> manual season browsing clear.
+> **Continue Watching with saved resume items.**
+> The final image should show the actual list and its `A OPEN`, `X REMOVE`, and
+> `B BACK` controls.
 
 > [SCREENSHOT SHOT-10]
 > **Episode list for a selected season.**

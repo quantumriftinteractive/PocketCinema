@@ -15,7 +15,7 @@ PocketCinema Server is also called **PCServer** in this manual.
 5. [Watch your first movie](first-movie.md).
 
 After setup, see [Search](search.md), [My Library](library.md), [Continue
-Watching and Next Episode](continue-watching.md), [Choose a Source](sources.md),
+Watching](continue-watching.md), [Choose a Source](sources.md),
 [Subtitles](subtitles.md), [Live TV](live-tv.md), and [Settings](settings.md).
 
 If something goes wrong, start with [Troubleshooting](troubleshooting.md).

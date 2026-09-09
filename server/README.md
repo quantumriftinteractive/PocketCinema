@@ -2,10 +2,11 @@
 
 Minimal stdlib-only Python server for the Miyoo JSON communication proof.
 
-Run on the gaming PC Tailscale address:
+Run with the PCServer host address for the network path the Miyoo will use:
 
 ```powershell
-python .\server\pocketcinema_server.py --host 100.85.171.67 --port 8755
+$env:POCKETCINEMA_HOST = "PCSERVER_IP"
+python .\server\pocketcinema_server.py --host $env:POCKETCINEMA_HOST --port 8755
 ```
 
 or:

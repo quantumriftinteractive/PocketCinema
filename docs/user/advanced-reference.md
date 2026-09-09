@@ -30,9 +30,9 @@ state remain on the PCServer host. PocketCinema exposes only the safe,
 device-facing results needed for browsing and playback. My Library is read-only
 from PocketCinema.
 
-Useful deeper notes remain in the repository's [Stremio account
-documentation](../stremio-account-addons.md) and [local Stremio Service backend
-documentation](../local-stremio-service-backend.md).
+Useful deeper notes remain in the repository's developer documentation on
+Stremio accounts and the local Stremio Service backend; those documents are
+outside the normal public manual export.
 
 ## Playback and conversion
 

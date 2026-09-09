@@ -1,5 +1,5 @@
 param(
-  [string]$HostAddress = "100.85.171.67",
+  [string]$HostAddress = $env:POCKETCINEMA_HOST,
   [int]$Port = 8755,
   [string]$PublicHost = $HostAddress,
   [string]$StremioServiceUrl = "http://127.0.0.1:11470",
@@ -13,6 +13,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
+if (-not $HostAddress) {
+  throw "Set POCKETCINEMA_HOST or pass -HostAddress"
+}
 if (-not $FFprobePath) {
   $stremioFFprobe = Join-Path $env:LOCALAPPDATA "Programs\LNV\Stremio-4\ffprobe.exe"
   if (Test-Path -LiteralPath $stremioFFprobe) {
