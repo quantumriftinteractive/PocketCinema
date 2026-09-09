@@ -31,6 +31,8 @@ app = BUNDLE(
         "CFBundleDisplayName": "PocketCinema Server",
         "CFBundleName": "PocketCinema Server",
         "CFBundleIdentifier": "com.quantumriftinteractive.pocketcinema.server",
+        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleVersion": "1",
         "NSHighResolutionCapable": True,
     },
 )

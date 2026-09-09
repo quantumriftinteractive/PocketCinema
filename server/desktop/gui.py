@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import ctypes
 import sys
 import threading
 import tkinter as tk
@@ -23,6 +24,54 @@ from .config import (
 from .lifecycle import PCServerLifecycle, sanitize_log_line
 from .tray import SERVER_ICON, WindowsTray, menu_state, tray_title
 from .workers import DesktopWorkers
+
+
+def _set_macos_application_icon(path):
+    """Restore the bundle icon after Tk's macOS iconphoto handling."""
+    if sys.platform != "darwin":
+        return
+    objc = ctypes.CDLL("/usr/lib/libobjc.A.dylib")
+    objc.objc_getClass.argtypes = [ctypes.c_char_p]
+    objc.objc_getClass.restype = ctypes.c_void_p
+    objc.sel_registerName.argtypes = [ctypes.c_char_p]
+    objc.sel_registerName.restype = ctypes.c_void_p
+    msg_send = objc.objc_msgSend
+    msg_send.restype = ctypes.c_void_p
+
+    def send(receiver, selector, *args):
+        msg_send.argtypes = [ctypes.c_void_p, ctypes.c_void_p] + [ctypes.c_void_p] * len(args)
+        return msg_send(receiver, selector, *args)
+
+    def selector(name):
+        return objc.sel_registerName(name.encode("ascii"))
+
+    ns_application = objc.objc_getClass(b"NSApplication")
+    ns_image = objc.objc_getClass(b"NSImage")
+    ns_string = objc.objc_getClass(b"NSString")
+    path_bytes = ctypes.create_string_buffer(
+        str(path).encode(sys.getfilesystemencoding() or "utf-8") + b"\0"
+    )
+    path_string = send(
+        ns_string,
+        selector("stringWithUTF8String:"),
+        ctypes.cast(path_bytes, ctypes.c_void_p),
+    )
+    image = send(send(ns_image, selector("alloc")), selector("initWithContentsOfFile:"), path_string)
+    if image:
+        send(send(ns_application, selector("sharedApplication")), selector("setApplicationIconImage:"), image)
+
+
+def _set_macos_regular_activation_policy():
+    if sys.platform != "darwin":
+        return
+    try:
+        from AppKit import (
+            NSApplication,
+            NSApplicationActivationPolicyRegular,
+        )
+    except ImportError:
+        return
+    NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyRegular)
 
 
 def configure_tk_theme(root):
@@ -88,6 +137,9 @@ class PocketCinemaDesktop:
         self._last_logs = ()
         self._closing = False
         self._busy = False
+        self._poll_after_id = None
+        self._pump_after_id = None
+        self._menu_after_id = None
         self.workers = DesktopWorkers()
         self.tray = None
         self._tray_failed = False
@@ -98,6 +150,9 @@ class PocketCinemaDesktop:
             self.values[name].trace_add("write", self._on_route_setting_changed)
         self.refresh_capabilities()
         self.refresh_network_summary()
+        if sys.platform == "darwin":
+            _set_macos_regular_activation_policy()
+            self._menu_after_id = self.root.after(1000, self._configure_macos_menu)
         if sys.platform == "win32":
             try:
                 self.tray = WindowsTray(
@@ -123,19 +178,14 @@ class PocketCinemaDesktop:
         self.root.title("PocketCinema Server")
         configure_tk_theme(self.root)
         if sys.platform == "darwin":
-            mac_menu = tk.Menu(self.root, tearoff=False)
-            app_menu = tk.Menu(mac_menu, tearoff=False)
-            app_menu.add_command(label="Show PocketCinema Server", command=self.show)
-            app_menu.add_separator()
-            app_menu.add_command(label="Quit PocketCinema Server", command=self.quit)
-            mac_menu.add_cascade(label="PocketCinema Server", menu=app_menu)
-            self.root.configure(menu=mac_menu)
-            self._mac_menu = mac_menu
+            self.root.createcommand("::tk::mac::Quit", self.quit)
+            self._configure_macos_menu()
         icon = SERVER_ICON
         try:
             self.root.iconphoto(True, tk.PhotoImage(file=str(icon)))
         except tk.TclError:
             pass
+        _set_macos_application_icon(icon)
         self.root.minsize(760, 650)
         outer = ttk.Frame(self.root, padding=18)
         outer.grid(sticky="nsew")
@@ -263,6 +313,22 @@ class PocketCinemaDesktop:
         outer.rowconfigure(row, weight=1)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.on_listen_mode_changed()
+
+    def _configure_macos_menu(self):
+        """Remove Tk's default utility menus from the macOS menu bar."""
+        self._menu_after_id = None
+        try:
+            from AppKit import NSApplication
+            main_menu = NSApplication.sharedApplication().mainMenu()
+            if main_menu is None:
+                return
+            for title in ("File", "Edit", "Help"):
+                item = main_menu.itemWithTitle_(title)
+                if item is not None:
+                    main_menu.removeItem_(item)
+        except (ImportError, AttributeError):
+            # A non-Cocoa Tk build has no native application menu to adjust.
+            return
 
     @staticmethod
     def _status_row(parent, row, label, variable):
@@ -631,6 +697,7 @@ class PocketCinemaDesktop:
             self.on_listen_mode_changed()
 
     def poll(self):
+        self._poll_after_id = None
         if self._closing:
             return
         if self.instance and self.instance.restore_requested():
@@ -650,9 +717,10 @@ class PocketCinemaDesktop:
             self._tray_failed = True
             self.show()
             messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
-        self.root.after(700, self.poll)
+        self._poll_after_id = self.root.after(700, self.poll)
 
     def pump_workers(self):
+        self._pump_after_id = None
         if self._closing:
             if self.workers.idle():
                 if self._quit_error:
@@ -665,12 +733,27 @@ class PocketCinemaDesktop:
                     self.poll()
                     self.root.after(50, self.pump_workers)
                     return
+                self._cancel_after_callbacks()
                 self.root.destroy()
                 return
+            self._pump_after_id = self.root.after(50, self.pump_workers)
+            return
         else:
             self.workers.drain()
             self.workers.idle()
-        self.root.after(50, self.pump_workers)
+        self._pump_after_id = self.root.after(50, self.pump_workers)
+
+    def _cancel_after_callbacks(self):
+        for name in (
+            "_poll_after_id", "_pump_after_id", "_menu_after_id",
+        ):
+            after_id = getattr(self, name, None)
+            if after_id is not None:
+                try:
+                    self.root.after_cancel(after_id)
+                except tk.TclError:
+                    pass
+                setattr(self, name, None)
 
     def show(self):
         if self._closing:
@@ -688,8 +771,6 @@ class PocketCinemaDesktop:
                 self.tray.notify_hidden()
             else:
                 messagebox.showerror("System tray unavailable", "The window will stay open; use Quit to exit.")
-        elif sys.platform == "darwin":
-            self.root.withdraw()
         else:
             self.quit()
 
@@ -710,8 +791,6 @@ class PocketCinemaDesktop:
                 self._quit_error = sanitize_log_line(str(exc)) or "Could not finish shutdown; retry Quit."
 
         self.workers.start(worker)
-
-
 def main():
     instance = None
     if sys.platform == "win32":
