@@ -364,8 +364,8 @@ install, or final release acceptance PASS.
 
 The corresponding-source release asset is now assembled and verified outside Git:
 `C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-corresponding-source.zip`, 71 files,
-44,451,360 bytes, SHA-256
-`6edc880455ebee6eb881376d7a53544433ce2162e9b0f9ccbec63f7021175ba8`. It contains
+44,451,296 bytes, SHA-256
+`75e9cd126ac893d619926f69c808b71081d56dc5f5fd7f4dd48d442bde30cc3b`. It contains
 the exact 16 source archives, 19 patches, licenses, notices, and manifests while
 excluding compiler/SDK/sysroot/runtime/selector/font binaries and user state.
 

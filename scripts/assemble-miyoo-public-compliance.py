@@ -68,7 +68,7 @@ def main() -> int:
     (out / "font").mkdir()
 
     recovery = json.loads((root / "source-info/dependency-source-recovery.json").read_text(encoding="utf-8"))
-    manifest = {"format": 1, "generated_from": str(root), "components": []}
+    manifest = {"format": 1, "generated_from": "verified external archival input set", "components": []}
 
     ffmpeg_archive = root / "upstream/ffmpeg/ffmpeg-2.4.14.tar.xz"
     ffmpeg = {
@@ -124,7 +124,8 @@ def main() -> int:
                                     "public_source": "font/PlusJakartaSans.ttf"})
     copy_verified(root / "licenses/PlusJakartaSans-2.6-OFL.txt", out / "licenses/PlusJakartaSans-2.6-OFL.txt")
     (out / "SOURCE-MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (out / "README.md").write_text("""# PocketCinema Miyoo v1 public compliance bundle\n\nThis metadata bundle accompanies the Miyoo runtime. The corresponding-source archives are release assets named and hash-pinned in `SOURCE-MANIFEST.json`; the large private archival input directory is not this bundle. The candidate player sets `LD_LIBRARY_PATH` to `experiments/ffplay/lib` before launching FFplay, so the listed shared libraries are replaceable compatible runtime files. Use the supplied corresponding sources and patches for LGPL modifications.\n\nThis bundle does not contain the compiler, SDK/sysroot, recovered runtime binaries, selector, account configuration, logs, or device state.\n""", encoding="utf-8")
+    source_note = "The corresponding-source archives are included under `corresponding-source/`." if args.include_archives else "The corresponding-source archives are separate release assets named and hash-pinned in `SOURCE-MANIFEST.json`."
+    (out / "README.md").write_text(f"""# PocketCinema Miyoo v1 public compliance bundle\n\nThis bundle accompanies the Miyoo runtime. {source_note} The large private archival input directory is not this bundle. The candidate player sets `LD_LIBRARY_PATH` to `experiments/ffplay/lib` before launching FFplay, so the listed shared libraries are replaceable compatible runtime files. Use the supplied corresponding sources and patches for LGPL modifications.\n\nThis bundle does not contain the compiler, SDK/sysroot, recovered runtime binaries, selector, account configuration, logs, or device state.\n""", encoding="utf-8")
     notices = ["# PocketCinema Miyoo v1 third-party notices", "", "PocketCinema ships FFplay and the shared libraries listed below. Corresponding source archives, patches, and hashes are identified in `SOURCE-MANIFEST.json`. LGPL components are dynamically linked; users may replace compatible shared libraries, subject to normal ABI compatibility. No technical restriction is intentionally added to prevent replacement or debugging of LGPL modifications.", ""]
     for component in manifest["components"]:
         notices += [f"## {component['component']} {component['version']}", f"- License: {component['license']}", "- Copyright/attribution: preserved in the accompanying authoritative license text for this component.", f"- Runtime: {component.get('runtime', 'font asset')}", f"- Corresponding source: `{component['public_source']}`", ""]

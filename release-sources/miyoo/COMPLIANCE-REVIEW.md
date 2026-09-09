@@ -21,8 +21,8 @@ and hash-pinned by `SOURCE-MANIFEST.json`; they were not copied into Git.
 
 The corresponding-source release asset has now been assembled and verified as
 `C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-corresponding-source.zip`: 71 files,
-44,451,360 bytes, SHA-256
-`6edc880455ebee6eb881376d7a53544433ce2162e9b0f9ccbec63f7021175ba8`. It contains
+44,451,296 bytes, SHA-256
+`75e9cd126ac893d619926f69c808b71081d56dc5f5fd7f4dd48d442bde30cc3b`. It contains
 16 source archives and 19 patches, with no compiler, SDK, sysroot, runtime binary,
 font binary, selector, or user state.
 
