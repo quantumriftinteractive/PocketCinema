@@ -1,7 +1,7 @@
 [
   {
     "package": "sdl",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/sdl/0001-use-correct-directfb-config.patch": {
@@ -31,7 +31,7 @@
   },
   {
     "package": "libass",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libass/libass.hash": {
@@ -55,7 +55,7 @@
   },
   {
     "package": "bzip2",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/bzip2/0001-build-objects-twice.patch": {
@@ -84,7 +84,7 @@
   },
   {
     "package": "libzlib",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libzlib/libzlib.hash": {
@@ -108,7 +108,7 @@
   },
   {
     "package": "fontconfig",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/fontconfig/0001-Fix-the-build-issue-with-enable-static.patch": {
@@ -138,7 +138,7 @@
   },
   {
     "package": "freetype",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/freetype/freetype.hash": {
@@ -165,7 +165,7 @@
   },
   {
     "package": "libfribidi",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libfribidi/libfribidi.hash": {
@@ -189,7 +189,7 @@
   },
   {
     "package": "harfbuzz",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/harfbuzz/0001-meson.build-check-for-pthread.h.patch": {
@@ -216,7 +216,7 @@
   },
   {
     "package": "libglib2",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libglib2/0001-fix-compile-time-atomic-detection.patch": {
@@ -253,7 +253,7 @@
   },
   {
     "package": "pcre",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/pcre/0001-Kill-compatibility-bits.patch": {
@@ -283,7 +283,7 @@
   },
   {
     "package": "expat",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/expat/expat.hash": {
@@ -309,7 +309,7 @@
   },
   {
     "package": "libpng",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libpng/0001-Disable-pngfix-and-png-fix-itxt.patch": {
@@ -338,7 +338,7 @@
   },
   {
     "package": "libffi",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/libffi/0001-Fix-installation-location-of-libffi.patch": {
@@ -370,7 +370,7 @@
   },
   {
     "package": "util-linux",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/util-linux/0001-libuuid-include-c-h-to-cover-restrict-keyword.patch": {
@@ -409,7 +409,7 @@
   },
   {
     "package": "tslib",
-    "exact_sdk_patch_status": "D: unknown",
+    "exact_sdk_patch_status": "C: Buildroot/package version corroborated; exact source artifact and applied patch set unproven",
     "candidate_buildroot": "2021.11",
     "files": {
       "buildroot-2021.11/package/tslib/tslib.hash": {

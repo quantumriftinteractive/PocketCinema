@@ -34,8 +34,10 @@ Miyoo v1 folder from an explicit prebuilt runtime input without the ARM sysroot
 or legacy-state migration. Redistribution remains blocked pending exact FFplay
 2.4.14 source/configuration, bundled-library provenance, font provenance, and
 the required notices/source-offer material. The Windows FFmpeg source/configuration
-and final patch are now preserved and byte-verified; exact SDK library source
-variants and the font upstream match remain open. See
+and final patch are now preserved and byte-verified. SDK/dependency provenance is
+classified C: Buildroot 2021.11/Steward family and package recipes are
+corroborated, but exact SDK configuration, applied patches, source archives, and
+the font upstream match remain open. See
 [provenance assessment](release-sources/miyoo/PROVENANCE.md). Fresh-install
 physical acceptance has not run.
 Milestone 23 now makes a

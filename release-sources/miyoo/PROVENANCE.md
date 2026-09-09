@@ -52,7 +52,9 @@ records the same 753,300,837-byte asset, created March 1, 2024, with no digest.
 This strongly identifies the SDK family and probable download artifact; equal
 size is not a cryptographic match. No replacement SDK binary was downloaded.
 This is a Steward Miyoo Mini SDK candidate, not proven to be an OnionOS-built
-SDK or the distinct `onion_toolchain.tar.gz` release asset.
+SDK or the distinct `onion_toolchain.tar.gz` release asset. SDK classification: **C**
+(family/version strongly corroborated, exact final configuration and patch set
+unproven).
 
 [Steward's Parasyte Buildroot instructions](https://steward-fu.github.io/website/handheld/miyoo_mini_parasyte_build_buildroot.htm)
 name Buildroot 2021.11, the external Arm 8.2-2018.08 toolchain and `/opt/mmiyoo`.
@@ -78,7 +80,9 @@ replace the missing original configuration. Download URLs and hashes are in
 
 Classification: A = proven stock upstream; B = proven Buildroot-patched;
 C = proven Miyoo/Onion-specific patches; D = exact source variant unknown.
-All recovered binaries remain **D**. The candidate recipe column shows what
+All recovered binaries are classified **C**: Buildroot/package versions and candidate
+recipes are corroborated, but exact source artifacts and applied patch sets are not
+proven. The candidate recipe column shows what
 stock Buildroot 2021.11 would apply, not what was proven applied to these bytes.
 Zero package patches does not prove A; recipe hooks, global patches, manual
 changes and configuration remain possible. No C patch set was established.
@@ -91,21 +95,21 @@ Header notices are evidence, not a claim of complete package-wide attribution.
 
 | Library/version | Class | Candidate recipe patches | Local license/copyright evidence | Still needed from exact source package |
 | --- | --- | --- | --- | --- |
-| SDL 1.2.15 | D | 2: DirectFB config, libX11 build | `usr/include/SDL/SDL.h`: LGPL notice | SDL-1.2.15 source, applied patches, full `COPYING` |
-| libass 0.15.2 | D | 0 | `usr/include/ass/ass.h`: ISC notice | libass-0.15.2 source and package `COPYING` |
-| bzip2 1.0.8 | D | 2: object/build-system changes | `usr/include/bzlib.h`: copyright, reference to LICENSE | bzip2-1.0.8 source/patches, `LICENSE` |
-| zlib 1.2.11 | D | 0 (`libzlib`) | `usr/include/zlib.h`: zlib notice | zlib-1.2.11 source, package `README` license |
-| Fontconfig 2.13.1 | D | 2: static build/pthread | `usr/include/fontconfig/fontconfig.h`: permission notice | fontconfig-2.13.1 source/patches, `COPYING` |
-| FreeType 2.10.4 | D | 0 | `usr/include/freetype2/freetype/freetype.h`: FTL/GPL reference | freetype-2.10.4 source; `docs/LICENSE.TXT`, `docs/FTL.TXT`, `docs/GPLv2.TXT` |
-| FriBidi 1.0.10 | D | 0 | `usr/include/fribidi/fribidi.h`: LGPL notice | fribidi-1.0.10 source, `COPYING` |
-| HarfBuzz 3.0.0 | D | 1: pthread header detection | `usr/include/harfbuzz/hb.h`: permission notice | harfbuzz-3.0.0 source/patch, aggregate `COPYING` including ucdn |
-| GLib 2.68.4 | D | 4: atomic detection, C++ requirement, compiler flag, pkg-config | `usr/include/glib-2.0/glib.h`: LGPL notice | glib-2.68.4 source/patches, `COPYING` |
-| PCRE 8.45 | D | 2: compatibility bits, C++ tests | `usr/share/doc/pcre/LICENCE`: full license; `COPYING` only points to it | pcre-8.45 source/patches; preserve recovered `LICENCE` |
-| Expat 2.4.1 | D | 0 | `usr/include/expat.h`: MIT notice | expat-2.4.1 source, aggregate `COPYING` |
-| libpng 1.6.37 | D | 1: disable pngfix tools | `usr/include/libpng16/png.h`: license text | libpng-1.6.37 source/patch, package `LICENSE` |
-| libffi 3.4.2 | D | 3: install location, two MIPS fixes | `usr/include/ffi.h`: MIT notice | libffi-3.4.2 source/patches, package `LICENSE`; ARM applicability assessed later |
-| libuuid 2.37.2 | D | 2 util-linux patches, one specifically libuuid | `usr/include/uuid/uuid.h`: BSD notice | util-linux-2.37.2 source/patches, `README.licensing`, `libuuid/COPYING`; assess libuuid separately from util-linux programs |
-| tslib 1.22 | D | 0 | `usr/include/tslib.h`: LGPL notice | tslib-1.22 source, `COPYING`; separate library/program terms |
+| SDL 1.2.15 | C | 2: DirectFB config, libX11 build | `usr/include/SDL/SDL.h`: LGPL notice | SDL-1.2.15 source, applied patches, full `COPYING` |
+| libass 0.15.2 | C | 0 | `usr/include/ass/ass.h`: ISC notice | libass-0.15.2 source and package `COPYING` |
+| bzip2 1.0.8 | C | 2: object/build-system changes | `usr/include/bzlib.h`: copyright, reference to LICENSE | bzip2-1.0.8 source/patches, `LICENSE` |
+| zlib 1.2.11 | C | 0 (`libzlib`) | `usr/include/zlib.h`: zlib notice | zlib-1.2.11 source, package `README` license |
+| Fontconfig 2.13.1 | C | 2: static build/pthread | `usr/include/fontconfig/fontconfig.h`: permission notice | fontconfig-2.13.1 source/patches, `COPYING` |
+| FreeType 2.10.4 | C | 0 | `usr/include/freetype2/freetype/freetype.h`: FTL/GPL reference | freetype-2.10.4 source; `docs/LICENSE.TXT`, `docs/FTL.TXT`, `docs/GPLv2.TXT` |
+| FriBidi 1.0.10 | C | 0 | `usr/include/fribidi/fribidi.h`: LGPL notice | fribidi-1.0.10 source, `COPYING` |
+| HarfBuzz 3.0.0 | C | 1: pthread header detection | `usr/include/harfbuzz/hb.h`: permission notice | harfbuzz-3.0.0 source/patch, aggregate `COPYING` including ucdn |
+| GLib 2.68.4 | C | 4: atomic detection, C++ requirement, compiler flag, pkg-config | `usr/include/glib-2.0/glib.h`: LGPL notice | glib-2.68.4 source/patches, `COPYING` |
+| PCRE 8.45 | C | 2: compatibility bits, C++ tests | `usr/share/doc/pcre/LICENCE`: full license; `COPYING` only points to it | pcre-8.45 source/patches; preserve recovered `LICENCE` |
+| Expat 2.4.1 | C | 0 | `usr/include/expat.h`: MIT notice | expat-2.4.1 source, aggregate `COPYING` |
+| libpng 1.6.37 | C | 1: disable pngfix tools | `usr/include/libpng16/png.h`: license text | libpng-1.6.37 source/patch, package `LICENSE` |
+| libffi 3.4.2 | C | 3: install location, two MIPS fixes | `usr/include/ffi.h`: MIT notice | libffi-3.4.2 source/patches, package `LICENSE`; ARM applicability assessed later |
+| libuuid 2.37.2 | C | 2 util-linux patches, one specifically libuuid | `usr/include/uuid/uuid.h`: BSD notice | util-linux-2.37.2 source/patches, `README.licensing`, `libuuid/COPYING`; assess libuuid separately from util-linux programs |
+| tslib 1.22 | C | 0 | `usr/include/tslib.h`: LGPL notice | tslib-1.22 source, `COPYING`; separate library/program terms |
 
 Version evidence is installed `.pc` data except bzip2's header and FreeType's
 2.10.4 header macros (`freetype2.pc` reports its separate 23.4.17 numbering).

@@ -336,8 +336,9 @@ were verified. The source staging script was tested without compiling. The
 original recovered tree, player, compiler, sysroot and font remain untouched.
 All fifteen deployment library files match the recovered SDK archive.
 
-The SDK is strongly linked to Steward's Miyoo Mini / Buildroot 2021.11 family;
-its exact configuration and applied library patches remain unproven. Full PCRE
+The SDK is classified provenance C: strongly linked to Steward's Miyoo Mini /
+Buildroot 2021.11 family, with candidate package recipes and source hashes, but
+its exact final configuration and applied library patches remain unproven. Full PCRE
 LICENCE and local header notices were located. Official Tokotype history and
 release assets did not contain the exact recovered font. See
 `release-sources/miyoo/PROVENANCE.md` for source/license evidence, hashes,
@@ -349,7 +350,8 @@ evidence is inherited; redistribution remains blocked.
 
 Next provenance action: recover/attest the exact SDK configuration and dependency
 sources/patches, resolve the exact font processing/source chain, and arrange
-controlled external backups. An independent FFplay reproduction build is a
+controlled external backups using `release-sources/miyoo/ARCHIVAL-PLAN.md` and
+`archival-manifest.json`. An independent FFplay reproduction build is a
 separate future gate and was not authorized in this preservation task.
 
 ### Prior Windows system-tray lifecycle handoff
