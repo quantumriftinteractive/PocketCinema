@@ -1193,6 +1193,80 @@ playback, direct and converted playback regressions remain unchanged, and a
 forced UI failure returns to the physically confirmed legacy path without stale
 processes or files.
 
+## Post-v1 Backlog
+
+PocketCinema v1.0.0 is feature-frozen and its accepted Miyoo package is sealed.
+The items below are post-v1 planning only. None should delay v1 unless a new
+finding becomes a genuine P0 release blocker.
+
+### P0 — Release Follow-up / Real User Blockers
+
+No additional P0 is currently recorded. Reserve this priority for a post-v1
+issue that breaks normal installation, connection, supported playback, or
+cleanup; causes a crash or hang; creates a serious packaging problem; or causes
+major user-facing confusion.
+
+### P1 — Selector Completion
+
+The shipped selector remains bounded at `MAX_ITEMS = 64`. The local
+`client/miyoo/sdl_selector.c` 64-to-128 edit is an intentionally uncommitted
+experiment and is not part of v1 or a complete implementation.
+
+- Complete and review selector capacity work.
+- Rebuild the shipped ARM selector binary and physically validate larger lists
+  on the Miyoo.
+- Verify navigation, performance, memory, and cancellation behavior.
+- Decide whether 128 is sufficient or whether paging/virtualized lists are the
+  better long-term solution.
+
+### P1 — UI Reshaping / UX Cleanup
+
+Review Home, Search, My Library, Continue Watching, Live TV, source selection,
+audio/subtitle flow, Settings, and connection/setup as one coherent Miyoo UI.
+Improve hierarchy, spacing, focus states, long-title display, navigation
+clarity, user-facing labels, and the prototype/terminal-menu feel while
+preserving controller-first usability and Miyoo performance.
+
+### P1 — Continue Watching / Series UX
+
+v1 exposes resume items with `A OPEN`, `X REMOVE`, and `B BACK`; no distinct
+Next Episode action or screen was observed in the accepted v1 UI. Post-v1 work
+should decide whether that action belongs in PocketCinema, clarify resume state,
+improve series continuation and episode navigation, and review remove-from-
+Continue interaction and confirmation behavior.
+
+### P2 — Subtitle / Audio UX
+
+Make track selection clearer and more deterministic across playback paths,
+including paths without a dedicated subtitle-selection screen. Improve active
+track/language indication and investigate the known roughly 60-second
+subtitle-package fallback delay. Preserve validated subtitle rendering and
+font-size behavior.
+
+### P2 — Connection / First-run Polish
+
+Simplify Local versus Remote setup, improve PCServer discovery and status
+feedback, improve connection-failure messages, and reduce manual IP:PORT
+friction where safe. Tailscale remains optional and standalone; its state and
+lifecycle must not be merged into PocketCinema.
+
+### P2 — My Library Improvements
+
+My Library remains read-only in v1: PocketCinema does not add or remove
+Stremio library items. Improve Movies/Series navigation, clarify those
+read-only semantics, investigate `????` year metadata, and consider sorting or
+filtering if the selector/UI architecture supports it cleanly.
+
+### P3 — Larger Post-v1 Ideas
+
+Keep these as lower-priority ideas rather than first-update commitments:
+
+- remote access/rendezvous without mandatory Tailscale;
+- safer pairing and discovery improvements;
+- richer PCServer desktop UX;
+- automatic update checks; and
+- broader packaging and platform improvements.
+
 ## Deferred Features
 
 These features should begin only after real stream playback and compatibility
