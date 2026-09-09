@@ -75,9 +75,9 @@ PASS: IPv4-preferred Remote presentation, silent server actions, active listen
 mode in the running hover, one native X notification, X/background operation,
 same-window restore and clean Quit. M21/M22 and accepted transport/playback/
 subtitle/account evidence remains inherited under the Production PASS invariant;
-no broad retest is required. The first unsigned Windows x64 one-directory
-candidate is now implemented, automated-tested, and physically PASS on the
-development Windows machine; see
+no broad retest is required. The unsigned Windows x64 one-directory v1.0.0
+candidate is now implemented, focused-audited, and has passed the approved
+FFmpeg/FFprobe hash, launch, metadata, and package-content checks; see
 [`docs/windows-packaging.md`](docs/windows-packaging.md) for build/artifact,
 dependency notices and audit. The packaged running-settings-lock physical gate is
 also PASS: stopped controls are editable, Running shows the explicit lock message
@@ -746,9 +746,9 @@ confirm every version actually shipped and include the applicable notices.
 - [ ] Record Windows code-signing and installer status; for macOS record target
       architecture, Developer ID signing, hardened-runtime, notarization, and
       ticket-stapling status.
-- [ ] Treat FFmpeg and FFprobe as externally detected tools until the exact
-      redistributed builds, configurations, provenance, notices, source
-      obligations, and update process have passed review.
+- [ ] For the Windows v1.0.0 candidate, retain the approved Gyan 9.0.1
+      FFmpeg/FFprobe build configuration, provenance, GPLv3 notices, source,
+      hashes, and update review with the release artifact.
 - [ ] Record `--version` output and build configuration for every bundled
       executable/library.
 - [ ] Preserve source or written source-offer information for LGPL/GPL-covered

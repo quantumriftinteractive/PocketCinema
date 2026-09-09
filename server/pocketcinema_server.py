@@ -39,7 +39,7 @@ except ImportError:
 
 
 CINEMETA_BASE = "https://v3-cinemeta.strem.io"
-SERVER_VERSION = "0.17.0-device-discovery"
+SERVER_VERSION = "1.0.0"
 DEFAULT_TIMEOUT = 15
 MEDIA_TIMEOUT = 30
 BIG_BUCK_BUNNY_ID = "tt1254207"

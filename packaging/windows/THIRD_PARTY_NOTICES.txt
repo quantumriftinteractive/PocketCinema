@@ -1,7 +1,16 @@
 PocketCinema Server Windows candidate - third-party notices
 
 Exact versions and file hashes accompany this file in BUILD_INFO.json and
-SHA256SUMS.txt. No FFmpeg, FFprobe, Stremio or Tailscale executable is included.
+SHA256SUMS.txt. This package includes the static GPLv3 FFmpeg 9.0.1 essentials
+build from Gyan Doshi / gyan.dev at `_internal/media-tools/bin/ffmpeg.exe` and
+`_internal/media-tools/bin/ffprobe.exe`. The corresponding source archive,
+detached signature, build configuration, hashes, and compliance plan are in
+`THIRD_PARTY/FFmpeg/`. Stremio and Tailscale executables are not included.
+
+FFmpeg 9.0.1: GPLv3. The bundled executables enable GPL components and must
+not be described as LGPL-only. Provider: https://www.gyan.dev/ffmpeg/builds/
+Corresponding source: https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz
+Source revision: https://github.com/FFmpeg/FFmpeg/commit/bf1b838f2ab88b4f8fd83443325c782ea0e0f7fa
 
 Python interpreter / standard library: Python Software Foundation license,
 including the component notices in THIRD_PARTY/Python-LICENSE.txt.

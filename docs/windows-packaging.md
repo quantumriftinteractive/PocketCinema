@@ -1,6 +1,6 @@
 # Windows standalone candidate (M23)
 
-Status: **Implemented, automated-tested, packaged developer-machine smoke PASS, and running-settings-lock physical PASS; clean-machine acceptance pending**.
+Status: **v1.0.0 implemented, focused package audit PASS; lifecycle and clean-machine acceptance pending**.
 This is an unsigned Windows x64 one-directory candidate, not a public release
 or completion of M23. The accepted source desktop/tray PASS remains inherited.
 
@@ -21,14 +21,14 @@ py -3.11 -m venv .tmp/windows-build-venv
 ```
 
 The script rejects a non-venv, mismatched Python/Tcl or dependency versions and
-safely replaces only `.tmp/windows-package`. Close test copies from that output
+safely replaces only `.tmp/windows-package-v1.0.0`. Close test copies from that output
 before rebuilding. It does not load or change the user's PocketCinema settings.
 All generated files, icon derivatives, build logs and artifacts remain ignored.
 
 Outputs:
 
-- `.tmp/windows-package/dist/PocketCinema Server/PocketCinema Server.exe`
-- `.tmp/windows-package/PocketCinema-Server-0.17.0-device-discovery-windows-x64.zip`
+- `.tmp/windows-package-v1.0.0/dist/PocketCinema Server/PocketCinema Server.exe`
+- `.tmp/windows-package-v1.0.0/PocketCinema-Server-1.0.0-windows-x64.zip`
 
 End users extract the **entire** ZIP, keep `_internal` beside the executable,
 and launch `PocketCinema Server.exe`. No Python installation, checkout, build
@@ -82,9 +82,12 @@ Frozen child media and fixture roots are explicit empty app-private folders
 there; nothing is copied from development fixtures or media. Mutable files never
 belong beside the executable, including under a protected installation directory.
 
-FFmpeg/FFprobe remain external: existing Stremio per-user installation, PATH,
-or manual selection. Missing tools produce the existing capability state.
-No media-tool binaries are downloaded or bundled. Stremio Service retains the
+The packaged v1.0.0 application includes the approved static GPLv3 FFmpeg 9.0.1
+essentials build under `_internal/media-tools/bin/`. Frozen execution prefers
+these app-local copies, so end users do not need FFmpeg, FFprobe, Stremio, or
+PATH changes. Source/development execution retains the existing Stremio,
+PATH, and manual-tool discovery fallbacks. No media-tool binaries are
+downloaded at runtime. Stremio Service retains the
 loopback default `http://127.0.0.1:11470`, validated overrides and unreachable
 feedback. No firewall or provider behavior changes. Tailscale remains independent;
 interface enumeration is informational and uses the existing hidden Windows
@@ -93,8 +96,8 @@ PowerShell helper. Users do not run PowerShell to launch the application.
 The canonical PNG is included for GUI/tray use. The build derives 16/24/32/48/64/
 128/256-pixel ICO sizes; no new artwork is tracked. Executable metadata uses
 PocketCinema Server / Quantum Rift Interactive. Both displayed versions derive
-from existing `SERVER_VERSION` (`0.17.0-device-discovery`); Windows numeric fields
-use `0.17.0.0`. No separate version source or branding is introduced.
+from existing `SERVER_VERSION` (`1.0.0`); Windows numeric fields use `1.0.0.0`.
+No separate version source or branding is introduced.
 
 ## Dependencies, notices and audit
 
@@ -104,7 +107,8 @@ Runtime dependencies remain pystray 0.19.5, Pillow 12.3.0 and six 1.17.0, plus
 bundled Python/Tcl/Tk. PyInstaller supplies freezing and the GUI bootloader;
 pefile also audits the generated executable. No extra runtime dependency is added.
 
-The artifact includes `THIRD_PARTY_NOTICES.txt` and collected full Python,
+The artifact includes `THIRD_PARTY_NOTICES.txt`, the FFmpeg GPLv3 notice and
+corresponding source material, and collected full Python,
 Tcl/Tk, Pillow, six, pystray and PyInstaller/hook licenses. Tcl's notice is a
 tracked verbatim copy from its `core-8-6-12` source. Python's Windows Microsoft
 runtime conditions are retained. PyInstaller's bootloader exception is included.
@@ -114,7 +118,8 @@ Public redistribution/signing and runtime-update review remain release gates.
 
 The build audits file paths/content and decompressed frozen modules for local
 checkout/home-path leakage; rejects logs, test packages/fixtures, caches, configs,
-credentials and external-tool executables; and verifies the GUI subsystem, both
+credentials and unapproved external-tool executables; requires the approved
+FFmpeg/FFprobe hashes and compliance files; and verifies the GUI subsystem, both
 roles, canonical icon and replaceable Win32 tray source. Collection uses explicit
 assets, not a repository-directory copy. Required standard-library DLLs/modules,
 Tcl/Tk scripts and Pillow assets are expected runtime content.
@@ -134,7 +139,7 @@ exact-owned-child Quit cleanup. The clean-machine gate remains **PENDING**.
 
 ```powershell
 & ./.tmp/windows-build-venv/Scripts/python.exe -m unittest server.test_desktop_runtime server.test_desktop server.test_desktop_tray server.test_desktop_refinements server.test_desktop_notifications -q
-& ./.tmp/windows-build-venv/Scripts/python.exe scripts/test-windows-package.py --gui --archive .tmp/windows-package/PocketCinema-Server-0.17.0-device-discovery-windows-x64.zip
+& ./.tmp/windows-build-venv/Scripts/python.exe scripts/test-windows-package.py --archive .tmp/windows-package-v1.0.0/PocketCinema-Server-1.0.0-windows-x64.zip
 ```
 
 The native test briefly moves/restores the mouse inside its own tray menu;
@@ -168,12 +173,12 @@ GUI/tray/settings-lock PASS evidence remains inherited.
 
 ## Next physical gate and remaining release work
 
-The packaged developer-machine smoke, running-settings-lock confirmation, and
-focused stream-search no-console physical check are complete PASS gates and must
-not be repeated unless later work materially affects those paths. Clean-Windows
-acceptance remains pending. Subtitle font-size settings is the next intended
-small client feature; do not reopen playback, subtitle, account,
-Remote streaming or M21/M22 matrices for this documentation update.
+The corrected v1.0.0 package-content, hash, metadata, tool-launch, and bundled
+resolution checks are PASS. The packaged developer-machine lifecycle smoke,
+running-settings-lock confirmation, and focused stream-search no-console
+physical check remain inherited or pending according to their existing evidence
+and must not be broadly repeated. Clean-Windows acceptance remains pending. The
+next gate is the focused lifecycle smoke against this corrected candidate.
 
 Later, a clean supported Windows installation must verify no Python/repository/
 build-tool/launch-script requirement, normal launch/icon/no console, GUI/tray

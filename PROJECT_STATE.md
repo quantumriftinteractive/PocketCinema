@@ -425,24 +425,25 @@ Validation: 28 focused notification/mode/tray/lifecycle tests, Python compilatio
 and diff checks passed. Existing tray, silent subprocess, route presentation,
 Local/Remote and M21/M22 evidence remains inherited.
 
-Windows standalone packaging is implemented as an unsigned PyInstaller
-one-directory x64 candidate. One windowed EXE dispatches the GUI or explicit
+Windows v1.0.0 packaging correction is implemented as an unsigned PyInstaller
+one-directory x64 candidate. The windowed EXE dispatches the GUI or explicit
 `--server-child` role before GUI initialization; inherited private pipes retain
-sanitized logs and clean exact-owned-child shutdown. Frozen resources are bundled
-and writable paths remain under the existing per-user PocketCinema root.
-FFmpeg/FFprobe remain externally detected; Stremio and Tailscale are not bundled
-or managed. See `docs/windows-packaging.md` for the reproducible build, dependency
-notices, artifact audit, regression-impact matrix and acceptance procedure.
+sanitized logs and clean exact-owned-child shutdown. Frozen resources remain
+under the existing per-user PocketCinema root. The approved static GPLv3
+FFmpeg/FFprobe 9.0.1 executables are bundled under the app-local
+`media-tools/bin/` path and preferred by frozen runtime resolution; Stremio and
+Tailscale remain unbundled and unmanaged.
 
-Validation: 68 focused desktop/runtime tests passed. The real frozen child and
-native GUI/tray lifecycle are automated-tested with isolated settings; the
-packaged developer-machine physical smoke is PASS, while clean-machine acceptance
-remains pending. The older Python 3.11.0/Tcl-Tk 8.6.12
-candidate runtime is pinned to measured build inputs and needs updating/review
-before public release.
+The focused v1.0.0 package audit passed: version and artifact naming, approved
+tool hashes, FFmpeg/FFprobe launches, BUILD_INFO bundled-media metadata,
+compliance material, package contents, and local-path scan. The package is
+`.tmp/windows-package-v1.0.0/PocketCinema-Server-1.0.0-windows-x64.zip`.
+The old 0.17.0 candidate remains preserved separately. The focused lifecycle
+smoke and clean-machine acceptance remain pending; the unsigned package and
+older Python 3.11.0/Tcl-Tk 8.6.12 runtime still require public-release review.
 
-Next exact action: continue the provenance gates above, then remaining M23
-release/distribution gates. The focused Windows
+Next exact action: run the focused Windows lifecycle smoke against the corrected
+v1.0.0 candidate, then remaining M23 clean-machine and distribution gates. The focused Windows
 stream-search, Miyoo Movie/Series, subtitle font-size, My Library, and Next
 Episode / Continue Series gates are physical PASS. The source tray UX and
 packaged Windows smoke gates are physical PASS. Production PASS and Impact-First

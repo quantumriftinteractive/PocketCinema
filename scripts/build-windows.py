@@ -16,10 +16,18 @@ import tkinter
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / ".tmp" / "windows-package"
+OUTPUT = ROOT / ".tmp" / "windows-package-v1.0.0"
 CONFIG = ROOT / "packaging" / "windows"
 PYTHON_VERSION = "3.11.0"
 TCL_VERSION = "8.6.12"
+MEDIA_INPUT = Path(os.environ.get(
+    "POCKETCINEMA_WINDOWS_FFMPEG_INPUT",
+    str(Path.home() / "PocketCinema-Windows-v1.0.0-release-inputs" / "ffmpeg"),
+))
+MEDIA_TOOLS = {
+    "ffmpeg.exe": "72A489ECCD008C2EC2C0A5856C5C75BC3D8BBFA90166C4566865C246445E6AA3",
+    "ffprobe.exe": "19202B23C0043F15AD1B7BCE2344F406FD52BD6EFD8F995CE02E7392A1CEC52F",
+}
 
 
 def repository_version():
@@ -33,7 +41,7 @@ def repository_version():
 def clean_output(path):
     # Resolve and check every recursive removal against the fixed build root.
     path = path.resolve()
-    expected = (ROOT / ".tmp" / "windows-package").resolve()
+    expected = OUTPUT.resolve()
     if path != expected or not path.is_relative_to((ROOT / ".tmp").resolve()):
         raise RuntimeError("Refusing to remove a path outside the packaging output")
     if path.exists():
@@ -83,6 +91,16 @@ def prepare_assets(version):
         "StringStruct('ProductVersion'," + repr(version) + ")])]),"
         "VarFileInfo([VarStruct('Translation',[1033,1200])])])", encoding="utf-8",
     )
+    media = assets / "media-tools" / "bin"
+    media.mkdir(parents=True)
+    for name, expected in MEDIA_TOOLS.items():
+        source = MEDIA_INPUT / "runtime-input" / name
+        if not source.is_file():
+            raise RuntimeError(f"Approved bundled media tool is missing: {source}")
+        actual = hashlib.sha256(source.read_bytes()).hexdigest().upper()
+        if actual != expected:
+            raise RuntimeError(f"Approved hash mismatch for {name}: {actual}")
+        shutil.copyfile(source, media / name)
 
 
 def copy_notices(destination):
@@ -100,6 +118,22 @@ def copy_notices(destination):
                 folder = licenses / name
                 folder.mkdir(exist_ok=True)
                 shutil.copyfile(dist.locate_file(entry), folder / entry.name)
+    ffmpeg = destination / "THIRD_PARTY" / "FFmpeg"
+    ffmpeg.mkdir(parents=True)
+    for source_name, destination_name in (
+        ("LICENSES/FFmpeg-LICENSE", "LICENSE"),
+        ("BUILD_INFO.txt", "BUILD_INFO.txt"),
+        ("ORIGIN.txt", "ORIGIN.txt"),
+        ("SOURCE_REFERENCE.txt", "SOURCE_REFERENCE.txt"),
+        ("COMPLIANCE-PLAN.txt", "COMPLIANCE-PLAN.txt"),
+        ("SHA256SUMS", "INPUT-SHA256SUMS.txt"),
+        ("extracted/ffmpeg-9.0.1-essentials_build/README.txt", "Gyan-build-README.txt"),
+    ):
+        shutil.copyfile(MEDIA_INPUT / source_name, ffmpeg / destination_name)
+    source_dir = ffmpeg / "SOURCE"
+    source_dir.mkdir()
+    for name in ("ffmpeg-9.0.1.tar.xz", "ffmpeg-9.0.1.tar.xz.asc"):
+        shutil.copyfile(MEDIA_INPUT / name, source_dir / name)
 
 
 def audit(destination):
@@ -115,12 +149,34 @@ def audit(destination):
                 raise RuntimeError("Local build path leaked into artifact: " + label)
     for path in paths:
         relative = path.relative_to(destination)
-        if forbidden.intersection(relative.parts) or path.name.lower() in {
-            "ffmpeg.exe", "ffprobe.exe", "tailscale.exe", "tailscaled.exe", "stremio.exe",
+        expected_media = {
+            Path("_internal") / "media-tools" / "bin" / name
+            for name in MEDIA_TOOLS
+        }
+        if forbidden.intersection(relative.parts) or (
+            path.name.lower() in {"ffmpeg.exe", "ffprobe.exe"} and relative not in expected_media
+        ) or path.name.lower() in {
+            "tailscale.exe", "tailscaled.exe", "stremio.exe",
             "stremio_account.json", "stream_addons.json", "config.json",
         } or path.suffix.lower() in {".log", ".pdb"}:
             raise RuntimeError("Unexpected development/runtime content in artifact: " + str(relative))
         check_paths(path.read_bytes(), str(relative))
+    media_hashes = {}
+    for name, expected in MEDIA_TOOLS.items():
+        path = destination / "_internal" / "media-tools" / "bin" / name
+        if not path.is_file():
+            raise RuntimeError("Required bundled media tool is missing: " + name)
+        actual = hashlib.sha256(path.read_bytes()).hexdigest().upper()
+        if actual != expected:
+            raise RuntimeError(f"Bundled media tool hash mismatch for {name}: {actual}")
+        media_hashes[name] = actual
+    for required in (
+        destination / "THIRD_PARTY" / "FFmpeg" / "LICENSE",
+        destination / "THIRD_PARTY" / "FFmpeg" / "SOURCE_REFERENCE.txt",
+        destination / "THIRD_PARTY" / "FFmpeg" / "SOURCE" / "ffmpeg-9.0.1.tar.xz",
+    ):
+        if not required.is_file():
+            raise RuntimeError("Required FFmpeg compliance file is missing: " + str(required.relative_to(destination)))
     exe = destination / "PocketCinema Server.exe"
     pe = pefile.PE(str(exe))
     if pe.OPTIONAL_HEADER.Subsystem != 2:
@@ -140,7 +196,8 @@ def audit(destination):
     if not (destination / "_internal" / "pystray" / "_win32.py").is_file():
         raise RuntimeError("Replaceable Win32 tray source missing")
     return {"file_count": len(paths), "frozen_module_count": len(modules), "gui_subsystem": True,
-            "external_media_tools_bundled": False, "local_path_scan": "PASS"}
+            "external_media_tools_bundled": True, "media_tools": media_hashes,
+            "local_path_scan": "PASS"}
 
 
 def main():
@@ -162,6 +219,9 @@ def main():
     for path in source_files:
         if path.is_file():
             source_hash.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + path.read_bytes())
+    source_hash.update(b"approved-media-tools\0")
+    for name, expected in MEDIA_TOOLS.items():
+        source_hash.update(name.encode() + b"\0" + expected.encode() + b"\0")
     info = {"product": "PocketCinema Server", "version": version, "python": PYTHON_VERSION,
             "tcl_tk": TCL_VERSION, "architecture": "Windows x64", "packages": versions,
             "source_inputs_sha256": source_hash.hexdigest(), "audit": result,

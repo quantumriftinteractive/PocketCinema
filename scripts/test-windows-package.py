@@ -224,7 +224,7 @@ def gui_smoke(exe, folder, settings, env, automatic_tools=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--exe", type=Path, default=ROOT / ".tmp/windows-package/dist/PocketCinema Server/PocketCinema Server.exe")
+    parser.add_argument("--exe", type=Path, default=ROOT / ".tmp/windows-package-v1.0.0/dist/PocketCinema Server/PocketCinema Server.exe")
     parser.add_argument("--gui", action="store_true", help="Also exercise native GUI/tray on the interactive desktop")
     parser.add_argument("--archive", type=Path, help="Extract the built ZIP outside the repository and test that copy")
     args = parser.parse_args()

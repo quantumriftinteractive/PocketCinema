@@ -330,6 +330,21 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
         self.assertEqual(status.path, str(tool))
         self.assertEqual(status.source, "Stremio runtime")
 
+    def test_frozen_windows_tool_detection_prefers_bundled_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundled = root / "media-tools" / "bin"
+            bundled.mkdir(parents=True)
+            tool = bundled / "ffmpeg.exe"
+            tool.write_bytes(b"test")
+            with mock.patch("server.desktop.capabilities.frozen", return_value=True), mock.patch(
+                "server.desktop.capabilities.resource_path", side_effect=lambda *parts: root.joinpath(*parts)
+            ):
+                status = detect_tool("ffmpeg", "/manual/ffmpeg.exe", platform="win32")
+        self.assertTrue(status.available)
+        self.assertEqual(status.path, str(tool))
+        self.assertEqual(status.source, "bundled")
+
     def test_stremio_reachable_and_unreachable_status(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), StremioHandler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
