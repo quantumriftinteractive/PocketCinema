@@ -894,7 +894,7 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
         )
         return f"http://{format_http_host(host)}:{self.server.server_port}{path}"
 
-    server_version = "PocketCinema/0.9"
+    server_version = f"PocketCinema/{SERVER_VERSION}"
 
     def refresh_generic_progress_titles(self, items):
         """Repair old client records that saved the app name as the title."""
