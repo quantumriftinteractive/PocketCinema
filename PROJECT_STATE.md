@@ -689,3 +689,9 @@ absent, and generated configuration differs from historical only by workspace
 paths and duplicate equivalent linker flags. Classification is B (configure pass
 with explained non-material differences). A full independent FFplay build is now
 eligible for separate authorization; no build or deployment occurred.
+
+The authorized FFplay-only build and preserved strip completed successfully, but
+the candidate is not byte-identical to known-good. Runtime ELF invariants match,
+while the bounded comparison shows a material `.text` difference (4-byte size
+delta and 746,293 differing bytes). Classification is C; the independent
+reproduction gate remains blocked and no deployment is authorized.

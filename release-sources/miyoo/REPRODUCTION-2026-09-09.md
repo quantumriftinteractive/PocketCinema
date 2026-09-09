@@ -182,3 +182,32 @@ historical `LDFLAGS` environment and preserved `--extra-ldflags` both contribute
 the same entries. No enabled-component or link-library difference was found.
 Classification: **B - CONFIGURE PASS WITH EXPLAINED NON-MATERIAL DIFFERENCES**.
 No build was run. The independent FFplay build can now be separately authorized.
+
+## Independent FFplay build result
+
+The authorized FFplay-only build ran in
+`C:\Users\ysocr\PocketCinema-Miyoo-v1.0.0-reproduction-retry-20260909-sysrootshim`
+with `/c/Users/ysocr/MM--PocketStremio/.tmp/make.exe -j4
+SHELL="C:/Program Files/Git/usr/bin/sh.exe" ffplay`. The target completed
+successfully, linking `ffplay_g`, copying it to `ffplay`, and applying the
+preserved strip command:
+
+```text
+/c/Users/ysocr/MM--PocketStremio/.tmp/arm-gnu/bin/arm-none-linux-gnueabihf-strip ffplay
+```
+
+Pre-strip `ffplay_g`: 3,309,472 bytes,
+SHA-256 `724d193128d119de4fc954bc15d632256d600ef8a52a4146573813228844e82f`.
+Post-strip candidate `ffplay`: 1,577,704 bytes,
+SHA-256 `0898573c1460f5ea36324a1c558d4a163ca76b63fdababf7c66e9e91044af73a`.
+Known-good remains 1,577,708 bytes,
+SHA-256 `3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6`.
+
+The candidate is not byte-identical. Bounded ELF checks show matching ARM32
+interpreter, expected SDL/FreeType/libass/bz2/z/pthread/libc dependencies, no
+RPATH/RUNPATH, GLIBC requirements no higher than 2.28, and no `libgcc_s.so.1`
+dependency. However, `.text` is 4 bytes larger and 746,293 bytes differ across
+the common text range; this is a material executable difference, not metadata or
+path-only variation. Classification: **C - MATERIAL UNEXPLAINED BINARY DIFFERENCE**.
+The independent reproduction gate remains blocked. No further binary archaeology,
+deployment, or selector work was performed.
