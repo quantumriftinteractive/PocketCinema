@@ -119,3 +119,35 @@ generated, so reproduced hashes are unavailable. Classification: **D - CONFIGURE
 STILL FAILS**. No build or deployment is authorized by this result; the next
 action requires separately authorized investigation of the historical
 freetype/pkg-config include-path environment.
+
+## Bounded FreeType/pkg-config investigation
+
+The recovered FreeType header is at
+`<Miyoo-sysroot>/usr/include/freetype2/ft2build.h`, with the required headers
+under the same `freetype2` directory. The recovered `.pc` file is
+`<Miyoo-sysroot>/usr/lib/pkgconfig/freetype2.pc`, SHA-256
+`f1a8d606218ba5265c00da101a56eb41484cf716da312aa21e2f8e0f1dee874f`.
+It declares `prefix=/usr`, `includedir=/usr/include`,
+`Cflags: -I${includedir}/freetype2`, and `Libs: -L${libdir} -lfreetype`.
+
+The archived reproduction shim (`pkg-config-arm.sh`, SHA-256
+`5ea1f5f0380b73a946c8b8e08c4019d77079c92b2ccc3f87a7162ef43b44de2b`) returns
+`-I/usr/include/freetype2` and `-L/usr/lib -lfreetype`; it invokes no external
+pkg-config and defines no `PKG_CONFIG_SYSROOT_DIR`, `PKG_CONFIG_LIBDIR`, or
+path-rewriting behavior. The preserved historical configure log instead shows
+sysrooted FreeType flags. The retained `experiments/ffplay/pkg-config-arm.sh`
+(commit `3c29d15`) computes the repository sysroot and returns those exact
+sysrooted flags. The historical log records no `PKG_CONFIG_SYSROOT_DIR`; its
+visible `PKG_CONFIG_PATH` is the host MSYS default.
+
+A standalone compiler include-search probe confirms that `--sysroot` rewrites
+standard `/usr/include` search locations but does not rewrite an explicit
+`-I/usr/include/freetype2`: that directory resolves to the Git installation and
+is ignored. The exact sysrooted include flag finds `ft2build.h`. Historical
+FreeType configure evidence uses the sysrooted flag and succeeds.
+
+Root cause: **D - wrong pkg-config file selected**. The retry used the archived
+shim with unrooted FreeType output, while historical success used the preserved
+sysroot-aware experiment shim. The single supported correction is to invoke the
+preserved `experiments/ffplay/pkg-config-arm.sh` behavior for the next configure
+retry. No configure retry was run during this investigation.

@@ -673,3 +673,12 @@ GLIBC_2.34 failure, but configure stopped at `freetype2` because the recovered
 pkg-config shim supplied `/usr/include/freetype2` and `ft2build.h` was not found.
 No generated configuration or build output was produced; the reproduction gate
 remains D and a full FFplay build is not authorized.
+
+The bounded FreeType investigation found the recovered header under
+`sysroot/usr/include/freetype2`. The archived reproduction shim emits unrooted
+`-I/usr/include/freetype2`, while historical configure evidence and the retained
+`experiments/ffplay/pkg-config-arm.sh` emit the sysrooted include path. The
+compiler does not rewrite an explicit `-I/usr/...`; classification is D (wrong
+pkg-config file selected). The next configure retry, if separately authorized,
+should invoke the preserved sysroot-aware experiment shim. No retry or build was
+run here.
