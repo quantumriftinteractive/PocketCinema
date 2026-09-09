@@ -545,10 +545,21 @@ class PocketCinemaDesktop:
         settings = None
         if action != "stop":
             try:
-                settings = validate_settings(self.settings())
+                # Starting is an explicit application of the editable route.
+                # Persist it before touching an existing child so a later app
+                # restart cannot revive a previous advertised host.
+                settings = save_settings(
+                    validate_settings(self.settings()), self.data_root
+                )
             except ConfigurationError as exc:
                 self.show()
                 messagebox.showerror("Server cannot start", str(exc))
+                return
+            except OSError as exc:
+                self.show()
+                messagebox.showerror(
+                    "Server cannot start", f"Settings could not be saved: {exc}"
+                )
                 return
         if action in {"start", "restart"} and getattr(self, "_pre_running_values", None) is None:
             values = getattr(self, "values", None)

@@ -52,6 +52,41 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(load_settings(temporary).server_name, "Living Room PCServer")
             self.assertEqual(json.loads((Path(temporary) / "config.json").read_text())["schema_version"], 2)
 
+    def test_saved_current_route_replaces_a_previous_advertised_route(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            save_settings(
+                DesktopSettings(
+                    listen_mode="custom",
+                    listen_address="192.168.20.151",
+                    advertised_mode="manual",
+                    advertised_address="192.168.20.151",
+                ),
+                temporary,
+            )
+            save_settings(
+                DesktopSettings(
+                    listen_mode="custom",
+                    listen_address="100.82.23.65",
+                    advertised_mode="manual",
+                    advertised_address="100.82.23.65",
+                ),
+                temporary,
+            )
+            restored = load_settings(temporary)
+        effective = resolve_network_settings(restored, "100.82.23.65")
+        self.assertEqual(effective.advertised_address, "100.82.23.65")
+        self.assertNotEqual(effective.advertised_address, "192.168.20.151")
+
+    def test_automatic_restart_resolves_the_current_address_not_saved_route(self):
+        settings = DesktopSettings(
+            listen_mode="automatic",
+            advertised_mode="automatic",
+            advertised_address="192.168.20.151",
+        )
+        effective = resolve_network_settings(settings, "100.82.23.65")
+        self.assertEqual(effective.advertised_address, "100.82.23.65")
+        self.assertNotEqual(effective.advertised_address, "192.168.20.151")
+
     def test_new_profile_automatically_derives_a_local_network_address(self):
         effective = resolve_network_settings(DesktopSettings(), "192.0.2.44")
         self.assertEqual(effective.listen_mode, "automatic")

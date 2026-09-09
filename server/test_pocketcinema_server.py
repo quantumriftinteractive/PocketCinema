@@ -426,6 +426,23 @@ class PocketCinemaServerTest(unittest.TestCase):
         payload = self.route_test_play_response(f"unapproved.example:{self.server.server_port}")
         self.assertTrue(payload["url"].startswith(f"http://127.0.0.1:{self.server.server_port}/"))
 
+    def test_playback_fallback_uses_the_current_advertised_route_not_a_stale_host(self):
+        self.server.public_host = "100.82.23.65"
+        self.server.public_hosts = ("100.82.23.65",)
+        payload = self.route_test_play_response(f"192.168.20.151:{self.server.server_port}")
+        self.assertTrue(payload["url"].startswith(f"http://100.82.23.65:{self.server.server_port}/"))
+        self.assertNotIn("192.168.20.151", payload["url"])
+
+    def test_status_exposes_the_effective_advertised_route(self):
+        self.server.public_host = "100.82.23.65"
+        self.server.public_hosts = ("100.82.23.65", "192.168.0.10")
+        _, status = self.get_json("/api/status")
+        self.assertEqual(status["device_route"], {
+            "advertised_host": "100.82.23.65",
+            "approved_hosts": ["100.82.23.65", "192.168.0.10"],
+            "port": self.server.server_port,
+        })
+
     def post_json(self, path, payload):
         request = urllib.request.Request(
             self.base + path,

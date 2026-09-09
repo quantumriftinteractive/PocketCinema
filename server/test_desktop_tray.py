@@ -28,6 +28,9 @@ class TrayLifecycleTests(unittest.TestCase):
     def desktop(self):
         desktop = object.__new__(PocketCinemaDesktop)
         desktop.root = mock.Mock()
+        data_root = tempfile.TemporaryDirectory()
+        self.addCleanup(data_root.cleanup)
+        desktop.data_root = data_root.name
         desktop.instance = None
         desktop.lifecycle = mock.Mock()
         desktop.lifecycle.status.return_value = LifecycleStatus("Stopped", "", None, "")
@@ -113,6 +116,22 @@ class TrayLifecycleTests(unittest.TestCase):
         desktop._start_with_settings = lambda settings: calls.append("start")
         desktop.restart()
         self.assertEqual(calls, ["stop", "start"])
+
+    def test_start_persists_the_current_route_before_launching_the_child(self):
+        desktop = self.desktop()
+        current = DesktopSettings(
+            listen_mode="custom",
+            listen_address="100.82.23.65",
+            advertised_mode="manual",
+            advertised_address="100.82.23.65",
+        )
+        desktop.settings.return_value = current
+        desktop.data_root = "/test-data"
+        desktop._start_with_settings = mock.Mock()
+        with mock.patch("server.desktop.gui.save_settings", return_value=current) as save:
+            desktop.start()
+        save.assert_called_once_with(current, "/test-data")
+        desktop._start_with_settings.assert_called_once_with(current)
 
     def test_busy_blocks_duplicate_start_and_quit_prevents_late_start(self):
         desktop = self.desktop()

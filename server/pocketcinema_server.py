@@ -953,6 +953,13 @@ class PocketCinemaHandler(BaseHTTPRequestHandler):
                     "service": "pocketcinema-server",
                     "version": SERVER_VERSION,
                     "message": "PocketCinema Server is reachable",
+                    "device_route": {
+                        "advertised_host": self.server.public_host,
+                        "approved_hosts": list(
+                            getattr(self.server, "public_hosts", (self.server.public_host,))
+                        ),
+                        "port": self.server.server_port,
+                    },
                     "discovery": {
                         "enabled": bool(
                             getattr(self.server, "discovery_responder", None)

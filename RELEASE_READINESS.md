@@ -78,18 +78,20 @@ acceptance failures:
   valid; this is a separate startup UX/performance issue.
 - During the shared Thunderbolts failure, the Miyoo used
   `100.82.23.65:8755` while PCServer advertised stale `192.168.20.151:8755`.
-  A runtime restart corrected the advertisement and the same stream played.
-  Before release, verify advertised-route persistence and resolution across a
-  normal restart, prevent stale-route reintroduction, and make the desktop
-  advertised-address configuration clear. No Library source-code fix was
-  required.
+  The cause was that Start/Restart applied edited desktop settings only to that
+  child invocation; a later desktop-app restart could reload the old saved
+  manual route. Start/Restart now atomically save the requested route before
+  launching the child. Automatic mode still resolves only current interfaces,
+  while an explicit Custom/manual route remains stable. `/api/status` exposes
+  the child’s effective advertised route and `/api/play` returns only its
+  approved current/request route. The stale-route persistence gate is
+  automated **PASS**; no Library source-code fix or new Miyoo test was needed.
 
 The Next Episode / Continue Series feature is now physically accepted and no
 longer an open product candidate. Remaining distribution work is macOS `.app`
 and macOS launch/runtime smoke, Windows clean-machine packaged
 smoke, fresh/distribution-SD validation, renderer/subtitle asset
-licensing/package completeness, advertised-route persistence/configuration
-verification, and unsigned/signing/runtime-warning review. The Windows
+licensing/package completeness, and unsigned/signing/runtime-warning review. The Windows
 development-machine packaged candidate and smoke already exist.
 
 The focused production UX fixes are physically confirmed PASS: stream/source-
