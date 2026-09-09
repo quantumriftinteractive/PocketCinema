@@ -721,3 +721,9 @@ object-specific cause plus unrelated others), so the independent FFplay
 reproduction gate remains blocked. No rebuild occurred. One future retry, if
 separately authorized, may restore the historical source-tree path and working
 directory while preserving all existing flags.
+
+The proposed historical-working-directory retry was not run: `.tmp/ffmpeg-2.4.14`
+is the authoritative recovered tree containing the retained known-good FFplay,
+historical configuration, and object evidence. Rebuilding there would destroy
+unique evidence. Classification is D (safe historical-path test cannot be
+performed); the independent reproduction gate remains blocked.

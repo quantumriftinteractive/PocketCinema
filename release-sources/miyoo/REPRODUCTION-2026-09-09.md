@@ -306,3 +306,15 @@ rebuild from the historical source-tree path and working directory
 compiler sees the same path context as the retained historical objects. This was
 not executed and is not claimed to resolve the timestamp or all four
 post-preprocessing differences.
+
+## Historical-path rebuild safety decision
+
+The proposed `<repo>/.tmp/ffmpeg-2.4.14` working directory was inspected
+read-only and is authoritative recovered evidence, not an expendable build copy.
+It contains the retained known-good FFplay (`1,577,708` bytes, SHA-256
+`3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6`), historical
+`config.h` and `config.mak` hashes, and retained object evidence including
+`cmdutils.o`. Rebuilding there would overwrite unique evidence.
+
+Classification: **D - safe historical-path test cannot be performed**. No
+alternative workspace or rebuild was attempted.
