@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs/user/public-docs.json"
 OUTPUT = ROOT / "public-docs/pocketcinema"
+MANIFEST_OUTPUT = OUTPUT / "manifest.json"
 
 
 def load_manifest():
@@ -33,7 +34,10 @@ def load_manifest():
 
 
 def expected(files):
-    return {path: source.read_bytes() for path, source in files}
+    wanted = {path: source.read_bytes() for path, source in files}
+    manifest = {"product": "PocketCinema", "version": 1, "files": [str(path) for path, _ in files]}
+    wanted[Path("manifest.json")] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
+    return wanted
 
 
 def actual():

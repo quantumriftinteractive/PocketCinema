@@ -1,0 +1,22 @@
+{
+  "product": "PocketCinema",
+  "version": 1,
+  "files": [
+    "index.md",
+    "install-server.md",
+    "configure-server.md",
+    "install-miyoo.md",
+    "connect.md",
+    "first-movie.md",
+    "search.md",
+    "library.md",
+    "continue-watching.md",
+    "sources.md",
+    "subtitles.md",
+    "live-tv.md",
+    "settings.md",
+    "troubleshooting.md",
+    "advanced-reference.md",
+    "privacy-and-security.md"
+  ]
+}
