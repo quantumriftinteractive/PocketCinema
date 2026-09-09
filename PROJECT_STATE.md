@@ -578,9 +578,25 @@ Pending:
   conversion input bridge to return 502 before FFmpeg produced media. The bridge
   now permits only bounded 1920x1080/8 Mbps H.264 conversion inputs while
   retaining the existing 640x360/1.6 Mbps direct-device bound. Focused automated
-  coverage passes. Miyoo physical revalidation of one StremTV channel remains
-  pending. The separate selector capacity issue remains: its 64-item limit can
-  display only the first 64 of the server's 128 live-TV results.
+  coverage passes. The successful physical StremTV playback remains inherited
+  PASS evidence. The Miyoo selector capacity is now bounded at 128 items. Its
+  pointer array, per-item line buffer, dynamic rendering, wraparound navigation,
+  and cleanup all scale with the parsed count, exposing the current server
+  maximum without changing callers or addon behavior. The ARM reproducibility
+  build remains pending because this checkout lacks the ignored ARM
+  compiler/sysroot; the current prebuilt 64-item selector remains the release
+  binary, and the 128-item source change is unbuilt and unshipped. The earlier
+  Greek-channel removal idea was rejected: those entries are linked
+  account-addon data, not a PocketCinema-shipped catalog.
+
+- A clean host-side Miyoo package assembler is implemented and validated at
+  `scripts/build-miyoo-release-package.ps1`. It assembles a technically
+  self-contained package from first-party files plus an explicit prebuilt
+  runtime input, without an ARM sysroot, selector compilation, legacy-state
+  migration, or bundled user state. The v1 package remains blocked from public
+  redistribution until the recovered FFplay 2.4.14 source/configuration,
+  bundled-library provenance, and Plus Jakarta Sans font provenance are
+  resolved. Fresh-install physical acceptance has not run.
 
 - Non-blocking M23 Remote follow-up: reproduce the brief usable micro-stutters
   only if they remain observable. Remote IPv4 presentation preference is now

@@ -29,6 +29,12 @@ the current normal paths. It also confirms the existing release blocker: a
 fresh Miyoo deployment still depends on ignored rebuilt-player, font, and
 runtime-library inputs until M23 packaging/licensing work provides reproducible
 release artifacts. See `docs/production-pass-audit.md`.
+The host-side package assembler now produces a technically self-contained
+Miyoo v1 folder from an explicit prebuilt runtime input without the ARM sysroot
+or legacy-state migration. Redistribution remains blocked pending exact FFplay
+2.4.14 source/configuration, bundled-library provenance, font provenance, and
+the required notices/source-offer material. Fresh-install physical acceptance
+has not run.
 Milestone 23 now makes a
 user-installable PocketCinema Server desktop distribution an explicit release
 requirement, but its implementation is gated on Milestone 21 completion.
@@ -110,8 +116,12 @@ bound before conversion, so the generic HLS bridge now admits only bounded
 1920x1080/8 Mbps H.264 conversion inputs while retaining the strict direct-device
 bound. Conversion-only fragmented-MP4 HLS now passes its validated initialization
 segment and media fragments to the existing converter; direct-device HLS remains
-MPEG-TS-only. One focused Miyoo StremTV playback check remains required; the separate
-64-item selector capacity limitation is documented and not yet corrected.
+MPEG-TS-only. The successful physical StremTV playback remains inherited PASS
+evidence. The working-tree Miyoo selector source is now bounded at 128, matching
+the current server maximum, but that source change is unbuilt and unshipped; the
+current prebuilt 64-item selector remains the release binary. The earlier
+Greek-channel removal idea was rejected because those entries are linked
+account-addon data, not a PocketCinema-shipped catalog.
 
 ## Verified Connection and Onboarding Resolution
 
@@ -399,11 +409,10 @@ This is the required v1.0 direction, not a currently available artifact.
 
 #### macOS
 
-The architecture must support a later `.app`, but macOS is not an end-user
-release target until native Apple Silicon and any claimed Intel/universal build
-are tested from their actual bundles. Developer ID signing, hardened-runtime
-review, notarization, ticket stapling, and Gatekeeper testing are release gates,
-not optional release polish.
+The packaged Apple Silicon `.app` is the intended macOS v1 installation path and
+its foreground lifecycle is physically accepted. Developer ID signing,
+hardened-runtime review, notarization, ticket stapling, licensing, and
+Gatekeeper testing remain release gates, not optional release polish.
 
 ### Developer/source installation
 
@@ -675,9 +684,9 @@ separately reviewed authentication and transport design.
   rather than a full language-preference system.
 - Generic account-backed Stremio TV-addon support is implemented through the
   existing Live TV and bounded conversion path, with focused automated coverage
-  for the StremTV HLS rendition boundary. One focused Miyoo playback confirmation
-  remains open. StremTV-specific support is not hard-coded. The existing ERT News
-  live-HLS path remains historically confirmed.
+  for the StremTV HLS rendition boundary and a bounded 128-item Miyoo selector.
+  StremTV-specific support is not hard-coded. The existing ERT News live-HLS
+  path and physical StremTV playback remain historically confirmed.
 - Tailscale clean-account onboarding and disconnected-boot behavior require
   separate physical testing; the working authenticated identity must not be
   reset during ordinary development.
