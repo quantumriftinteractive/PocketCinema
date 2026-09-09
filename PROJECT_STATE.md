@@ -420,8 +420,8 @@ Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: e736b1
-Remote verified: YES — e736b1 is reachable from fetched origin/main
+Checkpoint commit: `ae736b1`
+Remote verified: YES - `ae736b1` is reachable from fetched origin/main
 Machine: macOS development checkout
 Branch: `main`
 Active milestone: Milestone 23 â€” PocketCinema Server Desktop Distribution
