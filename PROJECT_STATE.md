@@ -422,7 +422,7 @@ Micro-stutter work remains deferred.
 
 ## Latest Verified Checkpoint
 
-Checkpoint commit: `0399abf`
+Checkpoint commit: `cba2960`
 Remote verified: YES — `bc356c1` is reachable from fetched `origin/main`
 Machine: macOS development checkout
 Branch: `main`
