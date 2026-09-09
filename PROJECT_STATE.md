@@ -695,3 +695,14 @@ the candidate is not byte-identical to known-good. Runtime ELF invariants match,
 while the bounded comparison shows a material `.text` difference (4-byte size
 delta and 746,293 differing bytes). Classification is C; the independent
 reproduction gate remains blocked and no deployment is authorized.
+
+The bounded material-difference investigation localized the earliest divergence
+to the generated `FFMPEG_CONFIGURATION` string in `cmdutils.o`: reproduced
+configure-path tokens make `.rodata.str1.1` 0xb0 bytes larger, while 277 of 289
+matched object pairs remain byte-identical and the toolchain, ARM ABI, compile
+flags, link libraries, and archive member order match. Classification is C
+(preprocessor/config define difference), not a toolchain or ABI mismatch. No
+rebuild or deployment occurred. One future corrected rebuild may be separately
+authorized using the historical configure-command representation and the
+preserved sysroot-aware pkg-config shim resolved through PATH; the current
+independent reproduction gate remains blocked.
