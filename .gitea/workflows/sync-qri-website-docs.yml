@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unexpected=$(git status --porcelain=v1 | awk '{path=$0; sub(/^... /, "", path); if (path !~ /^(src\/content\/docs\/docs\/pocketcinema|public\/docs\/pocketcinema)\//) print $0}')
+          unexpected=$(git status --porcelain=v1 | awk '{path=$0; sub(/^.. /, "", path); if (path !~ /^(src\/content\/docs\/docs\/pocketcinema|public\/docs\/pocketcinema)\//) print $0}')
           if [ -n "$unexpected" ]; then
             echo "Unexpected website changes detected:"
             printf '%s\n' "$unexpected"
