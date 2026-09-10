@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unexpected=$(git status --porcelain=v1 | awk '{path=$0; sub(/^... /, "", path); if (path !~ /^src\/content\/docs\/docs\/pocketcinema\//) print $0}')
+          unexpected=$(git status --porcelain=v1 | awk '{path=$0; sub(/^... /, "", path); if (path !~ /^(src\/content\/docs\/docs\/pocketcinema|public\/docs\/pocketcinema)\//) print $0}')
           if [ -n "$unexpected" ]; then
             echo "Unexpected website changes detected:"
             printf '%s\n' "$unexpected"
@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git add src/content/docs/docs/pocketcinema
+          git add src/content/docs/docs/pocketcinema public/docs/pocketcinema
           if git diff --cached --quiet; then
             echo "PocketCinema website snapshot is already current."
             exit 0
