@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/PocketCinema_Hero_Banner.png" alt="PocketCinema" width="100%">
+</p>
+
 # PocketCinema for Miyoo Mini Plus
 
 A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
