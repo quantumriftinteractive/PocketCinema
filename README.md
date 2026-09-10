@@ -6,6 +6,8 @@
 
 A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running OnionOS**.
 
+[☕ Support Quantum Rift Interactive on Ko-fi](https://ko-fi.com/quantumriftinteractive)
+
 ## Confirmed Prototype
 
 The current prototype completes this controller-driven OnionOS flow:
