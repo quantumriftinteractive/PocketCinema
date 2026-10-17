@@ -2804,6 +2804,33 @@ select_audio_track() {
   grep -F "$selected_audio	" /tmp/pocketcinema-audio-tracks.tsv | head -n 1 | cut -f2
 }
 
+show_no_playable_streams() {
+  # Source notices are context, never the overall reason that playback failed.
+  # Keep optional Local Files last and bound/sanitize provider-controlled text.
+  stream_error=$("$JQ" -r '
+    def safe_text:
+      tostring | gsub("(?i)(https?|file)://[^[:space:]]+"; "[URL]")
+      | gsub("[[:cntrl:]]"; " ");
+    [(.failures // [])[] | select((.message // "") != "")] as $all |
+    ($all | map(select(.message != "Stremio Service Local Files is disabled"))) as $other |
+    ($all | map(select(.message == "Stremio Service Local Files is disabled"))) as $local |
+    ($other + $local) as $notices |
+    "No playable streams available",
+    ($notices[:3][] |
+      if .message == "Stremio Service Local Files is disabled" then
+        "Local Files: disabled (optional)"
+      else
+        (((.source // "Source") | safe_text | .[:24]) + ": " +
+          ((.message // "Unavailable") | safe_text)) | .[:64]
+      end),
+    (if ($notices | length) > 3 then
+      "More source notices: " + (($notices | length) - 3 | tostring)
+    else empty end)
+  ' /tmp/pocketcinema-streams.json)
+  log "no selectable streams available"
+  message "PocketCinema" "$stream_error"
+}
+
 streams_flow() {
   type="$1"
   id="$2"
@@ -2819,6 +2846,14 @@ streams_flow() {
   if [ "$stream_lookup_rc" -ne 0 ]; then
     message "PocketCinema" "Stream lookup failed"
     return 1
+  fi
+
+  if ! "$JQ" -e --arg failed_ids "$FAILED_STREAM_IDS" '
+    any(.items[]?; . as $stream | .playable == true and
+      (($failed_ids | contains("|" + $stream.id + "|")) | not))
+  ' /tmp/pocketcinema-streams.json >/dev/null; then
+    show_no_playable_streams
+    return 0
   fi
 
   source_filter=""
@@ -2900,9 +2935,7 @@ Choose stream."
     | select(($audio_filter == "") or (($stream.compatibility.audio_languages // []) | map(ascii_downcase) | any(. == ($audio_filter | ascii_downcase))))
     | "\(if .playback_mode == "direct" then "[DIRECT] " elif .playback_mode == "convert" then "[CONVERT]" else "[CHECK]" end) \(.source_label // .name)\\n\(.release_label // "release metadata unavailable")\\n\((.compatibility.width // "?")|tostring)x\((.compatibility.height // "?")|tostring) \(.compatibility.video_codec // "?")/\(.compatibility.audio_codec // "?")\t\(.id)\t\(.description // "")"' /tmp/pocketcinema-streams.json >/tmp/pocketcinema-streams.tsv
   if [ ! -s /tmp/pocketcinema-streams.tsv ]; then
-    stream_error=$("$JQ" -r '.failures[0].message // "No playable streams"' /tmp/pocketcinema-streams.json)
-    log "no playable streams message=$stream_error"
-    message "PocketCinema" "$stream_error"
+    show_no_playable_streams
     return 0
   fi
 

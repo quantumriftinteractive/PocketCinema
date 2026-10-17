@@ -3287,7 +3287,7 @@ def main(shutdown_event=None):
             f"{httpd.discovery_network} | {advertised_url} | UDP {args.discovery_port}",
             flush=True,
         )
-    print(f"Stream addons configured: {len(httpd.stream_addons)}", flush=True)
+    print(f"Manual/built-in stream addons configured: {len(httpd.stream_addons)} (excludes Stremio account addons)", flush=True)
     print(
         "Stremio Service backend: "
         + (httpd.stremio_service.base_url or "disabled"),

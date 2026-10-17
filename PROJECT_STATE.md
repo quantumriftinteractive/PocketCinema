@@ -461,6 +461,45 @@ distribution/signing/runtime review, renderer-asset/licensing/fresh-deployment
 and final release-artifact gates remain pending; M23 remains incomplete.
 Micro-stutter work remains deferred.
 
+## Development Handoff — v1.0.1 maintenance candidate (2026-10-17)
+
+Branch: `maintenance/v1.0.1-stream-diagnostics`, based on `2278e25` in an
+isolated worktree. Original checkout changes and release files are untouched.
+User explicitly authorizes a local commit only: do not push, merge, bump the
+version, build release artifacts, or publish. The remote checkpoint below is
+historical and does not checkpoint this maintenance branch.
+
+Implemented: empty-result detection before source/language menus, bounded
+multi-source notices with optional disabled Local Files last, and an explicit
+manual/built-in addon-count log label. Existing settings, addon eligibility,
+security boundaries, conversion and player behavior remain unchanged.
+
+Compatibility investigation: archived decoder source supports a wider range
+than the measured device envelope. H.264 profile/pixel-format classification
+remains overly broad; the proposed probe/policy/cache correction requires
+approval and focused evidence before implementation. Reporter audio-only
+playback remains OPEN, not reproduced. Existing diagnostics are sufficient for
+initial targeted collection; no new playback logging is added.
+
+Validation: all 136 combined server/account/desktop/client tests pass, including
+six new executed shell-flow regressions; seven existing Miyoo shell checks,
+Python compilation, shell parsing and diff whitespace checks pass.
+A pre-existing Unix failure in the mock bundled-Windows-tool test was reproduced
+on the original checkout and corrected by setting its fixture executable bit.
+Physical validation/deployment awaits the requested development Miyoo SSH address;
+no client behavior is newly physically confirmed. Native Windows remains pending.
+
+Evidence and regression-impact matrix:
+`docs/v1.0.1-maintenance-investigation.md`. M21/M22 evidence is inherited for
+unchanged playback, subtitles, progress, conversion and account behavior.
+
+Next exact action: deploy this branch through `scripts/deploy-miyoo.ps1` using
+the existing installed player assets; verify permissions/cleanup, then perform
+the focused Apps empty-result display and successful stream-selection/playback
+smoke, collect logs, and review the proposed compatibility correction. Obtain
+reporter diagnostics before assigning an audio-only root cause. Push requires
+explicit authorization; another machine cannot obtain this candidate remotely.
+
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `b76e20d`
