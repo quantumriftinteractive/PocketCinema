@@ -505,6 +505,45 @@ source-specific languages and undefined-tag All audio selection in Apps, then on
 known-good playback/subtitle/Menu-cleanup smoke. Do not push without explicit
 authorization. Another machine cannot obtain this unpushed work remotely.
 
+## Development Handoff — reviewed display handoff preserved locally (2026-10-18)
+
+Branch remains `maintenance/v1.0.1-stream-diagnostics`. One local commit preserves
+the reviewed candidate on top of `c544e2b`; `08fcb7a` remains an ancestor. The
+final read-only review found no confirmed blockers to controlled physical
+validation. No build, package production, device access, deployment, fetch, push,
+merge, release or publication. Remote status is unverified. The remote checkpoint
+below remains historical; this candidate is local only.
+
+Implemented locally: preparation remains through network/session/subtitle work,
+then a clean, reaped panel exit is required before FFplay. Process identities
+use runtime-checked procfs parent/start-time fields. Missing/changed identity
+never authorizes signaling. Abnormal/forced/uncertain panel shutdown fails closed
+through every caller and latches across command substitutions. FFplay replaces
+its wrapper; cancellation bounds owned player/control/helper cleanup and saves
+player diagnostics. Readiness, watched-time and pause gates remain intact.
+A temporary black/stale preparation screen before video is still expected.
+
+These changes address reviewed code defects, not Uzma's proven root cause.
+The procfs-check/kill race cannot be eliminated in the current BusyBox shell;
+unverifiable or uninterruptible processes and SDL teardown after SIGKILL remain
+limitations. Device procfs compatibility and actual rendering are unmeasured.
+Evidence, test limitations and regression impact are recorded in
+`docs/v1.0.1-display-handoff.md`. Prior language/diagnostic fixes remain intact.
+
+Validation repeated before preservation: all eleven server test modules completed,
+208 tests OK (202 passed, 6 Windows-only skips; 64.770 seconds). All seven Miyoo
+shell checks, shell parsing, Python compilation and diff whitespace checks pass.
+No source/test changes were made after final review. Device procfs/rendering and
+Uzma's root cause remain unconfirmed.
+
+Next exact action: review the documented isolated physical-test plan in
+`docs/v1.0.1-display-handoff.md` and separately authorize preparation of a
+private developer test-card bundle. Preferred validation uses a spare SD card
+with official OnionOS 4.3.1-1 and the canonical app path, preserving the installed
+production card and avoiding a reporter installation replacement. The current
+deployer is not a side-by-side installer. No staging/deployment is authorized
+in this session. Do not push; no remote handoff is claimed.
+
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `b76e20d`

@@ -71,6 +71,16 @@ FIELD_TEST_LIB_DIR="$FIELD_TEST_DIR/lib"
 FIELD_TEST_SUBTITLE_FILE=""
 PADSP="$MIYOO_DIR/lib/libpadsp.so"
 LOADING_PID=""
+LOADING_ID=""
+FFPLAY_PID=""
+FFPLAY_ID=""
+PAUSE_MONITOR_ID=""
+PLAYBACK_CONTROL_ID=""
+RESOURCE_MONITOR_ID=""
+SERVER_MONITOR_ID=""
+DISPLAY_HANDOFF_FAILED=0
+DISPLAY_FAILURE_FILE=/tmp/pocketcinema-display-failure-$$
+rm -f "$DISPLAY_FAILURE_FILE"
 PAUSE_MONITOR_PID=""
 PLAYBACK_CONTROL_PID=""
 RESOURCE_MONITOR_PID=""
@@ -262,20 +272,22 @@ if [ "$APP_LOCAL_PLAYER" = "1" ] || [ "$FIELD_TEST" = "1" ] \
 fi
 
 cleanup() {
-  stop_loading
+  # Ignore repeated cancellation while bounded shutdown/reaping is in progress.
+  trap '' HUP INT TERM
+  stop_loading || true
+  stop_owned_process "$FFPLAY_PID" "$FFPLAY_ID" ffplay 0 || true
+  stop_owned_process "$PLAYBACK_CONTROL_PID" "$PLAYBACK_CONTROL_ID" playback-control 0 || true
+  stop_owned_process "$PAUSE_MONITOR_PID" "$PAUSE_MONITOR_ID" pause-monitor 0 || true
+  stop_owned_process "$RESOURCE_MONITOR_PID" "$RESOURCE_MONITOR_ID" resource-monitor 0 || true
   stop_server_monitor
-  if [ -n "$PAUSE_MONITOR_PID" ] && kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
-    kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
-    wait "$PAUSE_MONITOR_PID" 2>/dev/null || true
-  fi
-  if [ -n "$RESOURCE_MONITOR_PID" ]; then
-    kill "$RESOURCE_MONITOR_PID" 2>/dev/null || true
-    wait "$RESOURCE_MONITOR_PID" 2>/dev/null || true
-    RESOURCE_MONITOR_PID=""
+  preserve_ffplay_diagnostics
+  # A command substitution must not clear the parent UI's latched failure.
+  if IFS= read -r cleanup_self </proc/self/stat 2>/dev/null; then
+    [ "${cleanup_self%% *}" != "$$" ] || rm -f "$DISPLAY_FAILURE_FILE"
   fi
   rm -f /tmp/stay_awake /tmp/pocketcinema-subtitle.srt \
     "$FIELD_TEST_SUBTITLE_FILE" \
-    /tmp/pocketcinema-ffplay.log /tmp/pocketcinema-paused-seconds \
+    /tmp/pocketcinema-paused-seconds \
     /tmp/pocketcinema-play-error.json \
     "$PLAYBACK_CONTROL_FILE" \
     /tmp/pocketcinema-aspect-request \
@@ -311,6 +323,7 @@ log() {
 }
 
 message() {
+  require_display_safe
   title="$1"
   body="$2"
   message_mode="${3:-auto}"
@@ -331,15 +344,9 @@ message() {
     }
   ')
   if [ "$message_mode" = timed ]; then
-    rm -f /tmp/dismiss_info_panel
-    "$INFOPANEL" --title "$title" --message "$display_body" --persistent >/dev/null 2>&1 &
-    timed_message_pid=$!
+    start_loading "$title" "$display_body"
     sleep 3
-    if kill -0 "$timed_message_pid" 2>/dev/null; then
-      touch /tmp/dismiss_info_panel
-      wait "$timed_message_pid" 2>/dev/null || true
-    fi
-    rm -f /tmp/dismiss_info_panel
+    stop_loading || abort_display_handoff
   elif [ "$message_mode" = acknowledge ]; then
     "$INFOPANEL" --title "$title" --message "$display_body" >/dev/null 2>&1 || true
   else
@@ -347,25 +354,187 @@ message() {
   fi
 }
 
+# Linux procfs is checked at runtime. No ps/readlink/pidof extensions are needed.
+# stat's comm may contain spaces or ')': fields follow the LAST ') '.
+process_snapshot() (
+  case "$1" in ''|*[!0-9]*|0|1) return 2 ;; esac
+  [ -r /proc/self/stat ] || return 2
+  if [ ! -d "/proc/$1" ]; then return 1; fi
+  IFS= read -r proc_line <"/proc/$1/stat" 2>/dev/null || return 2
+  [ "${proc_line%% *}" = "$1" ] || return 2
+  proc_fields=${proc_line##*) }
+  [ "$proc_fields" != "$proc_line" ] || return 2
+  set -f
+  set -- $proc_fields
+  [ "$#" -ge 20 ] || return 2
+  proc_state=$1
+  proc_parent=$2
+  shift 19
+  proc_start=$1
+  case "$proc_parent" in ''|*[!0-9]*) return 2 ;; esac
+  case "$proc_start" in ''|*[!0-9]*) return 2 ;; esac
+  case "$proc_state" in R|S|D|Z|T|t|X|x|K|W|P|I) ;; *) return 2 ;; esac
+  printf '%s:%s:%s\n' "$proc_parent" "$proc_start" "$proc_state"
+)
+
+# Called in the launching shell, not a command substitution ($$ is inherited by
+# shell subshells). An empty owner disables identity capture and all signaling.
+record_launch_owner() {
+  LAUNCH_OWNER=""
+  if IFS= read -r owner_stat </proc/self/stat 2>/dev/null; then
+    LAUNCH_OWNER=${owner_stat%% *}
+    process_snapshot "$LAUNCH_OWNER" >/dev/null || return 1
+    return 0
+  fi
+  return 1
+}
+
+capture_process_identity() (
+  capture_snapshot=$(process_snapshot "$1") || return 1
+  [ "${capture_snapshot%%:*}" = "$2" ] || return 1
+  printf '%s\n' "${capture_snapshot%:*}"
+)
+
+# 0 = matching live child; 1 = gone/verified zombie (safe to wait);
+# 2 = changed/missing/unreadable identity (never signal or wait).
+owned_process_state() (
+  owned_snapshot=$(process_snapshot "$1")
+  owned_snapshot_rc=$?
+  [ "$owned_snapshot_rc" -ne 1 ] || return 1
+  [ "$owned_snapshot_rc" -eq 0 ] && [ -n "$2" ] || return 2
+  [ "${owned_snapshot%:*}" = "$2" ] || return 2
+  case "${owned_snapshot##*:}" in Z|X) return 1 ;; esac
+  return 0
+)
+
+signal_owned_process() {
+  owned_process_state "$1" "$2"
+  signal_state=$?
+  [ "$signal_state" -eq 0 ] || return "$signal_state"
+  # Small unavoidable procfs-check/kill race: builtin kill takes only a PID.
+  kill -"$3" "$1" 2>/dev/null
+}
+
+wait_owned_exit() (
+  owned_remaining=$3
+  while :; do
+    owned_process_state "$1" "$2"
+    owned_state=$?
+    [ "$owned_state" -ne 1 ] || return 0
+    [ "$owned_state" -eq 0 ] || return 2
+    [ "$owned_remaining" -gt 0 ] || return 1
+    sleep 1
+    owned_remaining=$((owned_remaining - 1))
+  done
+)
+
+# Caller must retain PID+identity together. wait is used only for a terminal
+# original child; its cached status, not PID disappearance, establishes success.
+stop_owned_process() {
+  OWNED_STOP_KIND=uncertain
+  OWNED_EXIT_RC=1
+  [ -n "$1" ] || { OWNED_STOP_KIND=clean; OWNED_EXIT_RC=0; return 0; }
+  owned_forced=0
+  wait_owned_exit "$1" "$2" "$4"
+  owned_wait_rc=$?
+  if [ "$owned_wait_rc" -eq 1 ]; then
+    log "$3 shutdown timeout; requesting TERM pid=$1"
+    signal_owned_process "$1" "$2" TERM
+    owned_signal_rc=$?
+    [ "$owned_signal_rc" -ne 2 ] || return 1
+    [ "$owned_signal_rc" -ne 0 ] || owned_forced=1
+    wait_owned_exit "$1" "$2" 2
+    owned_wait_rc=$?
+    if [ "$owned_wait_rc" -eq 1 ]; then
+      log "$3 termination timeout; requesting KILL pid=$1"
+      signal_owned_process "$1" "$2" KILL
+      owned_signal_rc=$?
+      [ "$owned_signal_rc" -ne 2 ] || return 1
+      [ "$owned_signal_rc" -ne 0 ] || owned_forced=1
+      wait_owned_exit "$1" "$2" 1
+      owned_wait_rc=$?
+    fi
+  fi
+  if [ "$owned_wait_rc" -ne 0 ]; then
+    [ "$owned_wait_rc" -ne 1 ] || OWNED_STOP_KIND=alive
+    log "$3 shutdown unsafe pid=$1 state=$OWNED_STOP_KIND"
+    return 1
+  fi
+  wait "$1" 2>/dev/null
+  OWNED_EXIT_RC=$?
+  OWNED_STOP_KIND=abnormal
+  if [ "$owned_forced" -eq 1 ]; then
+    OWNED_STOP_KIND=forced
+  elif [ "$OWNED_EXIT_RC" -eq 0 ]; then
+    OWNED_STOP_KIND=clean
+  fi
+  log "$3 exit pid=$1 state=$OWNED_STOP_KIND rc=$OWNED_EXIT_RC"
+  [ "$OWNED_STOP_KIND" = clean ]
+}
+
+fail_display_handoff() {
+  DISPLAY_HANDOFF_FAILED=1
+  : >"$DISPLAY_FAILURE_FILE"
+  log "display handoff unsafe; refusing further display initialization"
+}
+
+abort_display_handoff() {
+  fail_display_handoff
+  printf '%s\n' 'PocketCinema: preparation screen could not close safely; see UI log.' >&2
+  exit 1
+}
+
+require_display_safe() {
+  if [ "${DISPLAY_HANDOFF_FAILED:-0}" = 1 ] || [ -f "$DISPLAY_FAILURE_FILE" ]; then
+    abort_display_handoff
+  fi
+}
+
 start_loading() {
+  require_display_safe
   loading_title="$1"
   loading_message="$2"
-  stop_loading
+  stop_loading || abort_display_handoff
   rm -f /tmp/dismiss_info_panel
+  record_launch_owner || abort_display_handoff
   "$INFOPANEL" --title "$loading_title" --message "$loading_message" --persistent >/dev/null 2>&1 &
   LOADING_PID=$!
-  log "loading start pid=$LOADING_PID message=$loading_message"
+  LOADING_ID=$(capture_process_identity "$LOADING_PID" "$LAUNCH_OWNER") || LOADING_ID=""
+  log "loading start pid=$LOADING_PID identity=${LOADING_ID:-unavailable} message=$loading_message"
 }
 
 stop_loading() {
-  [ -n "$LOADING_PID" ] || return 0
-  if kill -0 "$LOADING_PID" 2>/dev/null; then
-    touch /tmp/dismiss_info_panel
-    wait "$LOADING_PID" 2>/dev/null || true
+  require_loading_result=0
+  if [ -n "$LOADING_PID" ]; then
+    owned_process_state "$LOADING_PID" "$LOADING_ID"
+    loading_state=$?
+    if [ "$loading_state" -eq 0 ]; then
+      touch /tmp/dismiss_info_panel
+    elif [ "$loading_state" -eq 2 ]; then
+      log "loading identity unverifiable pid=$LOADING_PID; no dismissal or signal"
+      fail_display_handoff
+      return 1
+    fi
+    stop_owned_process "$LOADING_PID" "$LOADING_ID" loading 3 || require_loading_result=1
+    # Keep only a potentially live original process for a verified cleanup retry.
+    case "$OWNED_STOP_KIND" in clean|abnormal|forced) LOADING_PID=""; LOADING_ID="" ;; esac
+    rm -f /tmp/dismiss_info_panel
+    [ "$require_loading_result" -eq 0 ] || fail_display_handoff
   fi
-  log "loading stop pid=$LOADING_PID"
-  LOADING_PID=""
-  rm -f /tmp/dismiss_info_panel
+  [ "${DISPLAY_HANDOFF_FAILED:-0}" != 1 ] && [ ! -f "$DISPLAY_FAILURE_FILE" ]
+}
+
+preserve_ffplay_diagnostics() {
+  if [ -f /tmp/pocketcinema-ffplay.log ]; then
+    cat /tmp/pocketcinema-ffplay.log >>"$LOG_FILE"
+    owned_process_state "$FFPLAY_PID" "$FFPLAY_ID"
+    diagnostics_state=$?
+    if [ -z "$FFPLAY_PID" ] || [ "$diagnostics_state" -eq 1 ]; then
+      rm -f /tmp/pocketcinema-ffplay.log
+    else
+      log "player still live or unverifiable; retaining temporary diagnostics"
+    fi
+  fi
 }
 
 curl_request_with_proxy() (
@@ -601,7 +770,8 @@ playback_server_error() {
   esac
 }
 
-run_ffplay() (
+# Always invoked asynchronously. exec makes $! the player, with no extra shell.
+run_ffplay() {
   video_filter="$1"
   url="$2"
   resume_seconds="$3"
@@ -647,14 +817,14 @@ run_ffplay() (
     HTTPS_PROXY="$REQUEST_PROXY" \
     https_proxy="$REQUEST_PROXY" \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    exec "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   else
     unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
     HOME=/mnt/SDCARD \
     LD_PRELOAD="$playback_preload" \
-    "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
+    exec "$FFPLAY" $screen_args $audio_args -hide_banner -stats -autoexit -ss "$resume_seconds" -vf "$video_filter" -i "$url"
   fi
-)
+}
 
 play_url() {
   url="$1"
@@ -677,6 +847,10 @@ play_url() {
   PLAYBACK_CONTROL_PID=""
   RESOURCE_MONITOR_PID=""
   rm -f "$ffplay_log" "$pause_result" "$PLAYBACK_CONTROL_FILE"
+  # Preparation is complete. Older Onion infoPanel owns SDL video: fully stop
+  # it before FFplay initializes SDL, independently of playback readiness.
+  stop_loading || abort_display_handoff
+  require_display_safe
   log "ffplay launch url=$url resume_seconds=$player_seek_seconds subtitles=${subtitle_file:-none}"
   touch /tmp/stay_awake
   cd "$SYS_DIR" || return 1
@@ -694,29 +868,35 @@ play_url() {
   first_ready=1
   while :; do
     rm -f "$PLAYBACK_CONTROL_FILE"
+    record_launch_owner || abort_display_handoff
     run_ffplay "$video_filter" "$current_url" 0 "$aspect_mode" >"$ffplay_log" 2>&1 &
     ffplay_pid=$!
+    FFPLAY_PID=$ffplay_pid
+    FFPLAY_ID=$(capture_process_identity "$FFPLAY_PID" "$LAUNCH_OWNER") || FFPLAY_ID=""
     if [ "$first_ready" = "1" ] && [ -x "$RESOURCE_MONITOR" ]; then
       if [ "$CANDIDATE_PLAYER" = "1" ]; then
         resource_player="app-local"
       else
         resource_player="onion"
       fi
+      record_launch_owner
       "$RESOURCE_MONITOR" "$BASE_DIR/logs/playback-resources.log" \
         "$ffplay_pid" "$resource_player" >>"$LOG_FILE" 2>&1 &
       RESOURCE_MONITOR_PID=$!
+      RESOURCE_MONITOR_ID=$(capture_process_identity "$RESOURCE_MONITOR_PID" "$LAUNCH_OWNER") || RESOURCE_MONITOR_ID=""
       log "resource monitor start pid=$RESOURCE_MONITOR_PID player_pid=$ffplay_pid"
     fi
-    while kill -0 "$ffplay_pid" 2>/dev/null; do
+    while owned_process_state "$FFPLAY_PID" "$FFPLAY_ID"; do
       if grep -q 'SDL_SetVideoMode' "$ffplay_log"; then
         if [ "$first_ready" = "1" ]; then
           playback_visible_started=$(date +%s)
           PLAYBACK_STARTUP=$((playback_visible_started - playback_started))
-          stop_loading
           log "ffplay video ready startup_seconds=$PLAYBACK_STARTUP"
           if [ -x "$PAUSE_MONITOR" ]; then
+            record_launch_owner
             "$PAUSE_MONITOR" "$pause_result" >>"$LOG_FILE" 2>&1 &
             PAUSE_MONITOR_PID=$!
+            PAUSE_MONITOR_ID=$(capture_process_identity "$PAUSE_MONITOR_PID" "$LAUNCH_OWNER") || PAUSE_MONITOR_ID=""
             log "pause monitor start pid=$PAUSE_MONITOR_PID"
           else
             log "pause monitor unavailable"
@@ -724,8 +904,10 @@ play_url() {
           if [ "$restart_seek_enabled" = "1" ] \
             || [ "$restart_seek_enabled" = "true" ] \
             && [ -x "$PLAYBACK_CONTROL" ]; then
+            record_launch_owner
             "$PLAYBACK_CONTROL" "$PLAYBACK_CONTROL_FILE" "$BASE_DIR/logs/playback-input.log" >>"$LOG_FILE" 2>&1 &
             PLAYBACK_CONTROL_PID=$!
+            PLAYBACK_CONTROL_ID=$(capture_process_identity "$PLAYBACK_CONTROL_PID" "$LAUNCH_OWNER") || PLAYBACK_CONTROL_ID=""
             log "playback control start pid=$PLAYBACK_CONTROL_PID"
           fi
           first_ready=0
@@ -735,7 +917,7 @@ play_url() {
       sleep 1
     done
     restart_requested=0
-    while kill -0 "$ffplay_pid" 2>/dev/null; do
+    while owned_process_state "$FFPLAY_PID" "$FFPLAY_ID"; do
       if [ "$restart_seek_enabled" = "1" ] || [ "$restart_seek_enabled" = "true" ]; then
         seek_delta=$(cat "$PLAYBACK_CONTROL_FILE" 2>/dev/null)
         rm -f "$PLAYBACK_CONTROL_FILE"
@@ -755,15 +937,25 @@ play_url() {
             fi
             log "converted seek restart delta=$seek_delta target=$seek_target"
             restart_requested=1
-            kill "$ffplay_pid" 2>/dev/null || true
+            signal_owned_process "$FFPLAY_PID" "$FFPLAY_ID" TERM || {
+              log "converted seek refused: player identity uncertain"
+              exit 1
+            }
             break
             ;;
         esac
       fi
       sleep 1
     done
-    wait "$ffplay_pid"
-    PLAYBACK_RC=$?
+    stop_owned_process "$FFPLAY_PID" "$FFPLAY_ID" ffplay 0 || true
+    PLAYBACK_RC=$OWNED_EXIT_RC
+    case "$OWNED_STOP_KIND" in
+      uncertain|alive)
+        log "player shutdown unverified; exiting UI"
+        exit 1 ;;
+    esac
+    FFPLAY_PID=""
+    FFPLAY_ID=""
     if [ "$restart_requested" = "1" ]; then
       # The server tears down the previous bounded FFmpeg job asynchronously.
       # Give its single-job lock time to release before reopening the session.
@@ -772,14 +964,13 @@ play_url() {
     fi
     break
   done
-  stop_loading
+  stop_loading || abort_display_handoff
   if [ -n "$PAUSE_MONITOR_PID" ]; then
-    if kill -0 "$PAUSE_MONITOR_PID" 2>/dev/null; then
-      kill "$PAUSE_MONITOR_PID" 2>/dev/null || true
-    fi
-    wait "$PAUSE_MONITOR_PID" 2>/dev/null
-    pause_monitor_rc=$?
-    PAUSE_MONITOR_PID=""
+    stop_owned_process "$PAUSE_MONITOR_PID" "$PAUSE_MONITOR_ID" pause-monitor 0 || true
+    case "$OWNED_STOP_KIND" in
+      uncertain|alive) log "pause-monitor shutdown unverified; exiting UI"; exit 1 ;;
+    esac
+    pause_monitor_rc=$OWNED_EXIT_RC
     if [ "$pause_monitor_rc" -eq 0 ] && [ -f "$pause_result" ]; then
       PLAYBACK_PAUSED=$(cat "$pause_result")
       case "$PLAYBACK_PAUSED" in
@@ -787,17 +978,22 @@ play_url() {
         *) PAUSE_TRACKING_VALID=1 ;;
       esac
     fi
+    PAUSE_MONITOR_PID=""
+    PAUSE_MONITOR_ID=""
   fi
-  if [ -n "$PLAYBACK_CONTROL_PID" ]; then
-    kill "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
-    wait "$PLAYBACK_CONTROL_PID" 2>/dev/null || true
-    PLAYBACK_CONTROL_PID=""
-  fi
-  if [ -n "$RESOURCE_MONITOR_PID" ]; then
-    kill "$RESOURCE_MONITOR_PID" 2>/dev/null || true
-    wait "$RESOURCE_MONITOR_PID" 2>/dev/null || true
-    RESOURCE_MONITOR_PID=""
-  fi
+  stop_owned_process "$PLAYBACK_CONTROL_PID" "$PLAYBACK_CONTROL_ID" playback-control 0 || true
+  case "$OWNED_STOP_KIND" in
+    uncertain|alive) log "playback-control shutdown unverified; exiting UI"; exit 1 ;;
+  esac
+  PLAYBACK_CONTROL_PID=""
+  PLAYBACK_CONTROL_ID=""
+  stop_owned_process "$RESOURCE_MONITOR_PID" "$RESOURCE_MONITOR_ID" resource-monitor 0 || true
+  case "$OWNED_STOP_KIND" in
+    uncertain|alive) log "resource-monitor shutdown unverified; exiting UI"; exit 1 ;;
+  esac
+  RESOURCE_MONITOR_PID=""
+  RESOURCE_MONITOR_ID=""
+  # Normal completion keeps the log available for classification below.
   cat "$ffplay_log" >>"$LOG_FILE"
   if grep -q 'Input #0' "$ffplay_log" \
     && grep -q 'SDL_SetVideoMode' "$ffplay_log" \
@@ -839,6 +1035,7 @@ play_url() {
 }
 
 select_from_file() {
+  require_display_safe
   title="$1"
   file="$2"
   bottom="${3:-Up/Down move  A select  B back}"
@@ -873,6 +1070,7 @@ select_from_file() {
 }
 
 show_account_qr() {
+  require_display_safe
   account_link="$1"
   log "account qr waiting for approval"
   qr_action=$(printf '%s\n' "$account_link" | \
@@ -909,12 +1107,9 @@ read_keyboard() {
 }
 
 stop_server_monitor() {
-  if [ -n "$SERVER_MONITOR_PID" ] \
-    && kill -0 "$SERVER_MONITOR_PID" 2>/dev/null; then
-    kill "$SERVER_MONITOR_PID" 2>/dev/null || true
-    wait "$SERVER_MONITOR_PID" 2>/dev/null || true
-  fi
+  stop_owned_process "$SERVER_MONITOR_PID" "$SERVER_MONITOR_ID" server-monitor 0 || true
   SERVER_MONITOR_PID=""
+  SERVER_MONITOR_ID=""
 }
 
 write_server_status() {
@@ -1062,6 +1257,7 @@ start_server_monitor() {
   SERVER_REACHABLE=2
   clear_server_route
   write_server_status "Server: Connecting..."
+  record_launch_owner
   (
     monitor_child_pid=""
     stop_monitor_child() {
@@ -1093,6 +1289,7 @@ start_server_monitor() {
     done
   ) &
   SERVER_MONITOR_PID=$!
+  SERVER_MONITOR_ID=$(capture_process_identity "$SERVER_MONITOR_PID" "$LAUNCH_OWNER") || SERVER_MONITOR_ID=""
   log "server status monitor start pid=$SERVER_MONITOR_PID server=$SERVER_BASE"
 }
 
@@ -1836,7 +2033,7 @@ discover_local_pcserver() {
         "$short_network" "$discovered_url" >>/tmp/pocketcinema-discovery.tsv
     done </tmp/pocketcinema-discovery.raw
   fi
-  stop_loading
+  stop_loading || abort_display_handoff
 
   if [ ! -s /tmp/pocketcinema-discovery.tsv ]; then
     message "PocketCinema Settings" "No PCServer found on the local network"
@@ -1854,11 +2051,11 @@ discover_local_pcserver() {
   }
   start_loading "Local connection" "Checking found PCServer..."
   if ! validate_pcserver_url_with_proxy "$discovered_url" ""; then
-    stop_loading
+    stop_loading || abort_display_handoff
     message "Local connection" "Found but local PCServer unreachable"
     return 1
   fi
-  stop_loading
+  stop_loading || abort_display_handoff
   SETUP_PCSERVER_URL="$discovered_url"
   log "local discovery found and validated"
 }
@@ -1885,7 +2082,7 @@ validate_setup_pcserver_url() {
   start_loading "$setup_kind connection" "Checking PCServer..."
   validate_pcserver_url_with_proxy "$setup_url" "$setup_proxy"
   manual_rc=$?
-  stop_loading
+  stop_loading || abort_display_handoff
   if [ "$manual_rc" -ne 0 ]; then
     case "$setup_kind" in
       Remote)
@@ -2159,7 +2356,7 @@ live_tv_flow() {
   start_loading "PocketCinema" "Loading live channels..."
   api_get "/api/live-tv" 45 >/tmp/pocketcinema-live-tv.json
   live_tv_rc=$?
-  stop_loading
+  stop_loading || abort_display_handoff
   if [ "$live_tv_rc" -ne 0 ]; then
     message "PocketCinema" "Live TV unavailable"
     return 1
@@ -2197,7 +2394,7 @@ library_items_flow() {
     api_get "/api/library?type=$library_type&page=$library_page&limit=60" 45 \
       >/tmp/pocketcinema-library.json
     library_rc=$?
-    stop_loading
+    stop_loading || abort_display_handoff
     if [ "$library_rc" -ne 0 ]; then
       message "My Library" "Library unavailable"
       return 1
@@ -2299,7 +2496,7 @@ account_flow() {
     start_loading "PocketCinema" "Checking Stremio account..."
     api_get "/api/addons?refresh=1" 45 >/tmp/pocketcinema-addons.json
     account_rc=$?
-    stop_loading
+    stop_loading || abort_display_handoff
     if [ "$account_rc" -ne 0 ]; then
       message "PocketCinema" "Stremio account unavailable"
       return 1
@@ -2332,7 +2529,7 @@ account_flow() {
     start_loading "PocketCinema" "Creating account link..."
     api_post_empty "/api/account/link" 30 >/tmp/pocketcinema-account-link.json
     link_rc=$?
-    stop_loading
+    stop_loading || abort_display_handoff
     if [ "$link_rc" -ne 0 ]; then
       message "PocketCinema" "Could not create account link"
       return 1
@@ -2350,7 +2547,7 @@ account_flow() {
       start_loading "PocketCinema" "Checking account approval..."
       api_get "/api/account?poll=1" 30 >/tmp/pocketcinema-account.json
       poll_rc=$?
-      stop_loading
+      stop_loading || abort_display_handoff
       if [ "$poll_rc" -ne 0 ]; then
         message "PocketCinema" "Account approval check failed"
         return 1
@@ -2842,7 +3039,7 @@ streams_flow() {
   start_loading "PocketCinema" "Checking available streams..."
   api_get "/api/streams/$type/$id?preflight=1" 120 >/tmp/pocketcinema-streams.json
   stream_lookup_rc=$?
-  stop_loading
+  stop_loading || abort_display_handoff
   if [ "$stream_lookup_rc" -ne 0 ]; then
     message "PocketCinema" "Stream lookup failed"
     return 1
@@ -3036,7 +3233,7 @@ fallback_matroska_playback() {
   fallback_stream_id="$7"
   fallback_audio_stream_index="${8:-0}"
 
-  stop_loading
+  stop_loading || abort_display_handoff
   rm -f "$FIELD_TEST_SUBTITLE_FILE"
   FIELD_TEST_SUBTITLE_FILE=""
   log "matroska setup fallback reason=$fallback_reason stream_id=$fallback_stream_id"
@@ -3129,7 +3326,7 @@ play_selected_stream() {
     fi
     subtitle_count=$("$JQ" -r '.count // 0' /tmp/pocketcinema-subtitles.json)
     if [ "$subtitle_count" -le 0 ] 2>/dev/null; then
-      stop_loading
+      stop_loading || abort_display_handoff
       subtitle_error=$("$JQ" -r '.unavailable_reason // "No preferred-language subtitles are available"' \
         /tmp/pocketcinema-subtitles.json 2>/dev/null)
       log "matroska subtitle discovery returned no supported tracks message=$subtitle_error"
@@ -3144,7 +3341,7 @@ play_selected_stream() {
   api_post_play "$type" "$id" "$stream_id" "$subtitle_id" "$resume_seconds" "$audio_stream_index" >/tmp/pocketcinema-play.json
   play_setup_rc=$?
   if [ "$play_setup_rc" -ne 0 ]; then
-    stop_loading
+    stop_loading || abort_display_handoff
     play_error=$(playback_setup_error "$play_setup_rc")
     log "playback setup transport failure rc=$play_setup_rc reason=$play_error"
     message "PocketCinema" "$play_error"
@@ -3164,7 +3361,7 @@ play_selected_stream() {
           ;;
       esac
     fi
-    stop_loading
+    stop_loading || abort_display_handoff
     play_error=$("$JQ" -r '.message // "Playback setup failed"' /tmp/pocketcinema-play.json 2>/dev/null)
     [ -n "$play_error" ] || play_error="PCServer returned an invalid playback response"
     log "playback setup rejected message=$play_error"
@@ -3174,7 +3371,7 @@ play_selected_stream() {
   save_last_play "$type" "$id" "$title" "$year" "$resume_seconds" "$stream_id" "$subtitle_id" "$audio_stream_index"
   server_field_test=$("$JQ" -r '.field_test // false' /tmp/pocketcinema-play.json)
   if [ "$FIELD_TEST" = "1" ] && [ "$server_field_test" != "true" ]; then
-    stop_loading
+    stop_loading || abort_display_handoff
     log "field-test rejected because server mode is disabled"
     message "PocketCinema" "Subtitle field test is disabled on the server"
     return 1
@@ -3236,7 +3433,7 @@ play_selected_stream() {
 
   log "playback url received"
   if [ "$MATROSKA_SUBTITLES" != "1" ]; then
-    stop_loading
+    stop_loading || abort_display_handoff
     if [ -n "$subtitle_id" ] && [ "$subtitle_id" != "none" ]; then
       start_loading "PocketCinema" \
         "Starting video... Subtitles are fixed; R1 switching is unavailable."
@@ -3293,7 +3490,7 @@ select_matroska_subtitle_fallback() {
       else
         log "English subtitle lookup failed"
       fi
-      stop_loading
+      stop_loading || abort_display_handoff
       ;;
   esac
   printf 'Continue with no subtitles\tnone\n' \
@@ -3327,7 +3524,7 @@ select_subtitle() {
     start_loading "PocketCinema" "Loading subtitles..."
     api_get "$subtitle_query" >/tmp/pocketcinema-subtitles.json
     subtitle_lookup_rc=$?
-    stop_loading
+    stop_loading || abort_display_handoff
     if [ "$subtitle_lookup_rc" -ne 0 ]; then
       log "subtitle lookup failed"
       printf '%s' "none"

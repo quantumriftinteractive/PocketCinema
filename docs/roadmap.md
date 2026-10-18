@@ -1070,8 +1070,16 @@ early empty-stream handling, clearer addon/source diagnostics, and (2026-10-18)
 source-specific audio language choices with undefined-tag preservation. The
 [readiness investigation](v1.0.1-source-language-readiness.md) records an
 unresolved vendor-log readiness dependency and successful original-v1 clock-offset
-comparison; readiness runtime behavior is unchanged. No version
-bump or release promotion is included. Focused device acceptance and native
+comparison. A subsequent locally preserved
+[sequential display handoff candidate](v1.0.1-display-handoff.md) now closes the
+owned preparation panel before FFplay starts. Safety-review corrections add
+runtime-checked process identities, clean-exit classification, latched failure
+propagation and bounded cancellation cleanup with diagnostic retention. Final
+read-only review found no confirmed blockers to controlled physical validation;
+the candidate is preserved in one local commit with a spare-card test plan.
+No package or deployment has occurred. Readiness/accounting gates remain unchanged. This compatibility
+hypothesis is automated-tested, not physically confirmed. No version bump or
+release promotion is included. Focused device acceptance and native
 Windows verification remain pending; the reported audio-only issue is open.
 H.264 profile/pixel-format policy changes are proposed pending approval.
 See [maintenance investigation and impact matrix](v1.0.1-maintenance-investigation.md).
