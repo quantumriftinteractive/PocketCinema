@@ -2910,8 +2910,13 @@ streams_flow() {
 
     if [ -z "$AUDIO_LANGUAGES" ] || { [ -z "$audio_filter" ] && [ "$AUDIO_FALLBACK" = "ask" ]; }; then
       printf 'All audio languages\t\n' > /tmp/pocketcinema-audio-filters.tsv
-      "$JQ" -r '.items[] | select(.playable == true) | (.compatibility.audio_languages // [])[] | select(ascii_downcase != "und")' \
-        /tmp/pocketcinema-streams.json | sort -u | while IFS= read -r language; do
+      "$JQ" -r --arg source_filter "$source_filter" --arg failed_ids "$FAILED_STREAM_IDS" '
+        .items[] | select(.playable == true) | . as $stream
+        | select(($failed_ids | contains("|" + $stream.id + "|")) | not)
+        | select(($source_filter == "") or (($stream.source_label // $stream.name) == $source_filter))
+        | (.compatibility.audio_languages // [])[] | ascii_downcase
+        | select(. != "" and . != "und")
+      ' /tmp/pocketcinema-streams.json | sort -u | while IFS= read -r language; do
           [ -n "$language" ] && printf '%s (verified)\t%s\n' "$language" "$language"
         done >> /tmp/pocketcinema-audio-filters.tsv
       verified_audio_count=$(wc -l </tmp/pocketcinema-audio-filters.tsv | tr -d ' ')
@@ -2922,8 +2927,8 @@ streams_flow() {
         fi
       else
         log "no verified audio tags available; leaving streams unfiltered"
-        message "Audio language" "No verified tags.
-Choose stream."
+        message "Audio language" "No verified audio tags for this source.
+Keeping all audio languages."
       fi
     fi
   fi

@@ -461,44 +461,49 @@ distribution/signing/runtime review, renderer-asset/licensing/fresh-deployment
 and final release-artifact gates remain pending; M23 remains incomplete.
 Micro-stutter work remains deferred.
 
-## Development Handoff — v1.0.1 maintenance candidate (2026-10-17)
+## Development Handoff — v1.0.1 source-language candidate (2026-10-18)
 
-Branch: `maintenance/v1.0.1-stream-diagnostics`, based on `2278e25` in an
-isolated worktree. Original checkout changes and release files are untouched.
-User explicitly authorizes a local commit only: do not push, merge, bump the
-version, build release artifacts, or publish. The remote checkpoint below is
-historical and does not checkpoint this maintenance branch.
+Branch: `maintenance/v1.0.1-stream-diagnostics`; prior commit `08fcb7a` retained.
+Remote fetch succeeded; branch continues the verified `2278e25` base without
+behind/diverged main history. Changes are local only: user prohibits deployment,
+push, merge, version bump, release artifacts and publication. Original checkout
+changes remain untouched. The remote checkpoint below is historical, not a
+remote checkpoint of this branch.
 
-Implemented: empty-result detection before source/language menus, bounded
-multi-source notices with optional disabled Local Files last, and an explicit
-manual/built-in addon-count log label. Existing settings, addon eligibility,
-security boundaries, conversion and player behavior remain unchanged.
+Implemented: manual language choices now follow the selected source and exclude
+failed/unplayable items. All audio languages is preserved; blank/undefined tags
+remain playable without being advertised as verified. All sources and saved
+preferences retain their existing behavior. Earlier empty-results/addon-count
+fixes are preserved. No server, player, readiness or subtitle runtime change.
 
-Compatibility investigation: archived decoder source supports a wider range
-than the measured device envelope. H.264 profile/pixel-format classification
-remains overly broad; the proposed probe/policy/cache correction requires
-approval and focused evidence before implementation. Reporter audio-only
-playback remains OPEN, not reproduced. Existing diagnostics are sufficient for
-initial targeted collection; no new playback logging is added.
+Baseline evidence: original v1.0.0 Open Media + English filtered all streams out
+before FFplay; Open Media + All audio worked physically. A controlled +72-hour
+device-clock test also played video/audio and dismissed loading (15 seconds,
+versus 17 at the correct clock). Time was restored. These observations do NOT
+physically accept this candidate, which has not been deployed.
 
-Validation: all 136 combined server/account/desktop/client tests pass, including
-six new executed shell-flow regressions; seven existing Miyoo shell checks,
-Python compilation, shell parsing and diff whitespace checks pass.
-A pre-existing Unix failure in the mock bundled-Windows-tool test was reproduced
-on the original checkout and corrected by setting its fixture executable bit.
-Physical validation/deployment awaits the requested development Miyoo SSH address;
-no client behavior is newly physically confirmed. Native Windows remains pending.
+Readiness investigation: loading depends on a vendor SDL log substring. Host
+characterization confirms missing output keeps the panel until player exit;
+archive/binary inspection shows success need not emit that vendor diagnostic.
+This is a plausible dependency weakness, not Uzma's proven root cause. Her
+reported audio-only playback remains OPEN; obtain live player output and loaded
+library identity before changing readiness. H.264 policy follow-up remains
+proposed/unimplemented as recorded in the prior investigation.
 
-Evidence and regression-impact matrix:
-`docs/v1.0.1-maintenance-investigation.md`. M21/M22 evidence is inherited for
-unchanged playback, subtitles, progress, conversion and account behavior.
+Validation: all 146 combined server/account/desktop/client tests pass, including
+14 executed selection tests and two readiness characterization tests.
+Seven existing Miyoo shell checks, compilation, shell parse and whitespace checks
+pass. Native Windows and candidate physical acceptance remain pending.
 
-Next exact action: deploy this branch through `scripts/deploy-miyoo.ps1` using
-the existing installed player assets; verify permissions/cleanup, then perform
-the focused Apps empty-result display and successful stream-selection/playback
-smoke, collect logs, and review the proposed compatibility correction. Obtain
-reporter diagnostics before assigning an audio-only root cause. Push requires
-explicit authorization; another machine cannot obtain this candidate remotely.
+Evidence: `docs/v1.0.1-source-language-readiness.md` includes the regression-impact
+matrix, original-v1 comparison, uncertainties and minimal physical checks.
+M21/M22 evidence is inherited for unchanged playback, conversion and subtitles.
+
+Next exact action: review the local commit, then obtain deployment authorization
+before using the standard deployer with existing accepted player assets. Verify
+source-specific languages and undefined-tag All audio selection in Apps, then one
+known-good playback/subtitle/Menu-cleanup smoke. Do not push without explicit
+authorization. Another machine cannot obtain this unpushed work remotely.
 
 ## Latest Verified Checkpoint
 

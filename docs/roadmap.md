@@ -1066,7 +1066,11 @@ navigation retained the expected existing `Play / Back` action menu.
 ### v1.0.1 maintenance investigation (2026-10-17)
 
 User-prioritized maintenance is implemented on a separate review branch:
-early empty-stream handling and clearer addon/source diagnostics. No version
+early empty-stream handling, clearer addon/source diagnostics, and (2026-10-18)
+source-specific audio language choices with undefined-tag preservation. The
+[readiness investigation](v1.0.1-source-language-readiness.md) records an
+unresolved vendor-log readiness dependency and successful original-v1 clock-offset
+comparison; readiness runtime behavior is unchanged. No version
 bump or release promotion is included. Focused device acceptance and native
 Windows verification remain pending; the reported audio-only issue is open.
 H.264 profile/pixel-format policy changes are proposed pending approval.
