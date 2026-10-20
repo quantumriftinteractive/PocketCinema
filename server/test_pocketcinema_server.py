@@ -84,10 +84,14 @@ class CommandLineConfigurationTest(unittest.TestCase):
                 if process.poll() is None:
                     process.terminate()
                 try:
-                    process.communicate(timeout=5)
+                    stdout, _ = process.communicate(timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
-                    process.communicate(timeout=5)
+                    stdout, _ = process.communicate(timeout=5)
+                self.assertIn(
+                    "Manual/built-in stream addons configured: 0 (excludes Stremio account addons)",
+                    stdout,
+                )
 
 
 class DiscoveryResponderTest(unittest.TestCase):

@@ -468,6 +468,89 @@ distribution/signing/runtime review, renderer-asset/licensing/fresh-deployment
 and final release-artifact gates remain pending; M23 remains incomplete.
 Micro-stutter work remains deferred.
 
+## Development Handoff — v1.0.1 source-language candidate (2026-10-18)
+
+Branch: `maintenance/v1.0.1-stream-diagnostics`; prior commit `08fcb7a` retained.
+Remote fetch succeeded; branch continues the verified `2278e25` base without
+behind/diverged main history. Changes are local only: user prohibits deployment,
+push, merge, version bump, release artifacts and publication. Original checkout
+changes remain untouched. The remote checkpoint below is historical, not a
+remote checkpoint of this branch.
+
+Implemented: manual language choices now follow the selected source and exclude
+failed/unplayable items. All audio languages is preserved; blank/undefined tags
+remain playable without being advertised as verified. All sources and saved
+preferences retain their existing behavior. Earlier empty-results/addon-count
+fixes are preserved. No server, player, readiness or subtitle runtime change.
+
+Baseline evidence: original v1.0.0 Open Media + English filtered all streams out
+before FFplay; Open Media + All audio worked physically. A controlled +72-hour
+device-clock test also played video/audio and dismissed loading (15 seconds,
+versus 17 at the correct clock). Time was restored. These observations do NOT
+physically accept this candidate, which has not been deployed.
+
+Readiness investigation: loading depends on a vendor SDL log substring. Host
+characterization confirms missing output keeps the panel until player exit;
+archive/binary inspection shows success need not emit that vendor diagnostic.
+This is a plausible dependency weakness, not Uzma's proven root cause. Her
+reported audio-only playback remains OPEN; obtain live player output and loaded
+library identity before changing readiness. H.264 policy follow-up remains
+proposed/unimplemented as recorded in the prior investigation.
+
+Validation: all 146 combined server/account/desktop/client tests pass, including
+14 executed selection tests and two readiness characterization tests.
+Seven existing Miyoo shell checks, compilation, shell parse and whitespace checks
+pass. Native Windows and candidate physical acceptance remain pending.
+
+Evidence: `docs/v1.0.1-source-language-readiness.md` includes the regression-impact
+matrix, original-v1 comparison, uncertainties and minimal physical checks.
+M21/M22 evidence is inherited for unchanged playback, conversion and subtitles.
+
+Next exact action: review the local commit, then obtain deployment authorization
+before using the standard deployer with existing accepted player assets. Verify
+source-specific languages and undefined-tag All audio selection in Apps, then one
+known-good playback/subtitle/Menu-cleanup smoke. Do not push without explicit
+authorization. Another machine cannot obtain this unpushed work remotely.
+
+## Development Handoff — reviewed display handoff preserved locally (2026-10-18)
+
+Branch remains `maintenance/v1.0.1-stream-diagnostics`. One local commit preserves
+the reviewed candidate on top of `c544e2b`; `08fcb7a` remains an ancestor. The
+final read-only review found no confirmed blockers to controlled physical
+validation. No build, package production, device access, deployment, fetch, push,
+merge, release or publication. Remote status is unverified. The remote checkpoint
+below remains historical; this candidate is local only.
+
+Implemented locally: preparation remains through network/session/subtitle work,
+then a clean, reaped panel exit is required before FFplay. Process identities
+use runtime-checked procfs parent/start-time fields. Missing/changed identity
+never authorizes signaling. Abnormal/forced/uncertain panel shutdown fails closed
+through every caller and latches across command substitutions. FFplay replaces
+its wrapper; cancellation bounds owned player/control/helper cleanup and saves
+player diagnostics. Readiness, watched-time and pause gates remain intact.
+A temporary black/stale preparation screen before video is still expected.
+
+These changes address reviewed code defects, not Uzma's proven root cause.
+The procfs-check/kill race cannot be eliminated in the current BusyBox shell;
+unverifiable or uninterruptible processes and SDL teardown after SIGKILL remain
+limitations. Device procfs compatibility and actual rendering are unmeasured.
+Evidence, test limitations and regression impact are recorded in
+`docs/v1.0.1-display-handoff.md`. Prior language/diagnostic fixes remain intact.
+
+Validation repeated before preservation: all eleven server test modules completed,
+208 tests OK (202 passed, 6 Windows-only skips; 64.770 seconds). All seven Miyoo
+shell checks, shell parsing, Python compilation and diff whitespace checks pass.
+No source/test changes were made after final review. Device procfs/rendering and
+Uzma's root cause remain unconfirmed.
+
+Next exact action: review the documented isolated physical-test plan in
+`docs/v1.0.1-display-handoff.md` and separately authorize preparation of a
+private developer test-card bundle. Preferred validation uses a spare SD card
+with official OnionOS 4.3.1-1 and the canonical app path, preserving the installed
+production card and avoiding a reporter installation replacement. The current
+deployer is not a side-by-side installer. No staging/deployment is authorized
+in this session. Do not push; no remote handoff is claimed.
+
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `b76e20d`

@@ -337,6 +337,8 @@ utun5: flags=8010<POINTOPOINT,MULTICAST> mtu 1280
             bundled.mkdir(parents=True)
             tool = bundled / "ffmpeg.exe"
             tool.write_bytes(b"test")
+            # The Windows fixture must also be executable on Unix test hosts.
+            tool.chmod(0o700)
             with mock.patch("server.desktop.capabilities.frozen", return_value=True), mock.patch(
                 "server.desktop.capabilities.resource_path", side_effect=lambda *parts: root.joinpath(*parts)
             ):
