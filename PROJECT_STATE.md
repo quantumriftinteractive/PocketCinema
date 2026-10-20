@@ -1,12 +1,19 @@
-# PocketCinema Current Project State
+# PocketCinema Repository State
 
-Last updated: 2026-09-09
+> This file is repository context and historical implementation evidence. It is
+> not the canonical live project tracker. Use the PocketCinema project in
+> Linear for current release state, active work, priorities, milestones, and
+> next actions.
+
+Last updated: 2026-09-11
 Last updated by machine: Windows development checkout
 Current branch: `main`
 Production baseline commit: `10987871d10a7f7be2f1a14f1b4e5d5d7c22904c`
 Expected remote branch: `origin/main`
 Active milestone: Milestone 23 — PocketCinema Server Desktop Distribution
-Release state: v1.0.0 platform artifacts sealed; final tag/publication pending.
+Release state: v1.0.0 platform artifacts are sealed and the repository contains
+the `v1.0.0` release tag. See Linear for the canonical current publication and
+post-v1 tracking state.
 Milestones 21 and 22 remain physically confirmed, and the final release
 assembly is tracked separately from post-v1 engineering work.
 
@@ -15,8 +22,8 @@ artifacts are sealed. The Miyoo and macOS distribution ZIPs were assembled
 locally under ignored `.tmp/final-release-assembly/`; the sealed Windows ZIP
 and Miyoo corresponding-source ZIP remain separate release assets identified by
 their recorded SHA-256 values. Final user documentation, the 16-page public
-export, and the tracked checksum plan are current. No tag or publication has
-been created.
+export, and the tracked checksum plan are current. The repository release tag
+is `v1.0.0`; publication and current post-v1 priorities are tracked in Linear.
 
 PocketCinema is the canonical pre-release identity. PocketStremio/`PSS` names
 in historical evidence describe the application that was physically tested at
