@@ -23,6 +23,7 @@ duplicate hero copy are now precisely ignored, not deleted.
 | Maintenance merge | e584acc |
 | Exact public release history | 88ac551177999165caf45ab40251490061f101b2, v1.0.1 |
 | Public release merge | 860d9ff |
+| Documentation/workflow reconciliation | 0f7a48007cc857c34e802a7c8b6d6de2168bc678 |
 
 The source-only selector preservation is an explicit QRI-28 historical exception.
 It has no rebuilt matching binary and remains Experimental, unshipped and outside

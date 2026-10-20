@@ -92,6 +92,14 @@ the unchanged v1.0.1 tag to Gitea, fetch and verify reachability before switchin
 machines. GitHub writes require their own explicit scope. Continue QRI-75/76 only
 under separate task scope; do not reopen unrelated historical physical matrices.
 
+## Local Consolidation Checkpoint — not published
+
+Local consolidation commit: `0f7a48007cc857c34e802a7c8b6d6de2168bc678`
+Validation: 208 tests run, 202 passed, 6 Windows-only skips; seven shell checks,
+compilation, syntax, release hashes, ancestry and preservation checks passed.
+Remote verified: NO — publication is explicitly prohibited until separately
+approved. This local commit is not the durable cross-machine checkpoint below.
+
 ## Latest Verified Checkpoint
 
 Checkpoint commit: `b76e20d`
