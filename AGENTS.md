@@ -606,3 +606,14 @@ The QRI-28 `feature/selector-128` source-only commit is an explicitly authorized
 historical preservation exception. It is Experimental, unbuilt and unshipped;
 never merge or release it without the matching ARM binary and focused physical
 acceptance. This exception does not authorize future source-only promotions.
+
+## Shared QRI Repository Governance
+
+Read the shared baseline in the existing QRI_Workflows checkout:
+[`CODEX_BASELINE.md`](../../Infrastructure/QRI_Workflows/governance/CODEX_BASELINE.md)
+and [`SESSIONS.md`](../../Infrastructure/QRI_Workflows/governance/SESSIONS.md).
+Shared tooling lives there; do not copy it into this product. On another machine,
+locate and verify the existing shared checkout if these relative links differ.
+These rules supplement the product constraints above. Explicit user authorization
+is required for remote writes, including older automatic checkpoint-push steps.
+Preserve the in-progress consolidation and all experimental/recovery work.
