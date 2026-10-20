@@ -8,6 +8,15 @@ A lightweight Stremio-style streaming client for the **Miyoo Mini Plus running O
 
 [Quantum Rift Interactive](https://quantumriftinteractive.pages.dev/) · [☕ Support Quantum Rift Interactive on Ko-fi](https://ko-fi.com/quantumriftinteractive)
 
+## Current releases and development
+
+Miyoo client **v1.0.1** is released; PocketCinema Server (PCServer) remains
+**v1.0.0**. See the [release index](docs/releases/README.md) for exact tags,
+checksums, validation and outstanding limits. Gitea is the development authority;
+GitHub is the publication destination. Use the
+[canonical workflow](docs/development-workflow.md) and
+[repository state](PROJECT_STATE.md) before resuming work.
+
 ## Confirmed Prototype
 
 The current prototype completes this controller-driven OnionOS flow:

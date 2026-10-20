@@ -1,8 +1,28 @@
 # PocketCinema Roadmap
 
-This is the canonical project roadmap. It separates behavior confirmed on the
-Miyoo Mini Plus from planned work and keeps each milestone independently
-testable.
+This roadmap summarizes sequencing. Linear owns live priorities; the
+[release index](releases/README.md) owns published versions/evidence and
+[repository state](../PROJECT_STATE.md) owns the checkout handoff. Historical
+milestone text below records its original acceptance, not current release gates.
+
+## Current release and next action — 2026-10-20
+
+Miyoo client v1.0.1 is released as CONDITIONAL GO. PCServer remains v1.0.0.
+The v1.0.0 public release is complete; M23 pre-release gate lists are superseded.
+
+### Post-release maintenance validation — QRI-75
+
+**Status: Next**
+
+Record unrestricted host-suite results, obtain focused OnionOS 4.4 beta acceptance,
+and retain sanitized post-playback logs/process evidence. The published release
+notes retain their original validation limits. Consolidation does not implement
+this physical validation or change released runtime assets.
+
+QRI-76 account-link HTTP 502 remains unresolved and high priority in Linear;
+its missing diagnostic candidate must be recovered before claiming preservation.
+QRI-27 Linux, QRI-28 selector and QRI-29 pairing remain separately scoped backlog.
+No unrelated feature development is authorized by consolidation.
 
 ## Status Legend
 
@@ -1063,105 +1083,40 @@ resolved correctly, source selection opened for that episode, and playback
 started with picture and audio. A watched S4E4 selected through ordinary season
 navigation retained the expected existing `Play / Back` action menu.
 
-### v1.0.1 maintenance investigation (2026-10-17)
+### v1.0.1 Miyoo client maintenance release
 
-User-prioritized maintenance is implemented on a separate review branch:
-early empty-stream handling, clearer addon/source diagnostics, and (2026-10-18)
-source-specific audio language choices with undefined-tag preservation. The
-[readiness investigation](v1.0.1-source-language-readiness.md) records an
-unresolved vendor-log readiness dependency and successful original-v1 clock-offset
-comparison. A subsequent locally preserved
-[sequential display handoff candidate](v1.0.1-display-handoff.md) now closes the
-owned preparation panel before FFplay starts. Safety-review corrections add
-runtime-checked process identities, clean-exit classification, latched failure
-propagation and bounded cancellation cleanup with diagnostic retention. Final
-read-only review found no confirmed blockers to controlled physical validation;
-the candidate is preserved in one local commit with a spare-card test plan.
-No package or deployment has occurred. Readiness/accounting gates remain unchanged. This compatibility
-hypothesis is automated-tested, not physically confirmed. No version bump or
-release promotion is included. Focused device acceptance and native
-Windows verification remain pending; the reported audio-only issue is open.
-H.264 profile/pixel-format policy changes are proposed pending approval.
-See [maintenance investigation and impact matrix](v1.0.1-maintenance-investigation.md).
-Milestone 23 remains the sole **Next** feature milestone; historical physical
-playback evidence is inherited for unchanged runtime paths.
+**Status: Released — CONDITIONAL GO (2026-10-20)**
+
+Exact public tag: `88ac551177999165caf45ab40251490061f101b2`; original maintenance
+history ends at `137c12602ff6b4e5d445fddf3abf53bed61cf2c1`. Both are retained by
+local consolidation. The released UI scripts are identical. Physical OnionOS
+4.3.1-1 video/audio/display handoff and Menu exit are accepted. Full host-suite
+execution was outstanding at publication; 4.4 beta and retained post-playback
+process/log evidence remain QRI-75 work. PCServer is unchanged at v1.0.0, and
+account-link HTTP 502 remains unresolved. See the [release index](releases/README.md).
+
+The [maintenance investigation](v1.0.1-maintenance-investigation.md),
+[source-language evidence](v1.0.1-source-language-readiness.md), and
+[display-handoff evidence](v1.0.1-display-handoff.md) preserve development history.
+Their pre-publication candidate status/permission statements are historical.
 
 ### 23. PocketCinema Server Desktop Distribution
 
-**Status: Next**
+**Status: Confirmed — v1.0.0 released**
 
-Replace the developer-oriented PocketCinema server launch experience with a
-small cross-platform desktop control application while preserving the existing
-Python server as the core implementation. The accepted macOS implementation is
-a packaged regular foreground app; Windows remains the required clean-machine
-end-user release target. Milestone 23 must not
-begin until Milestone 21 is marked **Confirmed** and its device-facing
-acceptance criteria are supported by the required evidence. Code presence alone
-does not satisfy that gate.
+Windows x64 and macOS arm64 PCServer v1.0.0 packages are released. Current Linear
+project evidence records clean-machine Windows validation, macOS lifecycle/package
+validation, bundled controlled FFmpeg/FFprobe, sealed Miyoo packaging, release
+checksums, corresponding-source compliance and public documentation. The macOS
+artifact remains ad-hoc signed and Windows remains unsigned as documented.
 
-- Persist non-secret desktop settings in the platform-appropriate per-user
-  application-data directory, separately from account credentials, private
-  addon configuration, logs, and runtime data.
-- Expose PCServer name, validated listen interface/address and port, a distinct
-  device-facing address, and a non-secret Stremio Service endpoint. The endpoint
-  must have a sensible local default (`http://127.0.0.1:11470`), an editable
-  host/address and port (or equivalent URL), manual override, persistence,
-  validation, reachability status, and actionable errors; it may name the same
-  PC or another reachable host, but remains PCServer-only. Also expose
-  FFmpeg/FFprobe detection with manual path selection.
-- Provide Stopped, Starting, Running, and Error states plus Start, Stop, Restart,
-  and Copy Miyoo Address controls.
-- Extract configuration, interface selection, validation, capability detection,
-  and owned-child lifecycle into reusable Python modules instead of coupling
-  them to PowerShell or GUI event handlers.
-- Keep the server independently runnable from source and preserve
-  `manage-server.ps1` and `manage-server.sh` as developer/admin tools.
-- Produce a one-directory Windows application bundle first. Do not redistribute
-  FFmpeg/FFprobe or other external binaries until exact provenance, licensing,
-  notices, and update responsibilities are approved.
-- The macOS `.app` baseline is implemented and physically accepted as a regular
-  foreground application with bundled FFmpeg/FFprobe 9.0.1, clean shutdown,
-  and ad-hoc signing. Developer ID signing, notarization, licensing, and final
-  release-artifact review remain open before public release claims.
-- Preserve direct play, conversion/downscaling, subtitle modes, multi-audio,
-  account linking, progress, Continue Watching, Resume, Menu cleanup, opaque
-  upstream URLs, PCServer-only Stremio Service access (with the secure local
-  default), and Tailscale independence.
-
-Design and release plan: [PocketCinema Server Desktop Distribution Plan](desktop-distribution-plan.md)
-
-Windows packaging checkpoint: an unsigned standalone x64 one-directory candidate
-is implemented, focused-automated-tested, and physically smoke-tested on the
-development machine. The macOS packaged foreground baseline is likewise
-physically accepted, but remains ad-hoc signed. Clean-Windows acceptance and the
-other M23 release gates remain open. See [Windows packaging evidence](windows-packaging.md)
-and [macOS packaging evidence](macos-packaging.md). M23 remains **Next**, with
-M21/M22 and accepted source desktop/tray evidence inherited.
-
-Miyoo source preservation is implemented and verified: the recovered FFmpeg
-2.4.14 final patch reconstructs the exact two modified source files without a
-rebuild. SDK family/source investigation and local license evidence are recorded
-in [the provenance assessment](../release-sources/miyoo/PROVENANCE.md). Exact
-dependency source variants, font upstream matching, external input archival,
-and independent reproduction remain open; no runtime or acceptance changed.
-
-Current release follow-ups tracked alongside this milestone are: macOS
-signing/notarization, licensing, and final bundle review; Windows clean-machine
-packaged-artifact smoke; fresh/distribution-SD validation;
-renderer/subtitle-asset licensing and package completeness; final release-artifact
-audit; and unsigned/signing/runtime-warning review. The existing Windows development-machine packaged candidate and
-smoke are evidence, not substitutes for the remaining clean/distribution gates.
-
-Acceptance criterion: a clean supported Windows PC can install or extract the
-actual PocketCinema Server release artifact, configure and persist the PCServer
-name, listen interface/address, port, advertised Miyoo address, and Stremio
-Service endpoint (including a manual host/address-and-port override) through the
-desktop application, detect or manually select FFmpeg and
-FFprobe, start and stop only its owned server, and connect a real Miyoo Mini Plus
-without Python, PowerShell, a repository checkout, or manual environment
-variables. The packaged-artifact run must pass the documented playback,
-restart, failure, cleanup, licensing, and privacy checks before this milestone
-can be marked **Confirmed**.
+The old M23 packaging and clean-install task lists are historical, preserved in
+Git and the [historical state](history/project-state-before-2026-10-20-consolidation.md).
+Do not recreate candidates or repeat accepted physical matrices solely because
+older packaging evidence predates final release. Follow
+[Windows packaging](windows-packaging.md), [macOS packaging](macos-packaging.md),
+and the [release index](releases/README.md) for their respective dated evidence.
+Post-release defects are tracked separately in Linear.
 
 ### 24. Offline Downloads
 
@@ -1231,9 +1186,10 @@ major user-facing confusion.
 
 ### P1 — Selector Completion
 
-The shipped selector remains bounded at `MAX_ITEMS = 64`. The local
-`client/miyoo/sdl_selector.c` 64-to-128 edit is an intentionally uncommitted
-experiment and is not part of v1 or a complete implementation.
+The shipped selector remains bounded at `MAX_ITEMS = 64`. The
+`feature/selector-128` branch preserves the 64-to-128 source-only experiment by
+explicit user exception. It is unbuilt, unshipped and excluded from main; it is
+not a complete implementation.
 
 - Complete and review selector capacity work.
 - Rebuild the shipped ARM selector binary and physically validate larger lists

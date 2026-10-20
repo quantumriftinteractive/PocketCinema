@@ -14,9 +14,11 @@ verified.
 In development discussion and documentation, `PCServer` is the accepted shorthand
 for the PocketCinema server. Spell it out on first use in user-facing material.
 
-Read `docs/roadmap.md` before starting feature work. Only the milestone marked
-**Next** should receive new feature scope unless the user explicitly changes the
-priority.
+Read `PROJECT_STATE.md`, the release index in `docs/releases/README.md`, and
+`docs/roadmap.md` before feature work. Linear owns live priorities; the roadmap
+summarizes sequencing. Only explicitly active issue/milestone scope should receive
+new features unless the user changes priority. Historical pre-release gate lists
+are not current work orders.
 
 ## Non-Negotiable Boundaries
 
@@ -47,10 +49,14 @@ priority.
 
 ## Source of Truth / State Ownership
 
-`PROJECT_STATE.md` owns the current operational and production state of
-PocketCinema, including the active milestone, confirmed behavior, invariants,
-experimental work, regressions, and development handoff. Do not duplicate
-detailed current-state narratives in `AGENTS.md`.
+`PROJECT_STATE.md` owns concise repository/production state, invariants and the
+development handoff. Linear owns live issue status and priorities.
+`docs/releases/README.md` indexes the authoritative immutable published release
+notes, manifests and checksums. The roadmap summarizes this state; dated evidence
+remains historical. Do not duplicate detailed current-state narratives in
+`AGENTS.md`. Resolve conflicts explicitly using the dated release record and
+current Linear issue evidence; never silently treat an old pre-release gate as
+an outstanding released-product blocker.
 
 `AGENTS.md` defines how Codex must work: stable architecture boundaries,
 implementation constraints, verification requirements, and repository
@@ -342,15 +348,17 @@ is inherited; "not re-tested today" is not "unconfirmed."
 
 ## Documentation and Milestones
 
-- `docs/roadmap.md` is authoritative for status and sequencing.
+- Linear is authoritative for live issue priorities/status; `docs/roadmap.md`
+  summarizes sequencing. Published versions and accepted release limits come from
+  the release index, not old gate lists.
 - POC evidence documents record only confirmed observations. Clearly label
   assumptions and unmeasured behavior.
 - A milestone becomes **Confirmed** only when its acceptance criteria have been
   met; device-facing criteria require a physical Miyoo test.
 - When completing a milestone, update the roadmap and its evidence document in
   the same commit.
-- Keep one milestone marked **Next**. Move unrelated ideas to **Deferred** rather
-  than expanding active scope.
+- Keep one roadmap milestone marked **Next**, aligned with the explicitly active
+  task. Move unrelated ideas to **Deferred** rather than expanding active scope.
 
 ## Git Discipline
 
@@ -368,9 +376,9 @@ session, reconstruct current truth from, in order:
 
 1. `PROJECT_STATE.md`;
 2. current code and tests;
-3. `docs/roadmap.md`;
-4. `RELEASE_READINESS.md`;
-5. relevant evidence;
+3. `docs/releases/README.md` and its exact dated published records;
+4. current Linear issues, `docs/roadmap.md`, and `RELEASE_READINESS.md`;
+5. relevant dated evidence;
 6. Git history.
 
 Conversation memory comes after repository evidence and must never override it.
@@ -412,10 +420,16 @@ Use this precedence unless repository evidence establishes a better structure:
    handoff.
 2. Current code and tests — implementation reality, which may contain a
    regression.
-3. `docs/roadmap.md` — milestone sequencing and official status.
-4. `RELEASE_READINESS.md` — release gates and scope.
+3. Published release records indexed by `docs/releases/README.md` — exact
+   versions, checksums and accepted validation limits.
+4. Linear — live issue priorities/status; roadmap and release readiness are
+   repository summaries, not competing live trackers.
 5. Latest feature/milestone evidence — physical validation and test history.
 6. Older evidence and historical docs — historical reference only.
+
+Respect these ownership domains: neither code nor an old local state narrative
+automatically overrides dated published evidence. New local test results belong
+in the handoff/evidence, without rewriting original release claims.
 
 Current code does not automatically override a physically confirmed invariant.
 If `PROJECT_STATE.md`, code, roadmap, release readiness, evidence, or recent
@@ -574,3 +588,21 @@ and remote state but must never fetch, pull, commit, push, reset, rebase, stash,
 or modify files. `Checkpoint reachable from origin/main: NO` must produce a
 prominent `REMOTE HANDOFF INVALID` warning and prohibit continuation from a
 different machine.
+
+## Canonical Git Workflow
+
+Use this one Git common directory. Gitea `origin` is development authority and
+GitHub is a controlled publication destination. Follow `docs/development-workflow.md`.
+Use short-lived Linear-linked branches and explicit validated integration into
+main. Tags for published versions are immutable; preserve both maintenance and
+publication ancestry when their commits differ. Worktrees must share this Git
+common directory and have a concrete temporary task; do not create permanent
+independent product checkouts. Never delete a worktree or branch while valuable
+work is unpreserved. Keep release artifacts outside source commits and preserve
+checksums. A user's local-only authorization overrides automatic checkpoint push
+steps: stop before remote writes and report handoff incomplete.
+
+The QRI-28 `feature/selector-128` source-only commit is an explicitly authorized
+historical preservation exception. It is Experimental, unbuilt and unshipped;
+never merge or release it without the matching ARM binary and focused physical
+acceptance. This exception does not authorize future source-only promotions.

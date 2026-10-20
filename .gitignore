@@ -7,3 +7,9 @@ server/data/*
 !server/data/.gitkeep
 __pycache__/
 *.pyc
+
+# Retained local release copies; never remove as part of ignoring them.
+/PocketCinema-v1.0.0-transfer/
+/dist/PocketCinema-Miyoo-v1.0.0/
+# Identical canonical artwork is tracked at docs/assets/PocketCinema_Hero_Banner.png.
+/UI_concept/Icons/PocketCinema_Hero_Banner.png
