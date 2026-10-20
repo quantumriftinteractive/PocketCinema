@@ -1,0 +1,188 @@
+{
+  "product": "PocketCinema Miyoo client",
+  "version": "1.0.1",
+  "source_commit": "137c12602ff6b4e5d445fddf3abf53bed61cf2c1",
+  "archive_root": "PocketCinema-Miyoo-v1.0.1",
+  "files": [
+    {
+      "path": "bin/pocketcinema-discovery",
+      "size": 16880,
+      "mode": "0755",
+      "sha256": "99bc1313bea50dba00b035fa98270444d42ba76e51b6bac956f41f79aa7b467c"
+    },
+    {
+      "path": "bin/pocketcinema-pause-monitor",
+      "size": 5708,
+      "mode": "0755",
+      "sha256": "56561ba48d7756d8f6a2e7a821fa4d21d3b2e63dfe69fa77b5339ecbe6afbeee"
+    },
+    {
+      "path": "bin/pocketcinema-playback-control",
+      "size": 12356,
+      "mode": "0755",
+      "sha256": "3d71c85df880626a3391f7a05ced40dd7482c242378a547ebf6fc6f9dd466e0d"
+    },
+    {
+      "path": "bin/pocketcinema-selector",
+      "size": 38332,
+      "mode": "0755",
+      "sha256": "c0dfe5fd1a5c4fcc3b026da75483d1a730ae8a702944145cb7f73e9ada898593"
+    },
+    {
+      "path": "client/pocketcinema-connection.sh",
+      "size": 6477,
+      "mode": "0755",
+      "sha256": "5a21a97fac0862874d030e671ff52bf923b83db75d1118a5b4c9941586285ad7"
+    },
+    {
+      "path": "client/pocketcinema-proxy.sh",
+      "size": 2339,
+      "mode": "0755",
+      "sha256": "c025c4d4fb24558d44f27be885c6894d8864d1a4e2ab4b165031a36b5969ad54"
+    },
+    {
+      "path": "client/pocketcinema-resource-monitor.sh",
+      "size": 2304,
+      "mode": "0755",
+      "sha256": "9ff2a6eaa610adfa0f8c93dc53fecb0933c19de644ff00035f709256dbe04767"
+    },
+    {
+      "path": "client/pocketcinema-ui.sh",
+      "size": 135874,
+      "mode": "0755",
+      "sha256": "73b66f9ffd95ad25b228864d87f79e63cf1d9b05ef27c937329e7393e36e6115"
+    },
+    {
+      "path": "config.json",
+      "size": 154,
+      "mode": "0644",
+      "sha256": "ca39cbd0d946f70765c71faa91fabbc178c367fef2d4c45e4a1a7433dbddd1d4"
+    },
+    {
+      "path": "config/pocketcinema.conf.example",
+      "size": 1784,
+      "mode": "0644",
+      "sha256": "b3a0f9c9216f5db1737df1da1ad4f3a41c635b28795903551f487abc431d9b66"
+    },
+    {
+      "path": "experiments/ffplay/bin/ffplay",
+      "size": 1577708,
+      "mode": "0755",
+      "sha256": "3a1f0da45dc2d6b44bd211476d9c05457ce7e25dc5050af4258e44f3fdc779e6"
+    },
+    {
+      "path": "experiments/ffplay/fonts.conf",
+      "size": 231,
+      "mode": "0644",
+      "sha256": "82b0571a27ca2662c8681b12880f239bc4d31cd1b64521f5df3775246b695957"
+    },
+    {
+      "path": "experiments/ffplay/fonts/PocketCinema.ttf",
+      "size": 176408,
+      "mode": "0755",
+      "sha256": "ca8cefd42d9d711cc864703355cb935dc9829e45d7c31f0ab5791cb8f77637c8"
+    },
+    {
+      "path": "experiments/ffplay/lib/libSDL-1.2.so.0",
+      "size": 327564,
+      "mode": "0755",
+      "sha256": "b3a20ca2d95aa4bb9531c26e0830257c356f6e2a42f35fb850f13c4abf04c01b"
+    },
+    {
+      "path": "experiments/ffplay/lib/libass.so.9",
+      "size": 240304,
+      "mode": "0755",
+      "sha256": "26776ca13a4a6b51580915e565c026243fb6275349635f05eef285ecd58f69c0"
+    },
+    {
+      "path": "experiments/ffplay/lib/libbz2.so.1.0",
+      "size": 80452,
+      "mode": "0755",
+      "sha256": "cbc32484844544ade1070e62153b54fef1865bbc37c45827a6b89ce648598d73"
+    },
+    {
+      "path": "experiments/ffplay/lib/libexpat.so.1",
+      "size": 249632,
+      "mode": "0755",
+      "sha256": "a88c70e706aece3708f9afad4b2c95267247832bb42eb23ed32a8249f029586b"
+    },
+    {
+      "path": "experiments/ffplay/lib/libffi.so.8",
+      "size": 39844,
+      "mode": "0755",
+      "sha256": "74e7783e9749c3d781c5c04237d8b8b486f901e765bddd8862327b6eabcf850a"
+    },
+    {
+      "path": "experiments/ffplay/lib/libfontconfig.so.1",
+      "size": 331172,
+      "mode": "0755",
+      "sha256": "e420ccda8d600303fc025df85934c5360bb67c88f68f61260dc42df2747b7c6b"
+    },
+    {
+      "path": "experiments/ffplay/lib/libfreetype.so.6",
+      "size": 728344,
+      "mode": "0755",
+      "sha256": "6518d3fd8b7574e07efc4ca1e8a9d7634cd8ba153865b862f3c4bb95421257d4"
+    },
+    {
+      "path": "experiments/ffplay/lib/libfribidi.so.0",
+      "size": 121772,
+      "mode": "0755",
+      "sha256": "7aa769364c85ddcddd0cbd2f00f81888c114a3688f5349379bac283e7f208170"
+    },
+    {
+      "path": "experiments/ffplay/lib/libglib-2.0.so.0",
+      "size": 1444344,
+      "mode": "0755",
+      "sha256": "f3de91dc47d4bc14b939b1e822640ee73d6105bd4bd8f74889360cdffc4c932f"
+    },
+    {
+      "path": "experiments/ffplay/lib/libharfbuzz.so.0",
+      "size": 1255716,
+      "mode": "0755",
+      "sha256": "5a5ea58e9a8738a306585b6cfd77552484cc28c10d6feccc454dbd6103f6255c"
+    },
+    {
+      "path": "experiments/ffplay/lib/libpcre.so.1",
+      "size": 278848,
+      "mode": "0755",
+      "sha256": "38384f8b33ddc477caa8707047e1dc8a754690db6237d24429e72fb3ebc8e282"
+    },
+    {
+      "path": "experiments/ffplay/lib/libpng16.so.16",
+      "size": 222572,
+      "mode": "0755",
+      "sha256": "0d1d88ce35742d18f8bfac66f1b6a8abd9f6e9943862a3d1bb87475d706f676c"
+    },
+    {
+      "path": "experiments/ffplay/lib/libts.so.0",
+      "size": 21700,
+      "mode": "0755",
+      "sha256": "206b4d75aaf941a30d0d3a8152fd47547dcec8db3ba79724ebb8cb1382dc7a28"
+    },
+    {
+      "path": "experiments/ffplay/lib/libuuid.so.1",
+      "size": 48480,
+      "mode": "0755",
+      "sha256": "e6db979d40b111fd9f406debf315ac60ffee44ad47f841724f48eae0f97312fc"
+    },
+    {
+      "path": "experiments/ffplay/lib/libz.so.1",
+      "size": 120356,
+      "mode": "0755",
+      "sha256": "06fbe1b55c5228f952a59f57a66aa4b09188435b2624bfa7e8c5851d623578c1"
+    },
+    {
+      "path": "icon.png",
+      "size": 11825,
+      "mode": "0644",
+      "sha256": "ca4184c6ec37614b1d24e7d323bca790344be0da7dd0050405ebfe40f60f3bb4"
+    },
+    {
+      "path": "launch.sh",
+      "size": 336,
+      "mode": "0755",
+      "sha256": "9c01b38d9aaad2e9d23f16c8cb6925bdedb93cd05ffb83c038fe058b564978cc"
+    }
+  ]
+}
